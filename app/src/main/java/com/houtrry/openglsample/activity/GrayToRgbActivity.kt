@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.util.Log
 import com.houtrry.openglsample.R
 import com.houtrry.openglsample.databinding.ActivityGrayToRgbBinding
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -27,6 +28,7 @@ class GrayToRgbActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         binding.srcImage.setImageResource(R.drawable.optemap_22k)
+//        binding.srcImage.setImageResource(R.mipmap.ic_launcher)
         binding.grayToRgb.setOnClickListener {
             grayToRgb()
         }
@@ -36,7 +38,7 @@ class GrayToRgbActivity : AppCompatActivity() {
         GlobalScope.launch(Dispatchers.IO) {
             val bitmap = BitmapFactory.decodeResource(
                 this@GrayToRgbActivity.resources,
-                R.drawable.optemap_22k,
+                R.drawable.optemap_217k,
                 BitmapFactory.Options().apply {
                     inPreferredConfig = Bitmap.Config.RGB_565
                 })
@@ -54,15 +56,15 @@ class GrayToRgbActivity : AppCompatActivity() {
 //            }
             Log.d(TAG, "grayToRgb start")
             var line = 0
-            for (x in 0 until bitmap.width) {
-                val pixel = bitmap.getPixel(x, line)
-                Log.d(TAG, "${Integer.toHexString(pixel)}, $pixel -> ($x, $line)")
-            }
+//            for (x in 0 until bitmap.width) {
+//                val pixel = bitmap.getPixel(x, line)
+//                Log.d(TAG, "${Integer.toHexString(pixel)}, $pixel -> ($x, $line) -> (${Color.red(pixel)/255.0}，${Color.green(pixel)/255.0}，${Color.blue(pixel)/255.0}，${Color.alpha(pixel)/255.0})")
+//            }
             Log.e(TAG, "-----------------------------")
             line = bitmap.height/2
             for (x in 0 until bitmap.width) {
                 val pixel = bitmap.getPixel(x, line)
-                Log.d(TAG, "${Integer.toHexString(pixel)}, $pixel -> ($x, $line)")
+                Log.d(TAG, "${Integer.toHexString(pixel)}, $pixel -> ($x, $line) -> (${Color.red(pixel)/255.0}，${Color.green(pixel)/255.0}，${Color.blue(pixel)/255.0}，${Color.alpha(pixel)/255.0}) -> (${Color.red(pixel)}，${Color.green(pixel)}，${Color.blue(pixel)}，${Color.alpha(pixel)})")
             }
         }
     }

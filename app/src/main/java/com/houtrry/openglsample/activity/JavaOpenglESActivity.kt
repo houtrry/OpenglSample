@@ -9,6 +9,7 @@ import android.widget.FrameLayout
 import com.houtrry.openglsample.R
 import com.houtrry.openglsample.databinding.ActivityJavaOpenglEsactivityBinding
 import com.houtrry.openglsample.shaper.MapShaper
+import com.houtrry.openglsample.utils.readRawText
 import com.houtrry.openglsample.weight.MapView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -34,7 +35,7 @@ class JavaOpenglESActivity : AppCompatActivity() {
 //        GlobalScope.launch(Dispatchers.IO) {
 //            val costTime = measureTimeMillis {
 //                val bitmap = BitmapFactory.decodeResource(this@JavaOpenglESActivity.resources, R.drawable.optemap_217k)
-//                mapView.addShaper(MapShaper(bitmap))
+//                mapView.addShaper(MapShaper(bitmap, readRawText(R.raw.map_vertex), readRawText(R.raw.map_fragment)))
 //            }
 //            Log.d(TAG, "costTime: $costTime")
 //        }
