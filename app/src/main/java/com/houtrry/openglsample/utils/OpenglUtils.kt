@@ -3,10 +3,11 @@ package com.houtrry.openglsample.utils
 import android.graphics.Bitmap
 import android.opengl.GLES20
 import android.opengl.GLUtils
+import android.util.Log
 
 object OpenglUtils {
 
-    fun loadShaper(type: Int, shaderCode: String): Int {
+    fun loadShaper(type: Int, shaderCode: String): Int? {
         //创建顶点着色器、片源着色器
         //并返回着色器id
         val shaper = GLES20.glCreateShader(type)
@@ -14,7 +15,61 @@ object OpenglUtils {
         GLES20.glShaderSource(shaper, shaderCode)
         //编辑着色器代码
         GLES20.glCompileShader(shaper)
+
+        //检查编译状态
+        val statusArray = intArrayOf(0)
+        GLES20.glGetShaderiv(shaper, GLES20.GL_COMPILE_STATUS, statusArray, 0)
+
+        Log.d(
+            "loadShaper",
+            "load shaper result is ${statusArray[0]}, and message is ${GLES20.glGetShaderInfoLog(shaper)}"
+        )
+        if (statusArray[0] == 0) {
+            //如果编译失败
+            GLES20.glDeleteShader(shaper)
+            Log.e("loadShaper", "compile shaper failure")
+            return null
+        }
+
         return shaper
+    }
+
+    fun linkProgram(vertexShape: Int, fragmentShape: Int):Int? {
+        //创建着色器程序
+        val program = GLES20.glCreateProgram()
+        if (program == 0) {
+            Log.e("linkProgram", "could`t create program")
+            return null
+        }
+        //为着色器程序添加顶点着色器
+        GLES20.glAttachShader(program, vertexShape)
+        //为着色器程序添加片源着色器
+        GLES20.glAttachShader(program, fragmentShape)
+        //链接并创建一个可执行的opengl es程序对象
+        GLES20.glLinkProgram(program)
+
+        //检查链接状态
+        val linkStatus = intArrayOf(0)
+        GLES20.glGetProgramiv(program, GLES20.GL_LINK_STATUS, linkStatus, 0)
+        Log.d(
+            "linkProgram",
+            "link program result is ${linkStatus[0]}, and message is ${GLES20.glGetProgramInfoLog(program)}"
+        )
+        if (linkStatus[0] == 0) {
+            //链接失败就删除program
+            GLES20.glDeleteProgram(program)
+            Log.e("linkProgram", "link program failure")
+            return null
+        }
+        return program
+    }
+
+    fun isValidateProgram(program:Int): Boolean {
+        GLES20.glValidateProgram(program)
+        val validateStatus = intArrayOf(0)
+        GLES20.glGetProgramiv(program, GLES20.GL_VALIDATE_STATUS, validateStatus, 0)
+        Log.d("isValidateProgram", "result of validate program status is ${validateStatus[0]}, and message is ${GLES20.glGetProgramInfoLog(program)}")
+        return validateStatus[0] != 0
     }
 
     fun createTexture(
@@ -26,7 +81,7 @@ object OpenglUtils {
             GLES20.GL_TEXTURE_2D, 1, minFilter, magFilter, wrapS, wrapT
         )
         GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)
-        bitmap.recycle()
+        bitmap.safeRecycle()
         return textureHandle[0]
     }
 

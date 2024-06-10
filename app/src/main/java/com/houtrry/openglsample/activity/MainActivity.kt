@@ -3,6 +3,7 @@ package com.houtrry.openglsample.activity
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import com.houtrry.lopengl.OpenglNativeTestActivity
 import com.houtrry.openglsample.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
@@ -14,15 +15,16 @@ class MainActivity : AppCompatActivity() {
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        binding.nativeOpengl.setOnClickListener {
-            startActivity(Intent(this, NativeOpenglActivity::class.java))
-        }
-        binding.javaOpengl.setOnClickListener {
-            startActivity(Intent(this, JavaOpenglESActivity::class.java))
-        }
-        binding.grayToRgb.setOnClickListener {
-            startActivity(Intent(this, GrayToRgbActivity::class.java))
-        }
+//        binding.nativeOpengl.setOnClickListener {
+//            startActivity(Intent(this, OpenglNativeTestActivity::class.java))
+//        }
+//        binding.javaOpengl.setOnClickListener {
+//            startActivity(Intent(this, JavaOpenglESActivity::class.java))
+//        }
+//        binding.grayToRgb.setOnClickListener {
+//            startActivity(Intent(this, GrayToRgbActivity::class.java))
+//        }
+        startActivity(Intent(this, OpenglNativeTestActivity::class.java))
     }
 
 }

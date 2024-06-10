@@ -1,9 +1,12 @@
 package com.houtrry.openglsample.shaper
 
+import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.opengl.GLES20
 import android.util.Log
 import com.houtrry.openglsample.utils.OpenglUtils
+import com.houtrry.openglsample.utils.glGetUniformLocation
 import com.houtrry.openglsample.utils.toBuffer
 import java.nio.FloatBuffer
 import java.nio.ShortBuffer
@@ -12,7 +15,7 @@ class MapShaper(
     private val bitmap: Bitmap,
     private val vertexShaderCode: String,
     private val fragmentShaderCode: String
-) : BaseShaper {
+) : IShaper {
 
     companion object {
         private const val TAG = "MapShaper"
@@ -65,27 +68,35 @@ class MapShaper(
         Log.d(TAG, "init start")
     }
 
-    override fun onCreate() {
+    override fun onCreate(context: Context) {
         //编译顶点着色器
         val vertexShaper: Int = OpenglUtils.loadShaper(
             GLES20.GL_VERTEX_SHADER, vertexShaderCode
-        )
+        ) ?: kotlin.run {
+            Log.e(TAG, "compile vertex shape failure")
+            return
+        }
         Log.d(TAG, "vertexShaper: $vertexShaper")
         //编译片源着色器
         val fragmentShaper: Int = OpenglUtils.loadShaper(
             GLES20.GL_FRAGMENT_SHADER, fragmentShaderCode
-        )
+        ) ?: kotlin.run {
+            Log.e(TAG, "compile fragment shape failure")
+            return
+        }
         Log.d(TAG, "fragmentShaper: $fragmentShaper")
         //创建着色器程序
-        mPrograms = GLES20.glCreateProgram().also {
-            //为着色器程序添加顶点着色器
-            GLES20.glAttachShader(it, vertexShaper)
-            //为着色器程序添加片源着色器
-            GLES20.glAttachShader(it, fragmentShaper)
-            //链接并创建一个可执行的opengl es程序对象
-            GLES20.glLinkProgram(it)
+        mPrograms = OpenglUtils.linkProgram(
+            vertexShaper, fragmentShaper
+        ) ?: kotlin.run {
+            Log.e(TAG, "link program failure")
+            return
         }
         Log.d(TAG, "mPrograms: $mPrograms")
+        if (!OpenglUtils.isValidateProgram(mPrograms)) {
+            Log.e(TAG, "program status isn`t validate")
+            return
+        }
         glTextureId = OpenglUtils.createTexture(
             bitmap,
             GLES20.GL_NEAREST, GLES20.GL_LINEAR,
@@ -98,6 +109,35 @@ class MapShaper(
 
     }
 
+    private fun String.colorToFloatArray(): FloatArray {
+        val color = Color.parseColor(this)
+        return floatArrayOf(
+            Color.red(color) / 255f,
+            Color.green(color) / 255f,
+            Color.blue(color) / 255f,
+            Color.alpha(color) / 255f
+        )
+    }
+
+    private val centerColor: FloatArray by lazy {
+        "#c3d8ea".colorToFloatArray()
+    }
+    private val outerColor: FloatArray by lazy {
+        "#ffffff".colorToFloatArray()
+    }
+    private val wallColor by lazy {
+        "#0072ff".colorToFloatArray()
+    }
+
+    private fun initColorValue(name: String, color: FloatArray) {
+        val centerColorUniformLocation = mPrograms.glGetUniformLocation(name)
+        GLES20.glUniform4fv(
+            centerColorUniformLocation, 1,
+            color,
+            0
+        )
+    }
+
     override fun onDraw() {
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
         GLES20.glUseProgram(mPrograms)
@@ -107,12 +147,15 @@ class MapShaper(
             position, COORDS_PRE_VERTEX, GLES20.GL_FLOAT,
             false, vertexStride, vertexBuffer
         )
-        GLES20.glActiveTexture(glTextureId)
 
+        initColorValue("center_color", centerColor)
+        initColorValue("outer_color", outerColor)
+        initColorValue("wall_color", wallColor)
+
+        GLES20.glActiveTexture(glTextureId)
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, glTextureId)
 
         val textureCoordinate = GLES20.glGetAttribLocation(mPrograms, "inputTextureCoordinate")
-
         GLES20.glEnableVertexAttribArray(textureCoordinate)
 
         GLES20.glVertexAttribPointer(
