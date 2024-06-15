@@ -18,6 +18,14 @@ struct LFloat7 {
     float a;
 };
 
+struct LFloat5 {
+    float x;
+    float y;
+    float z;
+    float u;
+    float v;
+};
+
 struct LFloat3 {
     float x;
     float y;
