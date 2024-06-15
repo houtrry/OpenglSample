@@ -44,84 +44,84 @@ void Java_com_houtrry_lopengl_view_MapView_ndkDraw(JNIEnv *env, jobject thiz) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
 
-//    glCullFace(GL_BACK);
-//    LFloat7 cubeVertex[] = {
-//            {-0.5f, -0.5f, -0.5f, 1.0, 0.0, 0.0, 1.0},
-//            {0.5f,  -0.5f, -0.5f, 1.0, 0.0, 0.0, 1.0},
-//            {0.5f,  0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0},
-//            {0.5f,  0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0},
-//            {-0.5f, 0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0},
-//            {-0.5f, -0.5f, -0.5f, 1.0, 0.0, 0.0, 1.0},
-//
-//            {-0.5f, -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
-//            {0.5f,  -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
-//            {0.5f,  0.5f,  0.5f,  0.0, 1.0, 0.0, 1.0},
-//            {0.5f,  0.5f,  0.5f,  0.0, 1.0, 0.0, 1.0},
-//            {-0.5f, 0.5f,  0.5f,  0.0, 1.0, 0.0, 1.0},
-//            {-0.5f, -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
-//
-//            {-0.5f, 0.5f,  0.5f,  0.0, 0.0, 1.0, 1.0},
-//            {-0.5f, 0.5f,  -0.5f, 0.0, 0.0, 1.0, 1.0},
-//            {-0.5f, -0.5f, -0.5f, 0.0, 0.0, 1.0, 1.0},
-//            {-0.5f, -0.5f, -0.5f, 0.0, 0.0, 1.0, 1.0},
-//            {-0.5f, -0.5f, 0.5f,  0.0, 0.0, 1.0, 1.0},
-//            {-0.5f, 0.5f,  0.5f,  0.0, 0.0, 1.0, 1.0},
-//
-//            {0.5f,  0.5f,  0.5f,  0.0, 0.0, 1.0, 1.0},
-//            {0.5f,  0.5f,  -0.5f, 0.0, 0.0, 1.0, 1.0},
-//            {0.5f,  -0.5f, -0.5f, 0.0, 0.0, 1.0, 1.0},
-//            {0.5f,  -0.5f, -0.5f, 0.0, 0.0, 1.0, 1.0},
-//            {0.5f,  -0.5f, 0.5f,  0.0, 0.0, 1.0, 1.0},
-//            {0.5f,  0.5f,  0.5f,  0.0, 0.0, 1.0, 1.0},
-//
-//            {-0.5f, -0.5f, -0.5f, 0.0, 1.0, 0.0, 1.0},
-//            {0.5f,  -0.5f, -0.5f, 0.0, 1.0, 0.0, 1.0},
-//            {0.5f,  -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
-//            {0.5f,  -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
-//            {-0.5f, -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
-//            {-0.5f, -0.5f, -0.5f, 0.0, 1.0, 0.0, 1.0},
-//
-//            {-0.5f, 0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0},
-//            {0.5f,  0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0},
-//            {0.5f,  0.5f,  0.5f,  1.0, 0.0, 0.0, 1.0},
-//            {0.5f,  0.5f,  0.5f,  1.0, 0.0, 0.0, 1.0},
-//            {-0.5f, 0.5f,  0.5f,  1.0, 0.0, 0.0, 1.0},
-//            {-0.5f, 0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0}
-//    };
-//    glEnableClientState(GL_VERTEX_ARRAY);
-//    glEnableClientState(GL_COLOR_ARRAY);
-//
-//    glVertexPointer(3, GL_FLOAT, sizeof(LFloat7), cubeVertex);
-//    glColorPointer(4, GL_FLOAT, sizeof(LFloat7), &cubeVertex[0].r);
-//
-//    m_angle+=0.01f;
-//
-//    glm::mat4x4 cubeMat;
-//    glm::mat4x4 cubeTransMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -0.5));
-//    glm::mat4x4 cubeRotateMat = glm::rotate(glm::mat4(1.0f), m_angle, glm::vec3(0.5f, 0.5f, 1.0));
-//    glm::mat4x4 cubeScaleMat = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f, 0.4f, 0.5));
-//    cubeMat = cubeTransMat * cubeRotateMat * cubeScaleMat;
-//
-//    glLoadMatrixf(glm::value_ptr(cubeMat));
-//
-//
-//    glDrawArrays(GL_TRIANGLES, 0, 36);
-//
-//
-//    glDisableClientState(GL_VERTEX_ARRAY);
-//    glDisableClientState(GL_COLOR_ARRAY);
+    glCullFace(GL_BACK);
+    LFloat7 cubeVertex[] = {
+            {-0.5f, -0.5f, -0.5f, 1.0, 0.0, 0.0, 1.0},
+            {0.5f,  -0.5f, -0.5f, 1.0, 0.0, 0.0, 1.0},
+            {0.5f,  0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0},
+            {0.5f,  0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0},
+            {-0.5f, 0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0},
+            {-0.5f, -0.5f, -0.5f, 1.0, 0.0, 0.0, 1.0},
+
+            {-0.5f, -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
+            {0.5f,  -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
+            {0.5f,  0.5f,  0.5f,  0.0, 1.0, 0.0, 1.0},
+            {0.5f,  0.5f,  0.5f,  0.0, 1.0, 0.0, 1.0},
+            {-0.5f, 0.5f,  0.5f,  0.0, 1.0, 0.0, 1.0},
+            {-0.5f, -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
+
+            {-0.5f, 0.5f,  0.5f,  0.0, 0.0, 1.0, 1.0},
+            {-0.5f, 0.5f,  -0.5f, 0.0, 0.0, 1.0, 1.0},
+            {-0.5f, -0.5f, -0.5f, 0.0, 0.0, 1.0, 1.0},
+            {-0.5f, -0.5f, -0.5f, 0.0, 0.0, 1.0, 1.0},
+            {-0.5f, -0.5f, 0.5f,  0.0, 0.0, 1.0, 1.0},
+            {-0.5f, 0.5f,  0.5f,  0.0, 0.0, 1.0, 1.0},
+
+            {0.5f,  0.5f,  0.5f,  0.0, 0.0, 1.0, 1.0},
+            {0.5f,  0.5f,  -0.5f, 0.0, 0.0, 1.0, 1.0},
+            {0.5f,  -0.5f, -0.5f, 0.0, 0.0, 1.0, 1.0},
+            {0.5f,  -0.5f, -0.5f, 0.0, 0.0, 1.0, 1.0},
+            {0.5f,  -0.5f, 0.5f,  0.0, 0.0, 1.0, 1.0},
+            {0.5f,  0.5f,  0.5f,  0.0, 0.0, 1.0, 1.0},
+
+            {-0.5f, -0.5f, -0.5f, 0.0, 1.0, 0.0, 1.0},
+            {0.5f,  -0.5f, -0.5f, 0.0, 1.0, 0.0, 1.0},
+            {0.5f,  -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
+            {0.5f,  -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
+            {-0.5f, -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
+            {-0.5f, -0.5f, -0.5f, 0.0, 1.0, 0.0, 1.0},
+
+            {-0.5f, 0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0},
+            {0.5f,  0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0},
+            {0.5f,  0.5f,  0.5f,  1.0, 0.0, 0.0, 1.0},
+            {0.5f,  0.5f,  0.5f,  1.0, 0.0, 0.0, 1.0},
+            {-0.5f, 0.5f,  0.5f,  1.0, 0.0, 0.0, 1.0},
+            {-0.5f, 0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0}
+    };
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_COLOR_ARRAY);
+
+    glVertexPointer(3, GL_FLOAT, sizeof(LFloat7), cubeVertex);
+    glColorPointer(4, GL_FLOAT, sizeof(LFloat7), &cubeVertex[0].r);
+
+    m_angle+=0.01f;
+
+    glm::mat4x4 cubeMat;
+    glm::mat4x4 cubeTransMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -0.5));
+    glm::mat4x4 cubeRotateMat = glm::rotate(glm::mat4(1.0f), m_angle, glm::vec3(0.5f, 0.5f, 1.0));
+    glm::mat4x4 cubeScaleMat = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f, 0.4f, 0.5));
+    cubeMat = cubeTransMat * cubeRotateMat * cubeScaleMat;
+
+    glLoadMatrixf(glm::value_ptr(cubeMat));
+
+
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+
+
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_COLOR_ARRAY);
     LOGD("glDraw end");
 
 
-    LFloat7 vertexTriangle[] = {
-            {-0.5, 0.1, -0.1, 1.0, 0.0, 0.0, 1.0},
-            {-0.5, 0.9, -0.1, 0.0, 1.0, 0.0, 1.0},
-            {0.5,  0.1, -0.1, 0.0, 0.0, 1.0, 1.0},
-            {0.5,  0.9, -0.1, 1.0, 0.0, 0.0, 1.0},
-    };
-    LOGD("vertex->>>, %d", vertexTriangle);
-    Triangle triangle(vertexTriangle, 4);
-    triangle.draw();
+//    LFloat7 vertexTriangle[] = {
+//            {-0.5, 0.1, -0.1, 1.0, 0.0, 0.0, 1.0},
+//            {-0.5, 0.9, -0.1, 0.0, 1.0, 0.0, 1.0},
+//            {0.5,  0.1, -0.1, 0.0, 0.0, 1.0, 1.0},
+//            {0.5,  0.9, -0.1, 1.0, 0.0, 0.0, 1.0},
+//    };
+//    LOGD("vertex->>>, %d", vertexTriangle);
+//    Triangle triangle(vertexTriangle, 4);
+//    triangle.draw();
 }
 
 void drawRotateCube() {
