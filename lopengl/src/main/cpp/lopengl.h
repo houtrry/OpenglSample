@@ -8,11 +8,11 @@
 extern "C" {
 #endif
 
-JNIEXPORT void JNICALL Java_com_houtrry_lopengl_view_MapView_ndkCreate(JNIEnv *, jobject);
-
-JNIEXPORT void JNICALL Java_com_houtrry_lopengl_view_MapView_ndkResize(JNIEnv *, jobject , jint , jint );
-
-JNIEXPORT void JNICALL Java_com_houtrry_lopengl_view_MapView_ndkDraw(JNIEnv *, jobject );
+//JNIEXPORT void JNICALL Java_com_houtrry_lopengl_view_MapView_ndkCreate(JNIEnv *, jobject);
+//
+//JNIEXPORT void JNICALL Java_com_houtrry_lopengl_view_MapView_ndkResize(JNIEnv *, jobject , jint , jint );
+//
+//JNIEXPORT void JNICALL Java_com_houtrry_lopengl_view_MapView_ndkDraw(JNIEnv *, jobject );
 
 #ifdef __cplusplus
 }

@@ -15,6 +15,7 @@
 
 extern "C" {
 #endif
+
 float m_angle = 0.0f;
 GLuint mTextureIds[6];
 
@@ -411,7 +412,7 @@ void drawTriangle() {
     glDisableClientState(GL_COLOR_ARRAY);
 }
 
-void Java_com_houtrry_lopengl_view_MapView_ndkCreate(JNIEnv *env, jobject thiz) {
+void ndkCreate(JNIEnv *env, jobject thiz) {
     LOGD("glCreate start");
     glClearColor(0.0, 0.0, 0.0, 1.0);
     glClearDepthf(1.0);
@@ -420,7 +421,7 @@ void Java_com_houtrry_lopengl_view_MapView_ndkCreate(JNIEnv *env, jobject thiz) 
     LOGD("glCreate end");
 }
 
-void Java_com_houtrry_lopengl_view_MapView_ndkResize(JNIEnv *env, jobject thiz, jint width,
+void ndkResize(JNIEnv *env, jobject thiz, jint width,
                                                      jint height) {
     LOGD("glResize start");
     glViewport(0, 0, width, height);
@@ -431,7 +432,7 @@ void Java_com_houtrry_lopengl_view_MapView_ndkResize(JNIEnv *env, jobject thiz, 
     LOGD("glResize end");
 }
 
-void Java_com_houtrry_lopengl_view_MapView_ndkDraw(JNIEnv *env, jobject thiz) {
+void ndkDraw(JNIEnv *env, jobject thiz) {
     LOGD("glDraw start");
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
@@ -446,7 +447,7 @@ void Java_com_houtrry_lopengl_view_MapView_ndkDraw(JNIEnv *env, jobject thiz) {
     drawCombineTexture();
 }
 
-jint Java_com_houtrry_lopengl_view_MapView_ndkReadAssertManager(JNIEnv *env, jobject thiz,
+jint ndkReadAssertManager(JNIEnv *env, jobject thiz,
                                                                 jobject asset_manager,
                                                                 jstring name) {
     AAssetManager *mAssetManager = AAssetManager_fromJava(env, asset_manager);
@@ -456,7 +457,7 @@ jint Java_com_houtrry_lopengl_view_MapView_ndkReadAssertManager(JNIEnv *env, job
     return 0;
 }
 
-jboolean Java_com_houtrry_lopengl_view_MapView_ndkReadAssertManagers(JNIEnv *env, jobject thiz,
+jboolean ndkReadAssertManagers(JNIEnv *env, jobject thiz,
                                                                      jobject asset_manager,
                                                                      jobjectArray names) {
 
@@ -478,6 +479,39 @@ jboolean Java_com_houtrry_lopengl_view_MapView_ndkReadAssertManagers(JNIEnv *env
     return true;
 }
 
+
+static const JNINativeMethod nativeMethod[] = {
+        // Java中的函数名    // 函数签名信息    // native的函数指针
+        {"ndkCreate", "()V", (void *) (ndkCreate)},
+        {"ndkResize", "(II)V", (void *) (ndkResize)},
+        {"ndkDraw", "()V", (void *) (ndkDraw)},
+        {"ndkReadAssertManager", "(Landroid/content/res/AssetManager;Ljava/lang/String;)I", (void *) (ndkReadAssertManager)},
+        {"ndkReadAssertManagers", "(Landroid/content/res/AssetManager;[Ljava/lang/String;)Z", (void *) (ndkReadAssertManagers)},
+};
+const char *target_class_name = "com/houtrry/lopengl/view/MapView";
+// 类库加载时自动调用
+JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reversed)
+{
+    JNIEnv *env = NULL;
+    // 初始化JNIEnv
+    if(vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6) != JNI_OK){
+        return JNI_FALSE;
+    }
+    // 找到需要动态动态注册的Jni类
+    jclass jniClass = env->FindClass(target_class_name);
+    if(nullptr == jniClass){
+        return JNI_FALSE;
+    }
+    // 动态注册
+    jint registerResult = env->RegisterNatives(jniClass, nativeMethod, sizeof(nativeMethod)/sizeof(JNINativeMethod));
+    if (registerResult) {
+        LOGD("register method successfully.");
+    } else {
+        LOGE("register method failure!!!");
+    }
+    // 返回JNI使用的版本
+    return JNI_VERSION_1_6;
+}
 #ifdef __cplusplus
 }
 #endif
