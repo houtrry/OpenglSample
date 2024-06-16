@@ -1,6 +1,7 @@
 package com.houtrry.lopengl.view
 
 import android.content.Context
+import android.content.res.AssetManager
 import android.opengl.GLSurfaceView
 import android.util.AttributeSet
 import javax.microedition.khronos.egl.EGLConfig
@@ -26,7 +27,19 @@ class MapView @JvmOverloads constructor(
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         ndkCreate()
+//        ndkReadAssertManager(context.assets, "rabit.png")
+        ndkReadAssertManagers(context.assets, arrayOf(
+            "1.png",
+            "2.png",
+            "3.png",
+            "4.png",
+            "5.png",
+            "6.png",
+        ))
     }
+
+    private external fun ndkReadAssertManagers(assetManager: AssetManager, names: Array<String>):Boolean
+
 
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
         ndkResize(width, height)
@@ -41,4 +54,6 @@ class MapView @JvmOverloads constructor(
     private external fun ndkResize(width: Int, height: Int)
 
     private external fun ndkDraw()
+
+    private external fun ndkReadAssertManager(assetManager: AssetManager, name: String): Int
 }
