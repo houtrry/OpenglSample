@@ -19,6 +19,61 @@ float m_angle = 0.0f;
 GLuint mTextureIds[6];
 
 /**
+ * 绘制纹理混合（同一个面绘制多个问题）
+ */
+void drawCombineTexture() {
+    glCullFace(GL_BACK);
+    LFloat5 cubeVertex[] = {
+            {-0.8f, -0.8f, -0.5f, 0.0, 0.0},
+            {0.8f,  -0.8f, -0.5f, 1.0, 0.0},
+            {0.8f,  0.8f,  -0.5f, 1.0, 1.0},
+            {0.8f,  0.8f,  -0.5f, 1.0, 1.0},
+            {-0.8f, 0.8f,  -0.5f, 0.0, 1.0},
+            {-0.8f, -0.8f, -0.5f, 0.0, 0.0},
+    };
+    glActiveTexture(GL_TEXTURE0);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, mTextureIds[0]);
+
+    glActiveTexture(GL_TEXTURE1);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, mTextureIds[5]);
+
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glVertexPointer(3, GL_FLOAT, sizeof(LFloat5), cubeVertex);
+
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    glClientActiveTexture(GL_TEXTURE0);
+    glTexCoordPointer(2, GL_FLOAT, sizeof(LFloat5), &cubeVertex[0].u);
+
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    glClientActiveTexture(GL_TEXTURE1);
+    glTexCoordPointer(2, GL_FLOAT, sizeof(LFloat5), &cubeVertex[0].u);
+
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE);
+    glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_ADD);
+
+    //注意这里，m_angle要想不停变化
+    //需要不停的刷新
+    //opengl的渲染模式，就不能是RENDERMODE_WHEN_DIRTY
+//    m_angle += 0.01f;
+
+    glm::mat4x4 cubeMat;
+    glm::mat4x4 cubeTransMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -0.5));
+    glm::mat4x4 cubeRotateMat = glm::rotate(glm::mat4(1.0f), m_angle, glm::vec3(0.5f, 0.5f, 1.0));
+    glm::mat4x4 cubeScaleMat = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f, 0.4f, 0.5));
+    cubeMat = cubeTransMat * cubeRotateMat * cubeScaleMat;
+
+    glLoadMatrixf(glm::value_ptr(cubeMat));
+
+
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+}
+/**
  * 绘制旋转的纹理图片
  */
 void drawRotateTextureCube() {
@@ -381,7 +436,8 @@ void Java_com_houtrry_lopengl_view_MapView_ndkDraw(JNIEnv *env, jobject thiz) {
 //    drawCube();
 //    drawRotateCube();
 //    drawTexture();
-    drawRotateTextureCube();
+//    drawRotateTextureCube();
+    drawCombineTexture();
 }
 
 jint Java_com_houtrry_lopengl_view_MapView_ndkReadAssertManager(JNIEnv *env, jobject thiz,
