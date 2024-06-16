@@ -38,9 +38,6 @@ class MapView @JvmOverloads constructor(
         ))
     }
 
-    private external fun ndkReadAssertManagers(assetManager: AssetManager, names: Array<String>):Boolean
-
-
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
         ndkResize(width, height)
     }
@@ -56,4 +53,7 @@ class MapView @JvmOverloads constructor(
     private external fun ndkDraw()
 
     private external fun ndkReadAssertManager(assetManager: AssetManager, name: String): Int
+
+    private external fun ndkReadAssertManagers(assetManager: AssetManager, names: Array<String>):Boolean
+
 }
