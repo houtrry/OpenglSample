@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "stb_image.h"
+#include "utils.h"
 
 //extern "C" {
 //#include "stb_image.h"
@@ -50,10 +51,12 @@ public:
 
     static LImage *readFromBuffer(U8_t *buff, int len) {
         int type, width, height = 0;
+        long timeStart = getTimestamp();
         stbi_set_flip_vertically_on_load(true);
         U8_t* picData = stbi_load_from_memory(buff, len, &width, &height, &type, 0);
         LImage* image = new LImage(width, height, type, picData);
         stbi_image_free(picData);
+        LOGD("readFromBuffer cost time is %ld", getTimestamp() - timeStart);
         return image;
     }
 
