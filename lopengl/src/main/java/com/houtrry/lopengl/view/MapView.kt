@@ -22,7 +22,7 @@ class MapView @JvmOverloads constructor(
     init {
 //        setEGLContextClientVersion(2)
         setRenderer(this)
-        renderMode = RENDERMODE_WHEN_DIRTY
+//        renderMode = RENDERMODE_WHEN_DIRTY
     }
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
