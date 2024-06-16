@@ -6,6 +6,7 @@
 #include "LOpenglPrimitivesDef.h"
 #include "Triangle.h"
 #include "LImage.h"
+#include "utils.h"
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
@@ -15,6 +16,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <android/asset_manager_jni.h>
 #include <android/asset_manager.h>
+
 
 #ifdef __cplusplus
 
@@ -476,6 +478,7 @@ jboolean Java_com_houtrry_lopengl_view_MapView_ndkReadAssertManagers(JNIEnv *env
         return false;
     }
 //    int size = env->GetArrayLength(names);
+    long startTimestamp = getTimestamp();
     for (int i = 0; i < 6; i++) {
         jobject jobject = env->GetObjectArrayElement(names, i);
         jstring jstr = static_cast<jstring>(jobject);
@@ -483,7 +486,7 @@ jboolean Java_com_houtrry_lopengl_view_MapView_ndkReadAssertManagers(JNIEnv *env
         mTextureIds[i] = readSourceFromAssertManager(mAssetManager, fileName);
         env->ReleaseStringUTFChars(jstr, fileName);
     }
-    LOGD("ndkReadAssertManagers end");
+    LOGD("ndkReadAssertManagers end, and cost time is %ld", getTimestamp() - startTimestamp);
     return true;
 }
 
