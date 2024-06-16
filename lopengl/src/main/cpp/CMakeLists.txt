@@ -7,6 +7,7 @@ cmake_minimum_required(VERSION 3.18.1)
 
 # 添加头文件搜索路径
 INCLUDE_DIRECTORIES(./3rdparty/libglm/include)
+INCLUDE_DIRECTORIES(./3rdparty/libstbImage/include)
 # Declares and names the project.
 
 project("lopengl")
