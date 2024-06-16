@@ -31,25 +31,31 @@ void drawCombineTexture() {
             {-0.8f, 0.8f,  -0.5f, 0.0, 1.0},
             {-0.8f, -0.8f, -0.5f, 0.0, 0.0},
     };
+    //激活纹理0， 绑定纹理0的数据
     glActiveTexture(GL_TEXTURE0);
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, mTextureIds[0]);
 
+    //激活纹理1， 绑定纹理1的数据
     glActiveTexture(GL_TEXTURE1);
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, mTextureIds[5]);
 
+    //提交顶点数据
     glEnableClientState(GL_VERTEX_ARRAY);
     glVertexPointer(3, GL_FLOAT, sizeof(LFloat5), cubeVertex);
 
+    //提交纹理0的数据
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
     glClientActiveTexture(GL_TEXTURE0);
     glTexCoordPointer(2, GL_FLOAT, sizeof(LFloat5), &cubeVertex[0].u);
 
+    //提交纹理1的数据
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
     glClientActiveTexture(GL_TEXTURE1);
     glTexCoordPointer(2, GL_FLOAT, sizeof(LFloat5), &cubeVertex[0].u);
 
+    //设置纹理混合方式
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE);
     glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_ADD);
 
