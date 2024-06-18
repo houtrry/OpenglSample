@@ -27,6 +27,7 @@ add_library( # Sets the name of the library.
         Triangle.cpp
         LImage.cpp
         Tools.cpp
+        LOpenglRender.cpp
         lopengl.cpp
         )
 

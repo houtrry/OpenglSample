@@ -13,6 +13,7 @@
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include "LOpenglRender.h"
 
 #ifdef __cplusplus
 
@@ -239,80 +240,6 @@ void drawTexture() {
     glDisableClientState(GL_VERTEX_ARRAY);
     glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 }
-/**
- * 绘制旋转的立方体
- */
-void drawRotateCube() {
-    glCullFace(GL_BACK);
-    LFloat7 cubeVertex[] = {
-            {-0.5f, -0.5f, -0.5f, 1.0, 0.0, 0.0, 1.0},
-            {0.5f,  -0.5f, -0.5f, 1.0, 0.0, 0.0, 1.0},
-            {0.5f,  0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0},
-            {0.5f,  0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0},
-            {-0.5f, 0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0},
-            {-0.5f, -0.5f, -0.5f, 1.0, 0.0, 0.0, 1.0},
-
-            {-0.5f, -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
-            {0.5f,  -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
-            {0.5f,  0.5f,  0.5f,  0.0, 1.0, 0.0, 1.0},
-            {0.5f,  0.5f,  0.5f,  0.0, 1.0, 0.0, 1.0},
-            {-0.5f, 0.5f,  0.5f,  0.0, 1.0, 0.0, 1.0},
-            {-0.5f, -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
-
-            {-0.5f, 0.5f,  0.5f,  0.0, 0.0, 1.0, 1.0},
-            {-0.5f, 0.5f,  -0.5f, 0.0, 0.0, 1.0, 1.0},
-            {-0.5f, -0.5f, -0.5f, 0.0, 0.0, 1.0, 1.0},
-            {-0.5f, -0.5f, -0.5f, 0.0, 0.0, 1.0, 1.0},
-            {-0.5f, -0.5f, 0.5f,  0.0, 0.0, 1.0, 1.0},
-            {-0.5f, 0.5f,  0.5f,  0.0, 0.0, 1.0, 1.0},
-
-            {0.5f,  0.5f,  0.5f,  0.0, 0.0, 1.0, 1.0},
-            {0.5f,  0.5f,  -0.5f, 0.0, 0.0, 1.0, 1.0},
-            {0.5f,  -0.5f, -0.5f, 0.0, 0.0, 1.0, 1.0},
-            {0.5f,  -0.5f, -0.5f, 0.0, 0.0, 1.0, 1.0},
-            {0.5f,  -0.5f, 0.5f,  0.0, 0.0, 1.0, 1.0},
-            {0.5f,  0.5f,  0.5f,  0.0, 0.0, 1.0, 1.0},
-
-            {-0.5f, -0.5f, -0.5f, 0.0, 1.0, 0.0, 1.0},
-            {0.5f,  -0.5f, -0.5f, 0.0, 1.0, 0.0, 1.0},
-            {0.5f,  -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
-            {0.5f,  -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
-            {-0.5f, -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
-            {-0.5f, -0.5f, -0.5f, 0.0, 1.0, 0.0, 1.0},
-
-            {-0.5f, 0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0},
-            {0.5f,  0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0},
-            {0.5f,  0.5f,  0.5f,  1.0, 0.0, 0.0, 1.0},
-            {0.5f,  0.5f,  0.5f,  1.0, 0.0, 0.0, 1.0},
-            {-0.5f, 0.5f,  0.5f,  1.0, 0.0, 0.0, 1.0},
-            {-0.5f, 0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0}
-    };
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glEnableClientState(GL_COLOR_ARRAY);
-
-    glVertexPointer(3, GL_FLOAT, sizeof(LFloat7), cubeVertex);
-    glColorPointer(4, GL_FLOAT, sizeof(LFloat7), &cubeVertex[0].r);
-
-    //注意这里，m_angle要想不停变化
-    //需要不停的刷新
-    //opengl的渲染模式，就不能是RENDERMODE_WHEN_DIRTY
-    m_angle += 0.01f;
-
-    glm::mat4x4 cubeMat;
-    glm::mat4x4 cubeTransMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -0.5));
-    glm::mat4x4 cubeRotateMat = glm::rotate(glm::mat4(1.0f), m_angle, glm::vec3(0.5f, 0.5f, 1.0));
-    glm::mat4x4 cubeScaleMat = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f, 0.4f, 0.5));
-    cubeMat = cubeTransMat * cubeRotateMat * cubeScaleMat;
-
-    glLoadMatrixf(glm::value_ptr(cubeMat));
-
-
-    glDrawArrays(GL_TRIANGLES, 0, 36);
-
-
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_COLOR_ARRAY);
-}
 
 /**
  * 绘制立方体
@@ -415,38 +342,25 @@ void drawTriangle() {
     glDisableClientState(GL_COLOR_ARRAY);
 }
 
+LOpenglRender openglRender;
+
 void ndkCreate(JNIEnv *env, jobject thiz) {
-    LOGD("glCreate start");
-    glClearColor(0.0, 0.0, 0.0, 1.0);
-    glClearDepthf(1.0);
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LEQUAL);
-    LOGD("glCreate end");
+    openglRender.init();
 }
 
 void ndkResize(JNIEnv *env, jobject thiz, jint width,
                                                      jint height) {
-    LOGD("glResize start");
-    glViewport(0, 0, width, height);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrthof(-1, 1, -1, 1, 0.1, 1000.0);
-    glLoadIdentity();
-    LOGD("glResize end");
+    openglRender.resize(width, height);
 }
 
 void ndkDraw(JNIEnv *env, jobject thiz) {
-    LOGD("glDraw start");
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glLoadIdentity();
+    openglRender.draw();
 
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
 //    drawTriangle();
 //    drawCube();
 //    drawRotateCube();
 //    drawTexture();
-    drawRotateTextureCube();
+//    drawRotateTextureCube();
 //    drawCombineTexture();
 }
 
@@ -454,9 +368,10 @@ jint ndkReadAssertManager(JNIEnv *env, jobject thiz,
                                                                 jobject asset_manager,
                                                                 jstring name) {
     AAssetManager *mAssetManager = AAssetManager_fromJava(env, asset_manager);
-    const char *fileName = env->GetStringUTFChars(name, 0);
-    mTextureId = Tools::readSourceFromAssertManager(mAssetManager, fileName);
-    env->ReleaseStringUTFChars(name, fileName);
+    openglRender.setAssertManager(mAssetManager);
+//    const char *fileName = env->GetStringUTFChars(name, 0);
+//    mTextureId = Tools::readSourceFromAssertManager(mAssetManager, fileName);
+//    env->ReleaseStringUTFChars(name, fileName);
     return 0;
 }
 
@@ -465,20 +380,21 @@ jboolean ndkReadAssertManagers(JNIEnv *env, jobject thiz,
                                                                      jobjectArray names) {
 
     AAssetManager *mAssetManager = AAssetManager_fromJava(env, asset_manager);
-    if (NULL == mAssetManager) {
-        LOGF("assetManager is NULL");
-        return false;
-    }
-//    int size = env->GetArrayLength(names);
-    long startTimestamp = Tools::getTimestamp();
-    for (int i = 0; i < 6; i++) {
-        jobject jobject = env->GetObjectArrayElement(names, i);
-        jstring jstr = static_cast<jstring>(jobject);
-        const char *fileName = env->GetStringUTFChars(jstr, 0);
-        mTextureIds[i] = Tools::readSourceFromAssertManager(mAssetManager, fileName);
-        env->ReleaseStringUTFChars(jstr, fileName);
-    }
-    LOGD("ndkReadAssertManagers end, and cost time is %ld", Tools::getTimestamp() - startTimestamp);
+    openglRender.setAssertManager(mAssetManager);
+//    if (NULL == mAssetManager) {
+//        LOGF("assetManager is NULL");
+//        return false;
+//    }
+////    int size = env->GetArrayLength(names);
+//    long startTimestamp = Tools::getTimestamp();
+//    for (int i = 0; i < 6; i++) {
+//        jobject jobject = env->GetObjectArrayElement(names, i);
+//        jstring jstr = static_cast<jstring>(jobject);
+//        const char *fileName = env->GetStringUTFChars(jstr, 0);
+//        mTextureIds[i] = Tools::readSourceFromAssertManager(mAssetManager, fileName);
+//        env->ReleaseStringUTFChars(jstr, fileName);
+//    }
+//    LOGD("ndkReadAssertManagers end, and cost time is %ld", Tools::getTimestamp() - startTimestamp);
     return true;
 }
 
