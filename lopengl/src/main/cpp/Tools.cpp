@@ -1,24 +1,21 @@
 //
-// Created by huangdejun on 2024/6/16.
+// Created by houtr on 2024-06-18.
 //
 
-#ifndef OPENGLSAMPLE_OPENGL_UTILS_H
-#define OPENGLSAMPLE_OPENGL_UTILS_H
+#include "Tools.h"
 
-#include "LImage.h"
-#include <glm/glm.hpp>
-#include <glm/ext/matrix_transform.hpp>
-#include <glm/ext/matrix_clip_space.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <android/asset_manager_jni.h>
-#include <android/asset_manager.h>
+#include <time.h>
+#include "landroidlog.h"
+#include <string.h>
+#include <malloc.h>
 
-/**
- * 创建纹理ID
- * @return
- */
-GLuint createTexture(LImage *image) {
-    //声明纹理id
+long Tools::getTimestamp() {
+    struct timespec ts{};
+    clock_gettime(CLOCK_REALTIME, &ts);
+    return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+}
+
+GLuint Tools::createTexture(LImage *image) {
     GLuint textureId;
 
     glEnable(GL_TEXTURE_2D);
@@ -41,13 +38,7 @@ GLuint createTexture(LImage *image) {
     return textureId;
 }
 
-/**
- * 使用AssertsManager读取图片，并生成纹理ID
- * @param mAssetManager
- * @param fileName
- * @return
- */
-GLuint readSourceFromAssertManager(AAssetManager *mAssetManager, const char *fileName) {
+GLuint Tools::readSourceFromAssertManager(AAssetManager *mAssetManager, const char *fileName) {
     if (NULL == mAssetManager) {
         LOGF("mAssetManager is NULL");
         return -1;
@@ -74,7 +65,8 @@ GLuint readSourceFromAssertManager(AAssetManager *mAssetManager, const char *fil
     int readLen = AAsset_read(asset, imgBuff, bufferSize);
     LOGD("  Picture read: %d", readLen);
 
-    LImage *glImage = LImage::readFromBuffer(imgBuff, readLen);
+    LImage *glImage = new LImage();
+    glImage->readFromBuffer(imgBuff, readLen);
     LOGD("  image: %d, %d", glImage->getWidth(), glImage->getHeight());
     GLuint textureId = createTexture(glImage);
     delete glImage;
@@ -86,5 +78,3 @@ GLuint readSourceFromAssertManager(AAssetManager *mAssetManager, const char *fil
     AAsset_close(asset);
     return textureId;
 }
-
-#endif //OPENGLSAMPLE_OPENGL_UTILS_H
