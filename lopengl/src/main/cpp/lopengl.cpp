@@ -5,11 +5,14 @@
 #include "landroidlog.h"
 #include "LOpenglPrimitivesDef.h"
 #include "Triangle.h"
-#include "utils.h"
+#include "Tools.h"
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
-#include "opengl_utils.h"
+#include <glm/glm.hpp>
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/ext/matrix_clip_space.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #ifdef __cplusplus
 
@@ -443,8 +446,8 @@ void ndkDraw(JNIEnv *env, jobject thiz) {
 //    drawCube();
 //    drawRotateCube();
 //    drawTexture();
-//    drawRotateTextureCube();
-    drawCombineTexture();
+    drawRotateTextureCube();
+//    drawCombineTexture();
 }
 
 jint ndkReadAssertManager(JNIEnv *env, jobject thiz,
@@ -452,7 +455,7 @@ jint ndkReadAssertManager(JNIEnv *env, jobject thiz,
                                                                 jstring name) {
     AAssetManager *mAssetManager = AAssetManager_fromJava(env, asset_manager);
     const char *fileName = env->GetStringUTFChars(name, 0);
-    mTextureId = readSourceFromAssertManager(mAssetManager, fileName);
+    mTextureId = Tools::readSourceFromAssertManager(mAssetManager, fileName);
     env->ReleaseStringUTFChars(name, fileName);
     return 0;
 }
@@ -467,15 +470,15 @@ jboolean ndkReadAssertManagers(JNIEnv *env, jobject thiz,
         return false;
     }
 //    int size = env->GetArrayLength(names);
-    long startTimestamp = getTimestamp();
+    long startTimestamp = Tools::getTimestamp();
     for (int i = 0; i < 6; i++) {
         jobject jobject = env->GetObjectArrayElement(names, i);
         jstring jstr = static_cast<jstring>(jobject);
         const char *fileName = env->GetStringUTFChars(jstr, 0);
-        mTextureIds[i] = readSourceFromAssertManager(mAssetManager, fileName);
+        mTextureIds[i] = Tools::readSourceFromAssertManager(mAssetManager, fileName);
         env->ReleaseStringUTFChars(jstr, fileName);
     }
-    LOGD("ndkReadAssertManagers end, and cost time is %ld", getTimestamp() - startTimestamp);
+    LOGD("ndkReadAssertManagers end, and cost time is %ld", Tools::getTimestamp() - startTimestamp);
     return true;
 }
 
