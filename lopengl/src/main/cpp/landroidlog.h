@@ -18,6 +18,12 @@ extern "C" {
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LTAG, __VA_ARGS__)
 #define LOGF(...) __android_log_print(ANDROID_LOG_FATAL, LTAG, __VA_ARGS__)
 
+#define LOGTD(tag, ...) __android_log_print(ANDROID_LOG_DEBUG, tag, __VA_ARGS__)
+#define LOGTI(tag, ...) __android_log_print(ANDROID_LOG_INFO, tag, __VA_ARGS__)
+#define LOGTW(tag, ...) __android_log_print(ANDROID_LOG_WARN, tag, __VA_ARGS__)
+#define LOGTE(tag, ...) __android_log_print(ANDROID_LOG_ERROR, tag, __VA_ARGS__)
+#define LOGTF(tag, ...) __android_log_print(ANDROID_LOG_FATAL, tag, __VA_ARGS__)
+
 #ifdef __cplusplus
 }
 #endif

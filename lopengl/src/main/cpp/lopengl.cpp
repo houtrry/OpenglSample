@@ -24,7 +24,7 @@ float m_angle = 0.0f;
 GLuint mTextureIds[6];
 
 /**
- * 绘制纹理混合（同一个面绘制多个问题）
+ * 绘制纹理混合（同一个面绘制多个纹理）
  */
 void drawCombineTexture() {
     glCullFace(GL_BACK);
