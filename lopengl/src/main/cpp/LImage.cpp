@@ -58,3 +58,22 @@ void LImage::readFromBuffer(unsigned char *buff, int len) {
     type = t;
     LOGD("readFromBuffer cost time is %ld", Tools::getTimestamp() - timeStart);
 }
+
+void LImage::readFromFile(unsigned char *fileName) {
+    int t, w, h = 0;
+    long timeStart = Tools::getTimestamp();
+    U8_t* picData = stbi_load((char const *)fileName, &w, &h, &t, STBI_rgb_alpha);
+    int picDataSize = w * h * 4;
+    if (picDataSize == 0 || picData == nullptr) {
+        LOGD("readFromFile failure %s", fileName);
+        stbi_image_free(picData);
+        return;
+    }
+    imageData = (U8_t*)malloc(picDataSize);
+    memcpy(imageData, picData, picDataSize);
+    width = w;
+    height = h;
+    type = t;
+    stbi_image_free(imageData);
+    LOGD("readFromFile cost time is %ld", Tools::getTimestamp() - timeStart);
+}

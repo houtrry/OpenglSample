@@ -31,6 +31,8 @@ public:
 
     void readFromBuffer(U8_t *buff, int len);
 
+    void readFromFile(U8_t *fileName);
+
 private:
     int width = 0;
     int height = 0;
