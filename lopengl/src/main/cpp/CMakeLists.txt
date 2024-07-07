@@ -29,6 +29,8 @@ add_library( # Sets the name of the library.
         Tools.cpp
         LGlTexture.cpp
         shape/CubeShape.cpp
+        shape/PolygonShape.cpp
+        shape/LineShape.cpp
         LOpenglRender.cpp
         lopengl.cpp
         )

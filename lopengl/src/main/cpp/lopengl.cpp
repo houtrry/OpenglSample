@@ -307,6 +307,11 @@ void drawCube() {
  * 绘制三角形
  */
 void drawTriangle() {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glLoadIdentity();
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
     LFloat7 vertexTriangle[] = {
             {-0.5, 0.1, -0.1, 1.0, 0.0, 0.0, 1.0},
             {-0.5, 0.9, -0.1, 0.0, 1.0, 0.0, 1.0},
@@ -349,7 +354,7 @@ void ndkCreate(JNIEnv *env, jobject thiz) {
 }
 
 void ndkResize(JNIEnv *env, jobject thiz, jint width,
-                                                     jint height) {
+               jint height) {
     openglRender.resize(width, height);
 }
 
@@ -365,8 +370,8 @@ void ndkDraw(JNIEnv *env, jobject thiz) {
 }
 
 jint ndkReadAssertManager(JNIEnv *env, jobject thiz,
-                                                                jobject asset_manager,
-                                                                jstring name) {
+                          jobject asset_manager,
+                          jstring name) {
     AAssetManager *mAssetManager = AAssetManager_fromJava(env, asset_manager);
     openglRender.setAssertManager(mAssetManager);
 //    const char *fileName = env->GetStringUTFChars(name, 0);
@@ -376,8 +381,8 @@ jint ndkReadAssertManager(JNIEnv *env, jobject thiz,
 }
 
 jboolean ndkReadAssertManagers(JNIEnv *env, jobject thiz,
-                                                                     jobject asset_manager,
-                                                                     jobjectArray names) {
+                               jobject asset_manager,
+                               jobjectArray names) {
 
     AAssetManager *mAssetManager = AAssetManager_fromJava(env, asset_manager);
     openglRender.setAssertManager(mAssetManager);
@@ -401,32 +406,32 @@ jboolean ndkReadAssertManagers(JNIEnv *env, jobject thiz,
 
 static const JNINativeMethod nativeMethod[] = {
         // Java中的函数名    // 函数签名信息    // native的函数指针
-        {"ndkCreate", "()V", (void *) (ndkCreate)},
-        {"ndkResize", "(II)V", (void *) (ndkResize)},
-        {"ndkDraw", "()V", (void *) (ndkDraw)},
-        {"ndkReadAssertManager", "(Landroid/content/res/AssetManager;Ljava/lang/String;)I", (void *) (ndkReadAssertManager)},
+        {"ndkCreate",             "()V",                                                      (void *) (ndkCreate)},
+        {"ndkResize",             "(II)V",                                                    (void *) (ndkResize)},
+        {"ndkDraw",               "()V",                                                      (void *) (ndkDraw)},
+        {"ndkReadAssertManager",  "(Landroid/content/res/AssetManager;Ljava/lang/String;)I",  (void *) (ndkReadAssertManager)},
         {"ndkReadAssertManagers", "(Landroid/content/res/AssetManager;[Ljava/lang/String;)Z", (void *) (ndkReadAssertManagers)},
 };
 const char *target_class_name = "com/houtrry/lopengl/view/MapView";
 // 类库加载时自动调用
-JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reversed)
-{
+JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reversed) {
     JNIEnv *env = NULL;
     // 初始化JNIEnv
-    if(vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6) != JNI_OK){
+    if (vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6) != JNI_OK) {
         return JNI_FALSE;
     }
     // 找到需要动态动态注册的Jni类
     jclass jniClass = env->FindClass(target_class_name);
-    if(nullptr == jniClass){
+    if (nullptr == jniClass) {
         return JNI_FALSE;
     }
     // 动态注册
-    jint registerResult = env->RegisterNatives(jniClass, nativeMethod, sizeof(nativeMethod)/sizeof(JNINativeMethod));
-    if (registerResult) {
+    jint registerResult = env->RegisterNatives(jniClass, nativeMethod,
+                                               sizeof(nativeMethod) / sizeof(JNINativeMethod));
+    if (registerResult >= 0) {
         LOGD("register method successfully.");
     } else {
-        LOGE("register method failure!!!");
+        LOGE("register method failure!!!, error code is %d", registerResult);
     }
     // 返回JNI使用的版本
     return JNI_VERSION_1_6;

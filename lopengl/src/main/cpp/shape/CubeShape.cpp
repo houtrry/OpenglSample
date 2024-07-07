@@ -31,7 +31,6 @@ void CubeShape::setVertex(int size, LFloat7 *vertexArray) {
 
 void CubeShape::draw() {
     LOGD("  drawVertex -- size is %d", vertexSize);
-    LOGTD("draw", "--->>>draw--->>>");
     glCullFace(GL_BACK);
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_COLOR_ARRAY);
