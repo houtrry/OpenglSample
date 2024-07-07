@@ -15,11 +15,14 @@
 #include <glm/gtc/type_ptr.hpp>
 #include "LOpenglPrimitivesDef.h"
 #include "shape/CubeShape.h"
+#include "shape/PolygonShape.h"
 
 LOpenglRender::LOpenglRender() {
 
 }
 CubeShape cubeShape;
+PolygonShape polygonShape;
+
 LOpenglRender::~LOpenglRender() {
     if (mAssetManager) {
         free(mAssetManager);
@@ -33,7 +36,8 @@ void LOpenglRender::init() {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
     LOGD("glCreate end");
-    cubeShape.generateDefaultVertex();
+//    cubeShape.generateDefaultVertex();
+    polygonShape.generateDefaultVertex();
 }
 
 void LOpenglRender::resize(int width, int height) {
@@ -58,7 +62,8 @@ void LOpenglRender::draw() {
     glLoadIdentity();
 //    m_angle += 0.01;
 //    drawRotateCube(m_angle);
-    cubeShape.draw();
+//    cubeShape.draw();
+    polygonShape.draw();
 }
 
 void LOpenglRender::setAssertManager(AAssetManager *assetManager) {

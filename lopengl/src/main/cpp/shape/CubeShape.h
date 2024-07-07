@@ -7,7 +7,9 @@
 
 
 #include "../LOpenglPrimitivesDef.h"
-
+/**
+ * 立方体
+ */
 class CubeShape {
 public:
     CubeShape();
