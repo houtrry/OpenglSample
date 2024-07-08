@@ -32,6 +32,7 @@ add_library( # Sets the name of the library.
         shape/PolygonShape.cpp
         shape/LineShape.cpp
         LOpenglRender.cpp
+        LGlBuffer.cpp
         lopengl.cpp
         )
 
