@@ -12,43 +12,48 @@
 #include "../landroidlog.h"
 
 PolygonShape::PolygonShape() {
-
+    vbo = new LGlBuffer(LGlBuffer::VertexBuffer, LGlBuffer::StaticDraw);
 }
 
 PolygonShape::~PolygonShape() {
-    if (vertexArray) {
-        free(vertexArray);
-        vertexArray = nullptr;
+    if (vbo) {
+        delete vbo;
+        vbo = nullptr;
     }
 }
 
 void PolygonShape::setVertex(int size, LFloat7 *vertexArray) {
-    int dataSize = size * sizeof(LFloat7);
-    this->vertexArray = (LFloat7*) malloc(dataSize);
-    memcpy(this->vertexArray, vertexArray, dataSize);
-    vertexSize = size;
+    vbo->bind();
+    vbo->setBuffer(vertexArray, size);
+    vbo->unbind();
 }
 
 void PolygonShape::draw() {
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_COLOR_ARRAY);
 
-    glVertexPointer(3, GL_FLOAT, sizeof(LFloat7), vertexArray);
-    glColorPointer(4, GL_FLOAT, sizeof(LFloat7), &vertexArray[0].r);
+    vbo->bind();
+    float* vertexAddress = (float*)0;
+    float* colorAddress = (float*)12;
+    glVertexPointer(3, GL_FLOAT, sizeof(LFloat7), vertexAddress);
+    glColorPointer(4, GL_FLOAT, sizeof(LFloat7), colorAddress);
 
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, vertexSize);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
+    vbo->unbind();
     glDisableClientState(GL_VERTEX_ARRAY);
     glDisableClientState(GL_COLOR_ARRAY);
 }
 
 void PolygonShape::generateDefaultVertex() {
-    LFloat7* arr = new LFloat7[4];
-    arr[0] = {-0.5, 0.1, -0.1, 1.0, 0.0, 0.0, 1.0};
-    arr[1] = {-0.5, 0.9, -0.1, 0.0, 1.0, 0.0, 1.0};
-    arr[2] = {0.5,  0.1, -0.1, 0.0, 0.0, 1.0, 1.0};
-    arr[3] = {0.5,  0.9, -0.1, 1.0, 0.0, 0.0, 1.0};
-    vertexArray = arr;
-    vertexSize = 4;
+    LFloat7 arr[] = {
+            {-0.5, 0.1, -0.1, 1.0, 0.0, 0.0, 1.0},
+            {-0.5, 0.9, -0.1, 0.0, 1.0, 0.0, 1.0},
+            {0.5,  0.1, -0.1, 0.0, 0.0, 1.0, 1.0},
+            {0.5,  0.9, -0.1, 1.0, 0.0, 0.0, 1.0},
+    };
+    vbo->bind();
+    vbo->setBuffer(arr, sizeof(arr));
+    vbo->unbind();
 }
 

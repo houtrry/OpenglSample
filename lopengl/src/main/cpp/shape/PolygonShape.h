@@ -6,6 +6,7 @@
 #define OPENGLSAMPLE_POLYGONSHAPE_H
 
 #include "../LOpenglPrimitivesDef.h"
+#include "../LGlBuffer.h"
 
 /**
  * 平面多边形
@@ -20,8 +21,8 @@ public:
     void generateDefaultVertex();
 
 private:
-    LFloat7* vertexArray;
     int vertexSize;
+    LGlBuffer* vbo;
 };
 
 
