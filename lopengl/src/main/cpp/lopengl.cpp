@@ -436,6 +436,27 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reversed) {
     // 返回JNI使用的版本
     return JNI_VERSION_1_6;
 }
+
+JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *vm, void *reversed) {
+    JNIEnv *env = NULL;
+    // 初始化JNIEnv
+    if (vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6) != JNI_OK) {
+        return;
+    }
+    // 找到需要动态动态注册的Jni类
+    jclass jniClass = env->FindClass(target_class_name);
+    if (nullptr == jniClass) {
+        LOGE("unregister error, don`t find class %s", target_class_name);
+        return;
+    }
+    // 动态注册
+    jint registerResult = env->UnregisterNatives(jniClass);
+    if (registerResult >= 0) {
+        LOGD("unregister method successfully.");
+    } else {
+        LOGE("unregister method failure!!!, error code is %d", registerResult);
+    }
+}
 #ifdef __cplusplus
 }
 #endif
