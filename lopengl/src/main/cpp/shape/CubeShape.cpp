@@ -12,31 +12,31 @@
 #include "../landroidlog.h"
 
 CubeShape::CubeShape() {
-
+    vbo = new LGlBuffer(LGlBuffer::VertexBuffer, LGlBuffer::StaticDraw);
 }
 
 CubeShape::~CubeShape() {
-    if (cubeVertex) {
-        free(cubeVertex);
-        cubeVertex = nullptr;
+    if (vbo) {
+        delete vbo;
+        vbo = nullptr;
     }
 }
 
 void CubeShape::setVertex(int size, LFloat7 *vertexArray) {
-    int dataSize = size * sizeof(LFloat7);
-    cubeVertex = (LFloat7*) malloc(dataSize);
-    memcpy(cubeVertex, vertexArray, dataSize);
-    vertexSize = size;
+    vbo->bind();
+    vbo->setBuffer(vertexArray, size);
+    vbo->unbind();
 }
 
 void CubeShape::draw() {
-    LOGD("  drawVertex -- size is %d", vertexSize);
+    LOGD("  drawVertex -- size is");
     glCullFace(GL_BACK);
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_COLOR_ARRAY);
 
-    glVertexPointer(3, GL_FLOAT, sizeof(LFloat7), cubeVertex);
-    glColorPointer(4, GL_FLOAT, sizeof(LFloat7), &cubeVertex[0].r);
+    vbo->bind();
+    glVertexPointer(3, GL_FLOAT, sizeof(LFloat7), (float *) 0);
+    glColorPointer(4, GL_FLOAT, sizeof(LFloat7), (float *) 12);
 
     //注意这里，m_angle要想不停变化
     //需要不停的刷新
@@ -50,58 +50,59 @@ void CubeShape::draw() {
     glLoadMatrixf(glm::value_ptr(cubeMat));
     angle += 0.01;
 
-    glDrawArrays(GL_TRIANGLES, 0, vertexSize);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
 
+    vbo->unbind();
     glDisableClientState(GL_VERTEX_ARRAY);
     glDisableClientState(GL_COLOR_ARRAY);
 }
 
 void CubeShape::generateDefaultVertex() {
-    LFloat7* arr = new LFloat7[36];
-    arr[0] = {-0.5f, -0.5f, -0.5f, 1.0, 0.0, 0.0, 1.0};
-    arr[1] = {0.5f,  -0.5f, -0.5f, 1.0, 0.0, 0.5, 1.0};
-    arr[2] = {0.5f,  0.5f,  -0.5f, 1.0, 0.6, 0.0, 1.0};
-    arr[3] = {0.5f,  0.5f,  -0.5f, 1.0, 0.0, 4.0, 1.0};
-    arr[4] = {-0.5f, 0.5f,  -0.5f, 1.0, 2.0, 0.0, 1.0};
-    arr[5] = {-0.5f, -0.5f, -0.5f, 1.0, 0.0, 1.0, 1.0};
+    LFloat7 arr[] = {
+            {-0.5f, -0.5f, -0.5f, 1.0, 0.0, 0.0, 1.0},
+            {0.5f,  -0.5f, -0.5f, 1.0, 0.0, 0.0, 1.0},
+            {0.5f,  0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0},
+            {0.5f,  0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0},
+            {-0.5f, 0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0},
+            {-0.5f, -0.5f, -0.5f, 1.0, 0.0, 0.0, 1.0},
 
-    arr[1] = {0.5f,  -0.5f, -0.5f, 1.0, 0.0, 0.5, 1.0};
-    arr[2] = {0.5f,  0.5f,  -0.5f, 1.0, 0.6, 0.0, 1.0};
-    arr[3] = {0.5f,  0.5f,  -0.5f, 1.0, 0.0, 4.0, 1.0};
-    arr[4] = {-0.5f, 0.5f,  -0.5f, 1.0, 2.0, 0.0, 1.0};
-    arr[5] = {-0.5f, -0.5f, -0.5f, 1.0, 0.0, 1.0, 1.0};
-    arr[6] = {-0.5f, -0.5f, 0.5f,  0.9, 1.0, 0.5, 1.0};
-    arr[7] = {0.5f,  -0.5f, 0.5f,  0.5, 1.0, 0.2, 1.0};
-    arr[8] = {0.5f,  0.5f,  0.5f,  0.2, 1.0, 0.7, 1.0};
-    arr[9] = {0.5f,  0.5f,  0.5f,  0.7, 1.0, 0.1, 1.0};
-    arr[10] = {-0.5f, 0.5f,  0.5f,  0.3, 1.0, 0.5, 1.0};
-    arr[11] = {-0.5f, -0.5f, 0.5f,  0.5, 1.0, 0.7, 1.0};
-    arr[12] = {-0.5f, 0.5f,  0.5f,  0.7, 0.5, 1.0, 1.0};
-    arr[13] = {-0.5f, 0.5f,  -0.5f, 0.0, 0.7, 1.0, 1.0};
-    arr[14] = {-0.5f, -0.5f, -0.5f, 0.7, 0.1, 1.0, 1.0};
-    arr[15] = {-0.5f, -0.5f, -0.5f, 0.2, 0.7, 1.0, 1.0};
-    arr[16] = {-0.5f, -0.5f, 0.5f,  0.7, 0.0, 1.0, 1.0};
-    arr[17] = {-0.5f, 0.5f,  0.5f,  0.3, 0.7, 1.0, 1.0};
-    arr[18] = {0.5f,  0.5f,  0.5f,  0.2, 0.8, 1.0, 1.0};
-    arr[19] = {0.5f,  0.5f,  -0.5f, 0.0, 0.2, 1.0, 1.0};
-    arr[20] = {0.5f,  -0.5f, -0.5f, 0.2, 0.2, 1.0, 1.0};
-    arr[21] = {0.5f,  -0.5f, -0.5f, 0.2, 0.5, 1.0, 1.0};
-    arr[22] = {0.5f,  -0.5f, 0.5f,  0.2, 0.2, 1.0, 1.0};
-    arr[23] = {0.5f,  0.5f,  0.5f,  0.2, 0.0, 1.0, 1.0};
-    arr[24] = {-0.5f, -0.5f, -0.5f, 0.3, 1.0, 0.6, 1.0};
-    arr[25] = {0.5f,  -0.5f, -0.5f, 0.8, 1.0, 0.3, 1.0};
-    arr[26] = {0.5f,  -0.5f, 0.5f,  0.6, 1.0, 0.9, 1.0};
-    arr[27] = {0.5f,  -0.5f, 0.5f,  0.3, 1.0, 0.5, 1.0};
-    arr[28] = {-0.5f, -0.5f, 0.5f,  0.3, 1.0, 0.6, 1.0};
-    arr[29] = {-0.5f, -0.5f, -0.5f, 0.7, 1.0, 0.3, 1.0};
-    arr[30] = {-0.5f, 0.5f,  -0.5f, 1.0, 0.0, 0.6, 1.0};
-    arr[31] = {0.5f,  0.5f,  -0.5f, 1.0, 0.6, 0.3, 1.0};
-    arr[32] = {0.5f,  0.5f,  0.5f,  1.0, 0.0, 0.6, 1.0};
-    arr[33] = {0.5f,  0.5f,  0.5f,  1.0, 0.6, 0.0, 1.0};
-    arr[34] = {-0.5f, 0.5f,  0.5f,  1.0, 0.0, 0.6, 1.0};
-    arr[35] = {-0.5f, 0.5f,  -0.5f, 1.0, 0.6, 0.0, 1.0};
+            {-0.5f, -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
+            {0.5f,  -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
+            {0.5f,  0.5f,  0.5f,  0.0, 1.0, 0.0, 1.0},
+            {0.5f,  0.5f,  0.5f,  0.0, 1.0, 0.0, 1.0},
+            {-0.5f, 0.5f,  0.5f,  0.0, 1.0, 0.0, 1.0},
+            {-0.5f, -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
 
-    cubeVertex = arr;
-    vertexSize = 36;
-    LOGD("  drawVertex size is %d", vertexSize);
+            {-0.5f, 0.5f,  0.5f,  0.0, 0.0, 1.0, 1.0},
+            {-0.5f, 0.5f,  -0.5f, 0.0, 0.0, 1.0, 1.0},
+            {-0.5f, -0.5f, -0.5f, 0.0, 0.0, 1.0, 1.0},
+            {-0.5f, -0.5f, -0.5f, 0.0, 0.0, 1.0, 1.0},
+            {-0.5f, -0.5f, 0.5f,  0.0, 0.0, 1.0, 1.0},
+            {-0.5f, 0.5f,  0.5f,  0.0, 0.0, 1.0, 1.0},
+
+            {0.5f,  0.5f,  0.5f,  0.0, 0.0, 1.0, 1.0},
+            {0.5f,  0.5f,  -0.5f, 0.0, 0.0, 1.0, 1.0},
+            {0.5f,  -0.5f, -0.5f, 0.0, 0.0, 1.0, 1.0},
+            {0.5f,  -0.5f, -0.5f, 0.0, 0.0, 1.0, 1.0},
+            {0.5f,  -0.5f, 0.5f,  0.0, 0.0, 1.0, 1.0},
+            {0.5f,  0.5f,  0.5f,  0.0, 0.0, 1.0, 1.0},
+
+            {-0.5f, -0.5f, -0.5f, 0.0, 1.0, 0.0, 1.0},
+            {0.5f,  -0.5f, -0.5f, 0.0, 1.0, 0.0, 1.0},
+            {0.5f,  -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
+            {0.5f,  -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
+            {-0.5f, -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
+            {-0.5f, -0.5f, -0.5f, 0.0, 1.0, 0.0, 1.0},
+
+            {-0.5f, 0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0},
+            {0.5f,  0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0},
+            {0.5f,  0.5f,  0.5f,  1.0, 0.0, 0.0, 1.0},
+            {0.5f,  0.5f,  0.5f,  1.0, 0.0, 0.0, 1.0},
+            {-0.5f, 0.5f,  0.5f,  1.0, 0.0, 0.0, 1.0},
+            {-0.5f, 0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0}
+    };
+    vbo->bind();
+    vbo->setBuffer(arr, 36);
+    vbo->unbind();
+    LOGD("  drawVertex size is %d", 36);
 }

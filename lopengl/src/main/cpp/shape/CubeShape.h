@@ -7,6 +7,8 @@
 
 
 #include "../LOpenglPrimitivesDef.h"
+#include "../LGlBuffer.h"
+
 /**
  * 立方体
  */
@@ -18,9 +20,8 @@ public:
     void draw();
     void generateDefaultVertex();
 private:
-    LFloat7* cubeVertex;
     float angle;
-    int vertexSize;
+    LGlBuffer* vbo;
 };
 
 
