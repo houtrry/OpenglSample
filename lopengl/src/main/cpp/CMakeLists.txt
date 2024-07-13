@@ -55,7 +55,7 @@ find_library( # Sets the name of the path variable.
 
 target_link_libraries( # Specifies the target library.
         lopengl
-        GLESv1_CM
+        GLESv3
         GLESv2
         EGL
         android

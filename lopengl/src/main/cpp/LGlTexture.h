@@ -6,7 +6,7 @@
 #define OPENGLSAMPLE_LGLTEXTURE_H
 
 #include "LImage.h"
-#include <GLES/gl.h>
+#include <GLES3/gl3.h>
 #include <android/asset_manager_jni.h>
 #include <android/asset_manager.h>
 
