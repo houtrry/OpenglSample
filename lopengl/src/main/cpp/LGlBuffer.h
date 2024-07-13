@@ -5,7 +5,7 @@
 #ifndef OPENGLSAMPLE_LGLBUFFER_H
 #define OPENGLSAMPLE_LGLBUFFER_H
 
-#include <GLES/gl.h>
+#include <GLES3/gl3.h>
 
 class LGlBuffer {
 

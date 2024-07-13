@@ -1,5 +1,5 @@
 #include <string>
-#include <GLES/gl.h>
+#include <GLES3/gl3.h>
 #include <GLES2/gl2.h>
 #include "lopengl.h"
 #include "landroidlog.h"
@@ -26,326 +26,326 @@ GLuint mTextureIds[6];
 /**
  * 绘制纹理混合（同一个面绘制多个纹理）
  */
-void drawCombineTexture() {
-    glCullFace(GL_BACK);
-    LFloat5 cubeVertex[] = {
-            {-0.8f, -0.8f, -0.5f, 0.0, 0.0},
-            {0.8f,  -0.8f, -0.5f, 1.0, 0.0},
-            {0.8f,  0.8f,  -0.5f, 1.0, 1.0},
-            {0.8f,  0.8f,  -0.5f, 1.0, 1.0},
-            {-0.8f, 0.8f,  -0.5f, 0.0, 1.0},
-            {-0.8f, -0.8f, -0.5f, 0.0, 0.0},
-    };
-    //激活纹理0， 绑定纹理0的数据
-    glActiveTexture(GL_TEXTURE0);
-    glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, mTextureIds[0]);
-
-    //激活纹理1， 绑定纹理1的数据
-    glActiveTexture(GL_TEXTURE1);
-    glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, mTextureIds[5]);
-
-    //提交顶点数据
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glVertexPointer(3, GL_FLOAT, sizeof(LFloat5), cubeVertex);
-
-    //提交纹理0的数据
-    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-    glClientActiveTexture(GL_TEXTURE0);
-    glTexCoordPointer(2, GL_FLOAT, sizeof(LFloat5), &cubeVertex[0].u);
-
-    //提交纹理1的数据
-    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-    glClientActiveTexture(GL_TEXTURE1);
-    glTexCoordPointer(2, GL_FLOAT, sizeof(LFloat5), &cubeVertex[0].u);
-
-    //设置纹理混合方式
-    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE);
-    glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_ADD);
-
-    //注意这里，m_angle要想不停变化
-    //需要不停的刷新
-    //opengl的渲染模式，就不能是RENDERMODE_WHEN_DIRTY
-//    m_angle += 0.01f;
-
-    glm::mat4x4 cubeMat;
-    glm::mat4x4 cubeTransMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -0.5));
-    glm::mat4x4 cubeRotateMat = glm::rotate(glm::mat4(1.0f), m_angle, glm::vec3(0.5f, 0.5f, 1.0));
-    glm::mat4x4 cubeScaleMat = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f, 0.4f, 0.5));
-    cubeMat = cubeTransMat * cubeRotateMat * cubeScaleMat;
-
-    glLoadMatrixf(glm::value_ptr(cubeMat));
-
-
-    glDrawArrays(GL_TRIANGLES, 0, 6);
-
-
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-}
+//void drawCombineTexture() {
+//    glCullFace(GL_BACK);
+//    LFloat5 cubeVertex[] = {
+//            {-0.8f, -0.8f, -0.5f, 0.0, 0.0},
+//            {0.8f,  -0.8f, -0.5f, 1.0, 0.0},
+//            {0.8f,  0.8f,  -0.5f, 1.0, 1.0},
+//            {0.8f,  0.8f,  -0.5f, 1.0, 1.0},
+//            {-0.8f, 0.8f,  -0.5f, 0.0, 1.0},
+//            {-0.8f, -0.8f, -0.5f, 0.0, 0.0},
+//    };
+//    //激活纹理0， 绑定纹理0的数据
+//    glActiveTexture(GL_TEXTURE0);
+//    glEnable(GL_TEXTURE_2D);
+//    glBindTexture(GL_TEXTURE_2D, mTextureIds[0]);
+//
+//    //激活纹理1， 绑定纹理1的数据
+//    glActiveTexture(GL_TEXTURE1);
+//    glEnable(GL_TEXTURE_2D);
+//    glBindTexture(GL_TEXTURE_2D, mTextureIds[5]);
+//
+//    //提交顶点数据
+//    glEnableClientState(GL_VERTEX_ARRAY);
+//    glVertexPointer(3, GL_FLOAT, sizeof(LFloat5), cubeVertex);
+//
+//    //提交纹理0的数据
+//    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+//    glClientActiveTexture(GL_TEXTURE0);
+//    glTexCoordPointer(2, GL_FLOAT, sizeof(LFloat5), &cubeVertex[0].u);
+//
+//    //提交纹理1的数据
+//    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+//    glClientActiveTexture(GL_TEXTURE1);
+//    glTexCoordPointer(2, GL_FLOAT, sizeof(LFloat5), &cubeVertex[0].u);
+//
+//    //设置纹理混合方式
+//    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE);
+//    glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_ADD);
+//
+//    //注意这里，m_angle要想不停变化
+//    //需要不停的刷新
+//    //opengl的渲染模式，就不能是RENDERMODE_WHEN_DIRTY
+////    m_angle += 0.01f;
+//
+//    glm::mat4x4 cubeMat;
+//    glm::mat4x4 cubeTransMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -0.5));
+//    glm::mat4x4 cubeRotateMat = glm::rotate(glm::mat4(1.0f), m_angle, glm::vec3(0.5f, 0.5f, 1.0));
+//    glm::mat4x4 cubeScaleMat = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f, 0.4f, 0.5));
+//    cubeMat = cubeTransMat * cubeRotateMat * cubeScaleMat;
+//
+//    glLoadMatrixf(glm::value_ptr(cubeMat));
+//
+//
+//    glDrawArrays(GL_TRIANGLES, 0, 6);
+//
+//
+//    glDisableClientState(GL_VERTEX_ARRAY);
+//    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+//}
 /**
  * 绘制旋转的纹理图片
  */
-void drawRotateTextureCube() {
-    glCullFace(GL_BACK);
-    glFrontFace(GL_CW);
-    LFloat5 cubeVertex[] = {
-            {-0.5f, -0.5f, -0.5f, 0.0, 0.0},
-            {0.5f,  -0.5f, -0.5f, 1.0, 0.0},
-            {0.5f,  0.5f,  -0.5f, 1.0, 1.0},
-            {0.5f,  0.5f,  -0.5f, 1.0, 1.0},
-            {-0.5f, 0.5f,  -0.5f, 0.0, 1.0},
-            {-0.5f, -0.5f, -0.5f, 0.0, 0.0},
-
-            {-0.5f, -0.5f, 0.5f,  0.0, 0.0},
-            {0.5f,  -0.5f, 0.5f,  1.0, 0.0},
-            {0.5f,  0.5f,  0.5f,  1.0, 1.0},
-            {0.5f,  0.5f,  0.5f,  1.0, 1.0},
-            {-0.5f, 0.5f,  0.5f,  0.0, 1.0},
-            {-0.5f, -0.5f, 0.5f,  0.0, 0.0},
-
-            {-0.5f, 0.5f,  0.5f,  0.0, 0.0},
-            {-0.5f, 0.5f,  -0.5f, 1.0, 0.0},
-            {-0.5f, -0.5f, -0.5f, 1.0, 1.0},
-            {-0.5f, -0.5f, -0.5f, 1.0, 1.0},
-            {-0.5f, -0.5f, 0.5f,  0.0, 1.0},
-            {-0.5f, 0.5f,  0.5f,  0.0, 0.0},
-
-            {0.5f,  0.5f,  0.5f,  0.0, 0.0},
-            {0.5f,  0.5f,  -0.5f, 1.0, 0.0},
-            {0.5f,  -0.5f, -0.5f, 1.0, 1.0},
-            {0.5f,  -0.5f, -0.5f, 1.0, 1.0},
-            {0.5f,  -0.5f, 0.5f,  0.0, 1.0},
-            {0.5f,  0.5f,  0.5f,  0.0, 0.0},
-
-            {-0.5f, -0.5f, -0.5f, 0.0, 0.0},
-            {0.5f,  -0.5f, -0.5f, 1.0, 0.0},
-            {0.5f,  -0.5f, 0.5f,  1.0, 1.0},
-            {0.5f,  -0.5f, 0.5f,  1.0, 1.0},
-            {-0.5f, -0.5f, 0.5f,  0.0, 1.0},
-            {-0.5f, -0.5f, -0.5f, 0.0, 0.0},
-
-            {-0.5f, 0.5f,  -0.5f, 0.0, 0.0},
-            {0.5f,  0.5f,  -0.5f, 1.0, 0.0},
-            {0.5f,  0.5f,  0.5f,  1.0, 1.0},
-            {0.5f,  0.5f,  0.5f,  1.0, 1.0},
-            {-0.5f, 0.5f,  0.5f,  0.0, 1.0},
-            {-0.5f, 0.5f,  -0.5f, 0.0, 0.0}
-    };
-    LOGD("draw start");
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-
-    glVertexPointer(3, GL_FLOAT, sizeof(LFloat5), cubeVertex);
-    glTexCoordPointer(2, GL_FLOAT, sizeof(LFloat5), &cubeVertex[0].u);
-
-    //注意这里，m_angle要想不停变化
-    //需要不停的刷新
-    //opengl的渲染模式，就不能是RENDERMODE_WHEN_DIRTY
-    m_angle += 0.01f;
-
-    glm::mat4x4 cubeMat;
-    glm::mat4x4 cubeTransMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -0.5));
-    glm::mat4x4 cubeRotateMat = glm::rotate(glm::mat4(1.0f), m_angle, glm::vec3(0.5f, 0.5f, 1.0));
-    glm::mat4x4 cubeScaleMat = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f, 0.4f, 0.5));
-    cubeMat = cubeTransMat * cubeRotateMat * cubeScaleMat;
-
-    glLoadMatrixf(glm::value_ptr(cubeMat));
-
-
-    for (int i = 0; i < 6; ++i) {
-        LOGD("draw %d -> %d", i, mTextureIds[i]);
-        glBindTexture(GL_TEXTURE_2D, mTextureIds[i]);
-        glDrawArrays(GL_TRIANGLES, 6 * i, 6);
-    }
-
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-}
-
-GLuint mTextureId = 0;
-/**
- * 绘制纹理图片
- */
-void drawTexture() {
-    glCullFace(GL_BACK);
-    LFloat5 cubeVertex[] = {
-            {-0.5f, -0.5f, -0.5f, 0.0, 0.0},
-            {0.5f,  -0.5f, -0.5f, 1.0, 0.0},
-            {0.5f,  0.5f,  -0.5f, 1.0, 1.0},
-            {0.5f,  0.5f,  -0.5f, 1.0, 1.0},
-            {-0.5f, 0.5f,  -0.5f, 0.0, 1.0},
-            {-0.5f, -0.5f, -0.5f, 0.0, 0.0},
-
-            {-0.5f, -0.5f, 0.5f,  0.0, 0.0},
-            {0.5f,  -0.5f, 0.5f,  1.0, 0.0},
-            {0.5f,  0.5f,  0.5f,  1.0, 1.0},
-            {0.5f,  0.5f,  0.5f,  1.0, 1.0},
-            {-0.5f, 0.5f,  0.5f,  0.0, 1.0},
-            {-0.5f, -0.5f, 0.5f,  0.0, 0.0},
-
-            {-0.5f, 0.5f,  0.5f,  0.0, 0.0},
-            {-0.5f, 0.5f,  -0.5f, 1.0, 0.0},
-            {-0.5f, -0.5f, -0.5f, 1.0, 1.0},
-            {-0.5f, -0.5f, -0.5f, 1.0, 1.0},
-            {-0.5f, -0.5f, 0.5f,  0.0, 1.0},
-            {-0.5f, 0.5f,  0.5f,  0.0, 0.0},
-
-            {0.5f,  0.5f,  0.5f,  0.0, 0.0},
-            {0.5f,  0.5f,  -0.5f, 1.0, 0.0},
-            {0.5f,  -0.5f, -0.5f, 1.0, 1.0},
-            {0.5f,  -0.5f, -0.5f, 1.0, 1.0},
-            {0.5f,  -0.5f, 0.5f,  0.0, 1.0},
-            {0.5f,  0.5f,  0.5f,  0.0, 0.0},
-
-            {-0.5f, -0.5f, -0.5f, 0.0, 0.0},
-            {0.5f,  -0.5f, -0.5f, 1.0, 0.0},
-            {0.5f,  -0.5f, 0.5f,  1.0, 1.0},
-            {0.5f,  -0.5f, 0.5f,  1.0, 1.0},
-            {-0.5f, -0.5f, 0.5f,  0.0, 1.0},
-            {-0.5f, -0.5f, -0.5f, 0.0, 0.0},
-
-            {-0.5f, 0.5f,  -0.5f, 0.0, 0.0},
-            {0.5f,  0.5f,  -0.5f, 1.0, 0.0},
-            {0.5f,  0.5f,  0.5f,  1.0, 1.0},
-            {0.5f,  0.5f,  0.5f,  1.0, 1.0},
-            {-0.5f, 0.5f,  0.5f,  0.0, 1.0},
-            {-0.5f, 0.5f,  -0.5f, 0.0, 0.0}
-    };
-    glBindTexture(GL_TEXTURE_2D, mTextureId);
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-
-    glVertexPointer(3, GL_FLOAT, sizeof(LFloat5), cubeVertex);
-    glTexCoordPointer(2, GL_FLOAT, sizeof(LFloat5), &cubeVertex[0].u);
-
-    //注意这里，m_angle要想不停变化
-    //需要不停的刷新
-    //opengl的渲染模式，就不能是RENDERMODE_WHEN_DIRTY
-    m_angle += 0.01f;
-
-    glm::mat4x4 cubeMat;
-    glm::mat4x4 cubeTransMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -0.5));
-    glm::mat4x4 cubeRotateMat = glm::rotate(glm::mat4(1.0f), m_angle, glm::vec3(0.5f, 0.5f, 1.0));
-    glm::mat4x4 cubeScaleMat = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f, 0.4f, 0.5));
-    cubeMat = cubeTransMat * cubeRotateMat * cubeScaleMat;
-
-    glLoadMatrixf(glm::value_ptr(cubeMat));
-
-
-    glDrawArrays(GL_TRIANGLES, 0, 36);
-
-
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-}
-
-/**
- * 绘制立方体
- */
-void drawCube() {
-    glCullFace(GL_BACK);
-    LFloat7 cubeVertex[] = {
-            {-0.5f, -0.5f, -0.5f, 1.0, 0.0, 0.0, 1.0},
-            {0.5f,  -0.5f, -0.5f, 1.0, 0.0, 0.0, 1.0},
-            {0.5f,  0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0},
-            {0.5f,  0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0},
-            {-0.5f, 0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0},
-            {-0.5f, -0.5f, -0.5f, 1.0, 0.0, 0.0, 1.0},
-
-            {-0.5f, -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
-            {0.5f,  -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
-            {0.5f,  0.5f,  0.5f,  0.0, 1.0, 0.0, 1.0},
-            {0.5f,  0.5f,  0.5f,  0.0, 1.0, 0.0, 1.0},
-            {-0.5f, 0.5f,  0.5f,  0.0, 1.0, 0.0, 1.0},
-            {-0.5f, -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
-
-            {-0.5f, 0.5f,  0.5f,  0.0, 0.0, 1.0, 1.0},
-            {-0.5f, 0.5f,  -0.5f, 0.0, 0.0, 1.0, 1.0},
-            {-0.5f, -0.5f, -0.5f, 0.0, 0.0, 1.0, 1.0},
-            {-0.5f, -0.5f, -0.5f, 0.0, 0.0, 1.0, 1.0},
-            {-0.5f, -0.5f, 0.5f,  0.0, 0.0, 1.0, 1.0},
-            {-0.5f, 0.5f,  0.5f,  0.0, 0.0, 1.0, 1.0},
-
-            {0.5f,  0.5f,  0.5f,  0.0, 0.0, 1.0, 1.0},
-            {0.5f,  0.5f,  -0.5f, 0.0, 0.0, 1.0, 1.0},
-            {0.5f,  -0.5f, -0.5f, 0.0, 0.0, 1.0, 1.0},
-            {0.5f,  -0.5f, -0.5f, 0.0, 0.0, 1.0, 1.0},
-            {0.5f,  -0.5f, 0.5f,  0.0, 0.0, 1.0, 1.0},
-            {0.5f,  0.5f,  0.5f,  0.0, 0.0, 1.0, 1.0},
-
-            {-0.5f, -0.5f, -0.5f, 0.0, 1.0, 0.0, 1.0},
-            {0.5f,  -0.5f, -0.5f, 0.0, 1.0, 0.0, 1.0},
-            {0.5f,  -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
-            {0.5f,  -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
-            {-0.5f, -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
-            {-0.5f, -0.5f, -0.5f, 0.0, 1.0, 0.0, 1.0},
-
-            {-0.5f, 0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0},
-            {0.5f,  0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0},
-            {0.5f,  0.5f,  0.5f,  1.0, 0.0, 0.0, 1.0},
-            {0.5f,  0.5f,  0.5f,  1.0, 0.0, 0.0, 1.0},
-            {-0.5f, 0.5f,  0.5f,  1.0, 0.0, 0.0, 1.0},
-            {-0.5f, 0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0}
-    };
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glEnableClientState(GL_COLOR_ARRAY);
-
-    glVertexPointer(3, GL_FLOAT, sizeof(LFloat7), cubeVertex);
-    glColorPointer(4, GL_FLOAT, sizeof(LFloat7), &cubeVertex[0].r);
-
-    glDrawArrays(GL_TRIANGLES, 0, 36);
-
-
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_COLOR_ARRAY);
-}
-
-/**
- * 绘制正方形
- * 绘制三角形
- */
-void drawTriangle() {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glLoadIdentity();
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-
-    LFloat7 vertexTriangle[] = {
-            {-0.5, 0.1, -0.1, 1.0, 0.0, 0.0, 1.0},
-            {-0.5, 0.9, -0.1, 0.0, 1.0, 0.0, 1.0},
-            {0.5,  0.1, -0.1, 0.0, 0.0, 1.0, 1.0},
-            {0.5,  0.9, -0.1, 1.0, 0.0, 0.0, 1.0},
-    };
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glEnableClientState(GL_COLOR_ARRAY);
-
-    glVertexPointer(3, GL_FLOAT, sizeof(LFloat7), vertexTriangle);
-    glColorPointer(4, GL_FLOAT, sizeof(LFloat7), &vertexTriangle[0].r);
-
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_COLOR_ARRAY);
-
-    LFloat7 vertexTriangle2[] = {
-            {-0.0, 0.0,  -0.1, 1.0, 0.0, 0.0, 1.0},
-            {-0.5, -0.5, -0.1, 0.0, 1.0, 0.0, 1.0},
-            {0.5,  -0.5, -0.1, 0.0, 0.0, 1.0, 1.0},
-    };
-    //向GPU提交顶点坐标和颜色数据
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glEnableClientState(GL_COLOR_ARRAY);
-
-    glVertexPointer(3, GL_FLOAT, sizeof(LFloat7), vertexTriangle2);
-    glColorPointer(4, GL_FLOAT, sizeof(LFloat7), &vertexTriangle2[0].r);
-
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_COLOR_ARRAY);
-}
+//void drawRotateTextureCube() {
+//    glCullFace(GL_BACK);
+//    glFrontFace(GL_CW);
+//    LFloat5 cubeVertex[] = {
+//            {-0.5f, -0.5f, -0.5f, 0.0, 0.0},
+//            {0.5f,  -0.5f, -0.5f, 1.0, 0.0},
+//            {0.5f,  0.5f,  -0.5f, 1.0, 1.0},
+//            {0.5f,  0.5f,  -0.5f, 1.0, 1.0},
+//            {-0.5f, 0.5f,  -0.5f, 0.0, 1.0},
+//            {-0.5f, -0.5f, -0.5f, 0.0, 0.0},
+//
+//            {-0.5f, -0.5f, 0.5f,  0.0, 0.0},
+//            {0.5f,  -0.5f, 0.5f,  1.0, 0.0},
+//            {0.5f,  0.5f,  0.5f,  1.0, 1.0},
+//            {0.5f,  0.5f,  0.5f,  1.0, 1.0},
+//            {-0.5f, 0.5f,  0.5f,  0.0, 1.0},
+//            {-0.5f, -0.5f, 0.5f,  0.0, 0.0},
+//
+//            {-0.5f, 0.5f,  0.5f,  0.0, 0.0},
+//            {-0.5f, 0.5f,  -0.5f, 1.0, 0.0},
+//            {-0.5f, -0.5f, -0.5f, 1.0, 1.0},
+//            {-0.5f, -0.5f, -0.5f, 1.0, 1.0},
+//            {-0.5f, -0.5f, 0.5f,  0.0, 1.0},
+//            {-0.5f, 0.5f,  0.5f,  0.0, 0.0},
+//
+//            {0.5f,  0.5f,  0.5f,  0.0, 0.0},
+//            {0.5f,  0.5f,  -0.5f, 1.0, 0.0},
+//            {0.5f,  -0.5f, -0.5f, 1.0, 1.0},
+//            {0.5f,  -0.5f, -0.5f, 1.0, 1.0},
+//            {0.5f,  -0.5f, 0.5f,  0.0, 1.0},
+//            {0.5f,  0.5f,  0.5f,  0.0, 0.0},
+//
+//            {-0.5f, -0.5f, -0.5f, 0.0, 0.0},
+//            {0.5f,  -0.5f, -0.5f, 1.0, 0.0},
+//            {0.5f,  -0.5f, 0.5f,  1.0, 1.0},
+//            {0.5f,  -0.5f, 0.5f,  1.0, 1.0},
+//            {-0.5f, -0.5f, 0.5f,  0.0, 1.0},
+//            {-0.5f, -0.5f, -0.5f, 0.0, 0.0},
+//
+//            {-0.5f, 0.5f,  -0.5f, 0.0, 0.0},
+//            {0.5f,  0.5f,  -0.5f, 1.0, 0.0},
+//            {0.5f,  0.5f,  0.5f,  1.0, 1.0},
+//            {0.5f,  0.5f,  0.5f,  1.0, 1.0},
+//            {-0.5f, 0.5f,  0.5f,  0.0, 1.0},
+//            {-0.5f, 0.5f,  -0.5f, 0.0, 0.0}
+//    };
+//    LOGD("draw start");
+//    glEnableClientState(GL_VERTEX_ARRAY);
+//    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+//
+//    glVertexPointer(3, GL_FLOAT, sizeof(LFloat5), cubeVertex);
+//    glTexCoordPointer(2, GL_FLOAT, sizeof(LFloat5), &cubeVertex[0].u);
+//
+//    //注意这里，m_angle要想不停变化
+//    //需要不停的刷新
+//    //opengl的渲染模式，就不能是RENDERMODE_WHEN_DIRTY
+//    m_angle += 0.01f;
+//
+//    glm::mat4x4 cubeMat;
+//    glm::mat4x4 cubeTransMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -0.5));
+//    glm::mat4x4 cubeRotateMat = glm::rotate(glm::mat4(1.0f), m_angle, glm::vec3(0.5f, 0.5f, 1.0));
+//    glm::mat4x4 cubeScaleMat = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f, 0.4f, 0.5));
+//    cubeMat = cubeTransMat * cubeRotateMat * cubeScaleMat;
+//
+//    glLoadMatrixf(glm::value_ptr(cubeMat));
+//
+//
+//    for (int i = 0; i < 6; ++i) {
+//        LOGD("draw %d -> %d", i, mTextureIds[i]);
+//        glBindTexture(GL_TEXTURE_2D, mTextureIds[i]);
+//        glDrawArrays(GL_TRIANGLES, 6 * i, 6);
+//    }
+//
+//    glDisableClientState(GL_VERTEX_ARRAY);
+//    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+//}
+//
+//GLuint mTextureId = 0;
+///**
+// * 绘制纹理图片
+// */
+//void drawTexture() {
+//    glCullFace(GL_BACK);
+//    LFloat5 cubeVertex[] = {
+//            {-0.5f, -0.5f, -0.5f, 0.0, 0.0},
+//            {0.5f,  -0.5f, -0.5f, 1.0, 0.0},
+//            {0.5f,  0.5f,  -0.5f, 1.0, 1.0},
+//            {0.5f,  0.5f,  -0.5f, 1.0, 1.0},
+//            {-0.5f, 0.5f,  -0.5f, 0.0, 1.0},
+//            {-0.5f, -0.5f, -0.5f, 0.0, 0.0},
+//
+//            {-0.5f, -0.5f, 0.5f,  0.0, 0.0},
+//            {0.5f,  -0.5f, 0.5f,  1.0, 0.0},
+//            {0.5f,  0.5f,  0.5f,  1.0, 1.0},
+//            {0.5f,  0.5f,  0.5f,  1.0, 1.0},
+//            {-0.5f, 0.5f,  0.5f,  0.0, 1.0},
+//            {-0.5f, -0.5f, 0.5f,  0.0, 0.0},
+//
+//            {-0.5f, 0.5f,  0.5f,  0.0, 0.0},
+//            {-0.5f, 0.5f,  -0.5f, 1.0, 0.0},
+//            {-0.5f, -0.5f, -0.5f, 1.0, 1.0},
+//            {-0.5f, -0.5f, -0.5f, 1.0, 1.0},
+//            {-0.5f, -0.5f, 0.5f,  0.0, 1.0},
+//            {-0.5f, 0.5f,  0.5f,  0.0, 0.0},
+//
+//            {0.5f,  0.5f,  0.5f,  0.0, 0.0},
+//            {0.5f,  0.5f,  -0.5f, 1.0, 0.0},
+//            {0.5f,  -0.5f, -0.5f, 1.0, 1.0},
+//            {0.5f,  -0.5f, -0.5f, 1.0, 1.0},
+//            {0.5f,  -0.5f, 0.5f,  0.0, 1.0},
+//            {0.5f,  0.5f,  0.5f,  0.0, 0.0},
+//
+//            {-0.5f, -0.5f, -0.5f, 0.0, 0.0},
+//            {0.5f,  -0.5f, -0.5f, 1.0, 0.0},
+//            {0.5f,  -0.5f, 0.5f,  1.0, 1.0},
+//            {0.5f,  -0.5f, 0.5f,  1.0, 1.0},
+//            {-0.5f, -0.5f, 0.5f,  0.0, 1.0},
+//            {-0.5f, -0.5f, -0.5f, 0.0, 0.0},
+//
+//            {-0.5f, 0.5f,  -0.5f, 0.0, 0.0},
+//            {0.5f,  0.5f,  -0.5f, 1.0, 0.0},
+//            {0.5f,  0.5f,  0.5f,  1.0, 1.0},
+//            {0.5f,  0.5f,  0.5f,  1.0, 1.0},
+//            {-0.5f, 0.5f,  0.5f,  0.0, 1.0},
+//            {-0.5f, 0.5f,  -0.5f, 0.0, 0.0}
+//    };
+//    glBindTexture(GL_TEXTURE_2D, mTextureId);
+//    glEnableClientState(GL_VERTEX_ARRAY);
+//    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+//
+//    glVertexPointer(3, GL_FLOAT, sizeof(LFloat5), cubeVertex);
+//    glTexCoordPointer(2, GL_FLOAT, sizeof(LFloat5), &cubeVertex[0].u);
+//
+//    //注意这里，m_angle要想不停变化
+//    //需要不停的刷新
+//    //opengl的渲染模式，就不能是RENDERMODE_WHEN_DIRTY
+//    m_angle += 0.01f;
+//
+//    glm::mat4x4 cubeMat;
+//    glm::mat4x4 cubeTransMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -0.5));
+//    glm::mat4x4 cubeRotateMat = glm::rotate(glm::mat4(1.0f), m_angle, glm::vec3(0.5f, 0.5f, 1.0));
+//    glm::mat4x4 cubeScaleMat = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f, 0.4f, 0.5));
+//    cubeMat = cubeTransMat * cubeRotateMat * cubeScaleMat;
+//
+//    glLoadMatrixf(glm::value_ptr(cubeMat));
+//
+//
+//    glDrawArrays(GL_TRIANGLES, 0, 36);
+//
+//
+//    glDisableClientState(GL_VERTEX_ARRAY);
+//    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+//}
+//
+///**
+// * 绘制立方体
+// */
+//void drawCube() {
+//    glCullFace(GL_BACK);
+//    LFloat7 cubeVertex[] = {
+//            {-0.5f, -0.5f, -0.5f, 1.0, 0.0, 0.0, 1.0},
+//            {0.5f,  -0.5f, -0.5f, 1.0, 0.0, 0.0, 1.0},
+//            {0.5f,  0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0},
+//            {0.5f,  0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0},
+//            {-0.5f, 0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0},
+//            {-0.5f, -0.5f, -0.5f, 1.0, 0.0, 0.0, 1.0},
+//
+//            {-0.5f, -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
+//            {0.5f,  -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
+//            {0.5f,  0.5f,  0.5f,  0.0, 1.0, 0.0, 1.0},
+//            {0.5f,  0.5f,  0.5f,  0.0, 1.0, 0.0, 1.0},
+//            {-0.5f, 0.5f,  0.5f,  0.0, 1.0, 0.0, 1.0},
+//            {-0.5f, -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
+//
+//            {-0.5f, 0.5f,  0.5f,  0.0, 0.0, 1.0, 1.0},
+//            {-0.5f, 0.5f,  -0.5f, 0.0, 0.0, 1.0, 1.0},
+//            {-0.5f, -0.5f, -0.5f, 0.0, 0.0, 1.0, 1.0},
+//            {-0.5f, -0.5f, -0.5f, 0.0, 0.0, 1.0, 1.0},
+//            {-0.5f, -0.5f, 0.5f,  0.0, 0.0, 1.0, 1.0},
+//            {-0.5f, 0.5f,  0.5f,  0.0, 0.0, 1.0, 1.0},
+//
+//            {0.5f,  0.5f,  0.5f,  0.0, 0.0, 1.0, 1.0},
+//            {0.5f,  0.5f,  -0.5f, 0.0, 0.0, 1.0, 1.0},
+//            {0.5f,  -0.5f, -0.5f, 0.0, 0.0, 1.0, 1.0},
+//            {0.5f,  -0.5f, -0.5f, 0.0, 0.0, 1.0, 1.0},
+//            {0.5f,  -0.5f, 0.5f,  0.0, 0.0, 1.0, 1.0},
+//            {0.5f,  0.5f,  0.5f,  0.0, 0.0, 1.0, 1.0},
+//
+//            {-0.5f, -0.5f, -0.5f, 0.0, 1.0, 0.0, 1.0},
+//            {0.5f,  -0.5f, -0.5f, 0.0, 1.0, 0.0, 1.0},
+//            {0.5f,  -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
+//            {0.5f,  -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
+//            {-0.5f, -0.5f, 0.5f,  0.0, 1.0, 0.0, 1.0},
+//            {-0.5f, -0.5f, -0.5f, 0.0, 1.0, 0.0, 1.0},
+//
+//            {-0.5f, 0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0},
+//            {0.5f,  0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0},
+//            {0.5f,  0.5f,  0.5f,  1.0, 0.0, 0.0, 1.0},
+//            {0.5f,  0.5f,  0.5f,  1.0, 0.0, 0.0, 1.0},
+//            {-0.5f, 0.5f,  0.5f,  1.0, 0.0, 0.0, 1.0},
+//            {-0.5f, 0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0}
+//    };
+//    glEnableClientState(GL_VERTEX_ARRAY);
+//    glEnableClientState(GL_COLOR_ARRAY);
+//
+//    glVertexPointer(3, GL_FLOAT, sizeof(LFloat7), cubeVertex);
+//    glColorPointer(4, GL_FLOAT, sizeof(LFloat7), &cubeVertex[0].r);
+//
+//    glDrawArrays(GL_TRIANGLES, 0, 36);
+//
+//
+//    glDisableClientState(GL_VERTEX_ARRAY);
+//    glDisableClientState(GL_COLOR_ARRAY);
+//}
+//
+///**
+// * 绘制正方形
+// * 绘制三角形
+// */
+//void drawTriangle() {
+//    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+//    glLoadIdentity();
+//    glMatrixMode(GL_MODELVIEW);
+//    glLoadIdentity();
+//
+//    LFloat7 vertexTriangle[] = {
+//            {-0.5, 0.1, -0.1, 1.0, 0.0, 0.0, 1.0},
+//            {-0.5, 0.9, -0.1, 0.0, 1.0, 0.0, 1.0},
+//            {0.5,  0.1, -0.1, 0.0, 0.0, 1.0, 1.0},
+//            {0.5,  0.9, -0.1, 1.0, 0.0, 0.0, 1.0},
+//    };
+//    glEnableClientState(GL_VERTEX_ARRAY);
+//    glEnableClientState(GL_COLOR_ARRAY);
+//
+//    glVertexPointer(3, GL_FLOAT, sizeof(LFloat7), vertexTriangle);
+//    glColorPointer(4, GL_FLOAT, sizeof(LFloat7), &vertexTriangle[0].r);
+//
+//    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+//
+//    glDisableClientState(GL_VERTEX_ARRAY);
+//    glDisableClientState(GL_COLOR_ARRAY);
+//
+//    LFloat7 vertexTriangle2[] = {
+//            {-0.0, 0.0,  -0.1, 1.0, 0.0, 0.0, 1.0},
+//            {-0.5, -0.5, -0.1, 0.0, 1.0, 0.0, 1.0},
+//            {0.5,  -0.5, -0.1, 0.0, 0.0, 1.0, 1.0},
+//    };
+//    //向GPU提交顶点坐标和颜色数据
+//    glEnableClientState(GL_VERTEX_ARRAY);
+//    glEnableClientState(GL_COLOR_ARRAY);
+//
+//    glVertexPointer(3, GL_FLOAT, sizeof(LFloat7), vertexTriangle2);
+//    glColorPointer(4, GL_FLOAT, sizeof(LFloat7), &vertexTriangle2[0].r);
+//
+//    glDrawArrays(GL_TRIANGLES, 0, 3);
+//
+//    glDisableClientState(GL_VERTEX_ARRAY);
+//    glDisableClientState(GL_COLOR_ARRAY);
+//}
 
 LOpenglRender openglRender;
 

@@ -3,7 +3,7 @@
 //
 
 #include "PolygonShape.h"
-#include <GLES/gl.h>
+#include <GLES3/gl3.h>
 #include "glm/mat4x4.hpp"
 #include "glm/glm.hpp"
 #include "glm/ext/matrix_transform.hpp"
@@ -29,20 +29,20 @@ void PolygonShape::setVertex(int size, LFloat7 *vertexArray) {
 }
 
 void PolygonShape::draw() {
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glEnableClientState(GL_COLOR_ARRAY);
-
-    vbo->bind();
-    float* vertexAddress = (float*)0;
-    float* colorAddress = (float*)12;
-    glVertexPointer(3, GL_FLOAT, sizeof(LFloat7), vertexAddress);
-    glColorPointer(4, GL_FLOAT, sizeof(LFloat7), colorAddress);
-
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-    vbo->unbind();
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_COLOR_ARRAY);
+//    glEnableClientState(GL_VERTEX_ARRAY);
+//    glEnableClientState(GL_COLOR_ARRAY);
+//
+//    vbo->bind();
+//    float* vertexAddress = (float*)0;
+//    float* colorAddress = (float*)12;
+//    glVertexPointer(3, GL_FLOAT, sizeof(LFloat7), vertexAddress);
+//    glColorPointer(4, GL_FLOAT, sizeof(LFloat7), colorAddress);
+//
+//    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+//
+//    vbo->unbind();
+//    glDisableClientState(GL_VERTEX_ARRAY);
+//    glDisableClientState(GL_COLOR_ARRAY);
 }
 
 void PolygonShape::generateDefaultVertex() {
