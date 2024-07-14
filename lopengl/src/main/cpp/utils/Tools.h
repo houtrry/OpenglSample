@@ -5,9 +5,14 @@
 #ifndef OPENGLSAMPLE_TOOLS_H
 #define OPENGLSAMPLE_TOOLS_H
 
+#include <android/asset_manager_jni.h>
+#include <android/asset_manager.h>
+
 class Tools {
 public:
     static long getTimestamp();
+
+    static const char *readTextFromAssertManager(AAssetManager *assetManager, const char *fileName);
 };
 
 

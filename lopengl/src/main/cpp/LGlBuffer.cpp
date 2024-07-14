@@ -2,7 +2,6 @@
 // Created by huangdejun on 2024/7/7.
 //
 
-#include <GLES2/gl2.h>
 #include "LGlBuffer.h"
 
 LGlBuffer::LGlBuffer(LGlBuffer::BufferType type,

@@ -16,12 +16,14 @@
 #include "LOpenglPrimitivesDef.h"
 #include "shape/CubeShape.h"
 #include "shape/PolygonShape.h"
+#include "sample/TriangleSample.h"
 
 LOpenglRender::LOpenglRender() {
 
 }
 CubeShape cubeShape;
 PolygonShape polygonShape;
+TriangleSample triangleSample;
 
 LOpenglRender::~LOpenglRender() {
     if (mAssetManager) {
@@ -37,7 +39,16 @@ void LOpenglRender::init() {
     glDepthFunc(GL_LEQUAL);
     LOGD("glCreate end");
 //    cubeShape.generateDefaultVertex();
-    polygonShape.generateDefaultVertex();
+//    polygonShape.generateDefaultVertex();
+    LFloat7 arr[] = {
+            {-0.5, 0.1, -0.1, 1.0, 0.0, 0.0, 1.0},
+            {-0.5, 0.9, -0.1, 0.0, 1.0, 0.0, 1.0},
+            {0.5,  0.1, -0.1, 0.0, 0.0, 1.0, 1.0},
+            {0.5,  0.9, -0.1, 1.0, 0.0, 0.0, 1.0},
+    };
+    triangleSample.setAssertManager(mAssetManager);
+    triangleSample.init("triangle_vertex.glsl", "triangle_fragment.glsl");
+    triangleSample.setVertex(arr, 4);
 }
 
 void LOpenglRender::resize(int width, int height) {
@@ -63,7 +74,8 @@ void LOpenglRender::draw() {
 //    m_angle += 0.01;
 //    drawRotateCube(m_angle);
 //    cubeShape.draw();
-    polygonShape.draw();
+//    polygonShape.draw();
+    triangleSample.draw();
 }
 
 void LOpenglRender::setAssertManager(AAssetManager *assetManager) {
