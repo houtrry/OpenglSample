@@ -69,15 +69,8 @@ int TriangleSample::init(const char *vertexShapeFileName, const char *fragmentSh
 }
 
 void TriangleSample::setVertex(LFloat7 *vertexArray, int size) {
-    LFloat7 arr[] = {
-            {-0.5, 0.1, -0.1, 1.0, 0.0, 0.0, 1.0},
-            {-0.5, 0.9, -0.1, 0.0, 1.0, 0.0, 1.0},
-            {0.5,  0.1, -0.1, 0.0, 0.0, 1.0, 1.0},
-            {0.5,  0.9, -0.1, 1.0, 0.0, 0.0, 1.0},
-    };
     vbo->bind();
-    vbo->setBuffer(arr, 4);
-//    vbo->setBuffer(vertexArray, size);
+    vbo->setBuffer(vertexArray, size);
     vbo->unbind();
     LOGTD(TAG, "setVertex end");
 }
