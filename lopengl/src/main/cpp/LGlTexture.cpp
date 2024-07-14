@@ -6,7 +6,7 @@
 #include "landroidlog.h"
 #include <malloc.h>
 #include <string.h>
-#include "Tools.h"
+#include "utils/Tools.h"
 
 
 LGlTexture::LGlTexture() {
@@ -71,7 +71,7 @@ LGlTexture::createTextureFromAssertManager(AAssetManager *assetManager, const ch
 GLuint
 LGlTexture::generateTextureFromAssertManager(AAssetManager *assetManager, const char *fileName) {
     if (nullptr == assetManager) {
-        LOGF("mAssetManager is NULL");
+        LOGF("assetManager is NULL");
         return -1;
     }
     if (nullptr == fileName) {

@@ -26,7 +26,9 @@ add_library( # Sets the name of the library.
         # Provides a relative path to your source file(s).
         Triangle.cpp
         LImage.cpp
-        Tools.cpp
+        utils/Tools.cpp
+        utils/GlUtils.cpp
+        sample/TriangleSample.cpp
         LGlTexture.cpp
         shape/CubeShape.cpp
         shape/PolygonShape.cpp
@@ -56,7 +58,6 @@ find_library( # Sets the name of the path variable.
 target_link_libraries( # Specifies the target library.
         lopengl
         GLESv3
-        GLESv2
         EGL
         android
         # Links the target library to the log library

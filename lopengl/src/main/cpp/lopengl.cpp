@@ -1,11 +1,10 @@
 #include <string>
 #include <GLES3/gl3.h>
-#include <GLES2/gl2.h>
 #include "lopengl.h"
 #include "landroidlog.h"
 #include "LOpenglPrimitivesDef.h"
 #include "Triangle.h"
-#include "Tools.h"
+#include "utils/Tools.h"
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
@@ -20,8 +19,8 @@
 extern "C" {
 #endif
 
-float m_angle = 0.0f;
-GLuint mTextureIds[6];
+//float m_angle = 0.0f;
+//GLuint mTextureIds[6];
 
 /**
  * 绘制纹理混合（同一个面绘制多个纹理）
@@ -350,6 +349,7 @@ GLuint mTextureIds[6];
 LOpenglRender openglRender;
 
 void ndkCreate(JNIEnv *env, jobject thiz) {
+    LOGD("gl version is %s", glGetString(GL_VERSION));
     openglRender.init();
 }
 
@@ -375,7 +375,7 @@ jint ndkReadAssertManager(JNIEnv *env, jobject thiz,
     AAssetManager *mAssetManager = AAssetManager_fromJava(env, asset_manager);
     openglRender.setAssertManager(mAssetManager);
 //    const char *fileName = env->GetStringUTFChars(name, 0);
-//    mTextureId = Tools::readSourceFromAssertManager(mAssetManager, fileName);
+//    mTextureId = Tools::readSourceFromAssertManager(assetManager, fileName);
 //    env->ReleaseStringUTFChars(name, fileName);
     return 0;
 }
@@ -386,7 +386,7 @@ jboolean ndkReadAssertManagers(JNIEnv *env, jobject thiz,
 
     AAssetManager *mAssetManager = AAssetManager_fromJava(env, asset_manager);
     openglRender.setAssertManager(mAssetManager);
-//    if (NULL == mAssetManager) {
+//    if (NULL == assetManager) {
 //        LOGF("assetManager is NULL");
 //        return false;
 //    }
@@ -396,7 +396,7 @@ jboolean ndkReadAssertManagers(JNIEnv *env, jobject thiz,
 //        jobject jobject = env->GetObjectArrayElement(names, i);
 //        jstring jstr = static_cast<jstring>(jobject);
 //        const char *fileName = env->GetStringUTFChars(jstr, 0);
-//        mTextureIds[i] = Tools::readSourceFromAssertManager(mAssetManager, fileName);
+//        mTextureIds[i] = Tools::readSourceFromAssertManager(assetManager, fileName);
 //        env->ReleaseStringUTFChars(jstr, fileName);
 //    }
 //    LOGD("ndkReadAssertManagers end, and cost time is %ld", Tools::getTimestamp() - startTimestamp);

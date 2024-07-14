@@ -26,7 +26,7 @@ class MapView @JvmOverloads constructor(
     }
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
-        ndkCreate()
+
 //        ndkReadAssertManager(context.assets, "rabit.png")
         ndkReadAssertManagers(context.assets, arrayOf(
             "1.png",
@@ -36,6 +36,7 @@ class MapView @JvmOverloads constructor(
             "5.png",
             "6.png",
         ))
+        ndkCreate()
     }
 
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
