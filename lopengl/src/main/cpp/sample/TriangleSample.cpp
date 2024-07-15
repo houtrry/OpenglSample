@@ -34,6 +34,10 @@ TriangleSample::~TriangleSample() {
         delete vbo;
         vbo = nullptr;
     }
+    if (vao > 0) {
+        glDeleteVertexArrays(1, &vao);
+        vao = -1;
+    }
 //    if (aAssetManager) {
 //        delete aAssetManager;
 //        aAssetManager = nullptr;
@@ -69,9 +73,19 @@ int TriangleSample::init(const char *vertexShapeFileName, const char *fragmentSh
 }
 
 void TriangleSample::setVertex(LFloat7 *vertexArray, int size) {
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
     vbo->bind();
     vbo->setBuffer(vertexArray, size);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(LFloat7), (const void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(LFloat7), (const void*)(3 * sizeof(float)));
+
     vbo->unbind();
+
+    glBindVertexArray(0);
     LOGTD(TAG, "setVertex end");
 }
 
@@ -82,17 +96,12 @@ void TriangleSample::setAssertManager(AAssetManager *assetManager) {
 void TriangleSample::draw() {
     LOGTD(TAG, "draw start");
     glUseProgram(program);
-    vbo->bind();
 
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(LFloat7), (const void*)0);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(LFloat7), (const void*)(3 * sizeof(float)));
+    glBindVertexArray(vao);
+
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-    vbo->unbind();
-    glDisableVertexAttribArray(0);
-    glDisableVertexAttribArray(1);
+    glBindVertexArray(0);
     glUseProgram(0);
 
 
