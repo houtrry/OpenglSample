@@ -30,7 +30,7 @@ private:
     GLuint vertexShape;
     GLuint fragmentShape;
     GLuint program;
-    GLuint m_VBO;
+    GLuint vao;
     AAssetManager *aAssetManager;
     LGlBuffer *vbo;
     const char * TAG = "TriangleSample";
