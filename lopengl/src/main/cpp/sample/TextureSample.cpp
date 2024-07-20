@@ -1,20 +1,21 @@
 //
-// Created by huangdejun on 2024/7/14.
+// Created by houtr on 2024-07-15.
 //
 
-#include "TriangleSample.h"
+#include "TextureSample.h"
 #include "../landroidlog.h"
 #include "../utils/Tools.h"
 #include "../utils/GlUtils.h"
 #include <stdlib.h>
 #include <string>
 
-TriangleSample::TriangleSample() {
-    vbo = new LGlBuffer(LGlBuffer::VertexBuffer, LGlBuffer::StaticDraw);
+TextureSample::TextureSample() {
+    vbo = new LGlBuffer(LGlBuffer::IndexBuffer, LGlBuffer::StaticDraw);
     glGenVertexArrays(1, &vao);
+    texture = new LGlTexture();
 }
 
-TriangleSample::~TriangleSample() {
+TextureSample::~TextureSample() {
     if (TAG) {
         free((void *) TAG);
         TAG = nullptr;
@@ -31,6 +32,10 @@ TriangleSample::~TriangleSample() {
         glDeleteShader(fragmentShape);
         fragmentShape = -1;
     }
+    if (texture) {
+        delete texture;
+        texture = nullptr;
+    }
     if (vbo) {
         delete vbo;
         vbo = nullptr;
@@ -39,13 +44,9 @@ TriangleSample::~TriangleSample() {
         glDeleteVertexArrays(1, &vao);
         vao = -1;
     }
-//    if (aAssetManager) {
-//        delete aAssetManager;
-//        aAssetManager = nullptr;
-//    }
 }
 
-int TriangleSample::init(const char *vertexShapeFileName, const char *fragmentShapeFileName) {
+int TextureSample::init(const char *vertexShapeFileName, const char *fragmentShapeFileName) {
     if (!aAssetManager) {
         LOGTE(TAG,
               "init failure, aAssetManager is null, you need call TriangleSample::setAssertManager first!!!");
@@ -73,28 +74,21 @@ int TriangleSample::init(const char *vertexShapeFileName, const char *fragmentSh
     return 0;
 }
 
-void TriangleSample::setData(LFloat7 *vertexArray, int size) {
+void TextureSample::setData(LFloat5 *vertexArray, int size, const char *fileName) {
     glBindVertexArray(vao);
     vbo->bind();
     vbo->setBuffer(vertexArray, size);
 
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(LFloat7), (const void*)0);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(LFloat7), (const void*)(3 * sizeof(float)));
-
-    vbo->unbind();
+    texture->createTextureFromAssertManager(aAssetManager, fileName);
 
     glBindVertexArray(0);
-    LOGTD(TAG, "setVertex end");
 }
 
-void TriangleSample::setAssertManager(AAssetManager *assetManager) {
+void TextureSample::setAssertManager(AAssetManager *assetManager) {
     this->aAssetManager = assetManager;
 }
 
-void TriangleSample::draw() {
-    LOGTD(TAG, "draw start");
+void TextureSample::draw() {
     glUseProgram(program);
 
     glBindVertexArray(vao);
@@ -103,24 +97,4 @@ void TriangleSample::draw() {
 
     glBindVertexArray(0);
     glUseProgram(0);
-
-
-//    LFloat7 arr[] = {
-//            {-0.5, 0.1, -0.1, 1.0, 0.0, 0.0, 1.0},
-//            {-0.5, 0.9, -0.1, 0.0, 1.0, 0.0, 1.0},
-//            {0.5,  0.1, -0.1, 0.0, 0.0, 1.0, 1.0},
-//            {0.5,  0.9, -0.1, 1.0, 0.0, 0.0, 1.0},
-//    };
-//    glUseProgram(program);
-//
-//    glEnableVertexAttribArray(0);
-//    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(LFloat7), &arr[0].x);
-//    glEnableVertexAttribArray(1);
-//    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(LFloat7), &arr[0].r);
-//    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-//
-//    glDisableVertexAttribArray(0);
-//    glDisableVertexAttribArray(1);
-//    glUseProgram(0);
-    LOGTD(TAG, "draw end");
 }
