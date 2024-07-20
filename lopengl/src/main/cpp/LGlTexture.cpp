@@ -42,7 +42,7 @@ GLuint LGlTexture::generateTextureFromFile(char const *fileName) {
 GLuint LGlTexture::createGlTexture(LImage *image) {
     GLuint textureId;
 
-    glEnable(GL_TEXTURE_2D);
+//    glEnable(GL_TEXTURE_2D);
     //生成纹理id
     glGenTextures(1, &textureId);
     //绑定纹理id，之后的操作都针对当前的纹理索引

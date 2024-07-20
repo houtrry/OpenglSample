@@ -1,26 +1,26 @@
 //
-// Created by huangdejun on 2024/7/14.
+// Created by houtr on 2024-07-15.
 //
 
-#ifndef OPENGLSAMPLE_TRIANGLESAMPLE_H
-#define OPENGLSAMPLE_TRIANGLESAMPLE_H
+#ifndef OPENGLSAMPLE_TEXTURESAMPLE_H
+#define OPENGLSAMPLE_TEXTURESAMPLE_H
 
 #include <android/asset_manager_jni.h>
 #include <android/asset_manager.h>
 #include <GLES3/gl3.h>
 #include "../LOpenglPrimitivesDef.h"
 #include "../LGlBuffer.h"
+#include "../LGlTexture.h"
 
-class TriangleSample {
-
+class TextureSample {
 public:
-    TriangleSample();
+    TextureSample();
 
-    ~TriangleSample();
+    ~TextureSample();
 
     int init(const char *vertexShapeFileName, const char *fragmentShapeFileName);
 
-    void setData(LFloat7 *vertexArray, int size);
+    void setData(LFloat5 *vertexArray, int size, const char *fileName);
 
     void setAssertManager(AAssetManager *assetManager);
 
@@ -33,8 +33,9 @@ private:
     GLuint vao;
     AAssetManager *aAssetManager;
     LGlBuffer *vbo;
-    const char * TAG = "TriangleSample";
+    LGlTexture *texture;
+    const char *TAG = "TextureSample";
 };
 
 
-#endif //OPENGLSAMPLE_TRIANGLESAMPLE_H
+#endif //OPENGLSAMPLE_TEXTURESAMPLE_H

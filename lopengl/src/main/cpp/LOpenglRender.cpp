@@ -48,7 +48,7 @@ void LOpenglRender::init() {
     };
     triangleSample.setAssertManager(mAssetManager);
     triangleSample.init("triangle_vertex.glsl", "triangle_fragment.glsl");
-    triangleSample.setVertex(arr, sizeof(arr));
+    triangleSample.setData(arr, sizeof(arr));
 }
 
 void LOpenglRender::resize(int width, int height) {
