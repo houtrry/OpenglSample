@@ -122,3 +122,4 @@ bool GlUtils::checkErrorInfoLog(GlUtils::OperationType operationType, GLuint tar
     free(buf);
     return true;
 }
+

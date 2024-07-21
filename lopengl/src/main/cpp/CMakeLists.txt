@@ -29,6 +29,7 @@ add_library( # Sets the name of the library.
         utils/Tools.cpp
         utils/GlUtils.cpp
         sample/TriangleSample.cpp
+        sample/TextureSample.cpp
         LGlTexture.cpp
         shape/CubeShape.cpp
         shape/PolygonShape.cpp

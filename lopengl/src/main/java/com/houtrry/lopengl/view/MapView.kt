@@ -27,7 +27,7 @@ class MapView @JvmOverloads constructor(
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
 
-//        ndkReadAssertManager(context.assets, "rabit.png")
+//        ndkReadAssertManager(context.assets, "rabbit.png")
         ndkReadAssertManagers(context.assets, arrayOf(
             "1.png",
             "2.png",
