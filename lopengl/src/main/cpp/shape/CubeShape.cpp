@@ -102,7 +102,7 @@ void CubeShape::generateDefaultVertex() {
             {-0.5f, 0.5f,  -0.5f, 1.0, 0.0, 0.0, 1.0}
     };
     vbo->bind();
-    vbo->setBuffer(arr, 36);
+    vbo->setBuffer(arr, sizeof(arr));
     vbo->unbind();
     LOGD("  drawVertex size is %d", 36);
 }

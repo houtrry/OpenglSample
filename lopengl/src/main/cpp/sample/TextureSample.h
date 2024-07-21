@@ -32,8 +32,8 @@ private:
     GLuint program;
     GLuint vao;
     AAssetManager *aAssetManager;
-    LGlBuffer *vbo;
     LGlTexture *texture;
+    GLint m_SamplerLoc;
     const char *TAG = "TextureSample";
 };
 

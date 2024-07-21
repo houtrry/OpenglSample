@@ -17,6 +17,7 @@
 #include "shape/CubeShape.h"
 #include "shape/PolygonShape.h"
 #include "sample/TriangleSample.h"
+#include "sample/TextureSample.h"
 
 LOpenglRender::LOpenglRender() {
 
@@ -24,6 +25,7 @@ LOpenglRender::LOpenglRender() {
 CubeShape cubeShape;
 PolygonShape polygonShape;
 TriangleSample triangleSample;
+TextureSample textureSample;
 
 LOpenglRender::~LOpenglRender() {
     if (mAssetManager) {
@@ -40,15 +42,25 @@ void LOpenglRender::init() {
     LOGD("glCreate end");
 //    cubeShape.generateDefaultVertex();
 //    polygonShape.generateDefaultVertex();
-    LFloat7 arr[] = {
-            {-0.5, 0.1, -0.1, 1.0, 0.0, 0.0, 1.0},
-            {-0.5, 0.9, -0.1, 0.0, 1.0, 0.0, 1.0},
-            {0.5,  0.1, -0.1, 0.0, 0.0, 1.0, 1.0},
-            {0.5,  0.9, -0.1, 1.0, 0.0, 0.0, 1.0},
+//    LFloat7 arr[] = {
+//            {-0.5, 0.1, -0.1, 1.0, 0.0, 0.0, 1.0},
+//            {-0.5, 0.9, -0.1, 0.0, 1.0, 0.0, 1.0},
+//            {0.5,  0.1, -0.1, 0.0, 0.0, 1.0, 1.0},
+//            {0.5,  0.9, -0.1, 1.0, 0.0, 0.0, 1.0},
+//    };
+//    triangleSample.setAssertManager(mAssetManager);
+//    triangleSample.init("triangle_vertex.glsl", "triangle_fragment.glsl");
+//    triangleSample.setData(arr, sizeof(arr));
+
+    LFloat5 arr[] = {
+            {-0.5, 0.1, -0.1, 0.0, 1.0},
+            {-0.5, 0.9, -0.1, 0.0, 0.0},
+            {0.5,  0.1, -0.1, 1.0, 1.0},
+            {0.5,  0.9, -0.1, 1.0, 0.0},
     };
-    triangleSample.setAssertManager(mAssetManager);
-    triangleSample.init("triangle_vertex.glsl", "triangle_fragment.glsl");
-    triangleSample.setData(arr, sizeof(arr));
+    textureSample.setAssertManager(mAssetManager);
+    textureSample.init("texture_sample_vertex.glsl", "texture_sample_fragment.glsl");
+    textureSample.setData(arr, sizeof(arr), "rabbit.png");
 }
 
 void LOpenglRender::resize(int width, int height) {
@@ -75,7 +87,8 @@ void LOpenglRender::draw() {
 //    drawRotateCube(m_angle);
 //    cubeShape.draw();
 //    polygonShape.draw();
-    triangleSample.draw();
+//    triangleSample.draw();
+    textureSample.draw();
 }
 
 void LOpenglRender::setAssertManager(AAssetManager *assetManager) {
