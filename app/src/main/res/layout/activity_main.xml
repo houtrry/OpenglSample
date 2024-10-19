@@ -47,9 +47,24 @@
         android:paddingBottom="30dp"
         android:text="gray to rgb"
         android:textAllCaps="false"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/generate_gray_image_file"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/java_opengl" />
+
+    <TextView
+        android:id="@+id/generate_gray_image_file"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingStart="60dp"
+        android:paddingTop="30dp"
+        android:paddingEnd="60dp"
+        android:paddingBottom="30dp"
+        android:text="generate gray image file"
+        android:textAllCaps="false"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/gray_to_rgb" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
