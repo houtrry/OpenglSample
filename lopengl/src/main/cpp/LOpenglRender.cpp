@@ -51,12 +51,12 @@ void LOpenglRender::init() {
 //    triangleSample.setAssertManager(mAssetManager);
 //    triangleSample.init("triangle_vertex.glsl", "triangle_fragment.glsl");
 //    triangleSample.setData(arr, sizeof(arr));
-
+    textureSample.build();
     LFloat5 arr[] = {
-            {-0.5, 0.1, -0.1, 0.0, 1.0},
-            {-0.5, 0.9, -0.1, 0.0, 0.0},
-            {0.5,  0.1, -0.1, 1.0, 1.0},
-            {0.5,  0.9, -0.1, 1.0, 0.0},
+            {-0.5, 0.1, -0.1, 0.0, 0.0},
+            {-0.5, 0.9, -0.1, 0.0, 1.0},
+            {0.5,  0.9, -0.1, 1.0, 1.0},
+            {0.5,  0.1, -0.1, 1.0, 0.0},
     };
     textureSample.setAssertManager(mAssetManager);
     textureSample.init("texture_sample_vertex.glsl", "texture_sample_fragment.glsl");

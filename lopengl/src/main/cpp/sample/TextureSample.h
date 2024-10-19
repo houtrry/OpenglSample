@@ -18,6 +18,8 @@ public:
 
     ~TextureSample();
 
+    void build();
+
     int init(const char *vertexShapeFileName, const char *fragmentShapeFileName);
 
     void setData(LFloat5 *vertexArray, int size, const char *fileName);

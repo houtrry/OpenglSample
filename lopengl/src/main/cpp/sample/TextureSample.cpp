@@ -10,10 +10,7 @@
 #include <string>
 
 TextureSample::TextureSample() {
-    glGenVertexArrays(1, &vao);
-    texture = new LGlTexture();
-//    vbo = new LGlBuffer(LGlBuffer::VertexBuffer, LGlBuffer::StaticDraw);
-//    ebo = new LGlBuffer(LGlBuffer::IndexBuffer, LGlBuffer::StaticDraw);
+
 }
 
 TextureSample::~TextureSample() {
@@ -41,6 +38,13 @@ TextureSample::~TextureSample() {
         glDeleteVertexArrays(1, &vao);
         vao = -1;
     }
+}
+
+void TextureSample::build() {
+    glGenVertexArrays(1, &vao);
+    texture = new LGlTexture();
+//    vbo = new LGlBuffer(LGlBuffer::VertexBuffer, LGlBuffer::StaticDraw);
+//    ebo = new LGlBuffer(LGlBuffer::IndexBuffer, LGlBuffer::StaticDraw);
 }
 
 int TextureSample::init(const char *vertexShapeFileName, const char *fragmentShapeFileName) {
