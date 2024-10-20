@@ -42,7 +42,7 @@ GLuint LGlTexture::generateTextureFromFile(char const *fileName) {
 
 GLuint LGlTexture::createGlTexture(LImage *image) {
     GLuint textureId;
-    if (image->getType() < 4) {
+    if (image->getChannelSize() < 4) {
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     }
 //    glEnable(GL_TEXTURE_2D);
@@ -58,7 +58,7 @@ GLuint LGlTexture::createGlTexture(LImage *image) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
     //指定参数， 生成纹理（向GPU提交纹理数据）
-    switch (image->getType()) {
+    switch (image->getChannelSize()) {
         case 1: {
             glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE,
                          image->getWidth(), image->getHeight(),
