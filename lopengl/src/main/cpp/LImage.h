@@ -33,6 +33,8 @@ public:
 
     void readFromFile(U8_t *fileName);
 
+    void readFromGrayBuffer(U8_t *buff);
+
 private:
     int width = 0;
     int height = 0;

@@ -88,6 +88,7 @@ fun Bitmap.toGrayFile(file: File) {
     file.createNewFile()
     val width = this.width
     val height = this.height
+    Log.d("toGrayFile", "width: $width, height: $height")
 
     /**
      * mapData.origin_x = ByteUtil.getDouble(byteArray1)//8
@@ -109,10 +110,13 @@ fun Bitmap.toGrayFile(file: File) {
     for (i in 0 .. (offset + 8)) {
         Log.d("toGrayFile", "byteArray[$i] = ${byteArray[i]}")
     }
-    for (i in 0 until width) {
-        for (j in 0 until height) {
-            val color = getPixel(i, j)
-            byteArray[offset + j * width + i] = Color.red(color).toByte()
+    for (y in 0 until height) {
+        for (x in 0 until width) {
+            val pixel = getPixel(x, y)
+            byteArray[offset + y * width + x] = Color.red(pixel).toByte()
+            if (height / 2 == y) {
+                Log.d("toGrayFile", "g[$x, ${y}] = ${byteArray[offset + y * width + x]})")
+            }
         }
     }
 

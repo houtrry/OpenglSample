@@ -35,7 +35,7 @@ LOpenglRender::~LOpenglRender() {
 
 void LOpenglRender::init() {
     LOGD("glCreate start");
-    glClearColor(0.0, 0.0, 0.0, 1.0);
+    glClearColor(1.0, 1.0, 1.0, 1.0);
     glClearDepthf(1.0);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
@@ -57,10 +57,18 @@ void LOpenglRender::init() {
             {-0.5, 0.9, -0.1, 0.0, 1.0},
             {0.5,  0.9, -0.1, 1.0, 1.0},
             {0.5,  0.1, -0.1, 1.0, 0.0},
+//            {-0.5, 0.1, -0.1, 1.0, 0.0},
+//            {-0.5, 0.9, -0.1, 0.0, 1.0},
+//            {0.5,  0.9, -0.1, 1.0, 1.0},
+//            {0.5,  0.1, -0.1, 0.0, 0.0},
     };
     textureSample.setAssertManager(mAssetManager);
-    textureSample.init("texture_sample_vertex.glsl", "texture_sample_fragment.glsl");
-    textureSample.setData(arr, sizeof(arr), "rabbit.png");
+//    textureSample.init("texture_sample_vertex.glsl", "texture_sample_fragment.glsl");
+//    textureSample.setData(arr, sizeof(arr), "rabbit.png", false);
+//    textureSample.setData(arr, sizeof(arr), "2.png", false);
+//    textureSample.setData(arr, sizeof(arr), "optemap_22k.png", false);
+    textureSample.init("texture_gray_vertex.glsl", "texture_gray_fragment.glsl");
+    textureSample.setData(arr, sizeof(arr), "optemap_area_2k", true);
 }
 
 void LOpenglRender::resize(int width, int height) {

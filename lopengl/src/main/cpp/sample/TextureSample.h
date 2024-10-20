@@ -22,7 +22,7 @@ public:
 
     int init(const char *vertexShapeFileName, const char *fragmentShapeFileName);
 
-    void setData(LFloat5 *vertexArray, int size, const char *fileName);
+    void setData(LFloat5 *vertexArray, int size, const char *fileName, bool isSourceData);
 
     void setAssertManager(AAssetManager *assetManager);
 
