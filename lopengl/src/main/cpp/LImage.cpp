@@ -15,8 +15,8 @@ LImage::LImage() {
 LImage::LImage(int w, int h, int t, U8_t *data) {
     width = w;
     height = h;
-    type = t;
-    int size = w * h * 4;
+    channelSize = t;
+    int size = w * h * channelSize;
     imageData = data;
     if (size > 0 && data != nullptr) {
         imageData = (U8_t *) malloc(size);
@@ -40,8 +40,8 @@ int LImage::getHeight() const {
     return height;
 }
 
-int LImage::getType() const {
-    return type;
+int LImage::getChannelSize() const {
+    return channelSize;
 }
 
 U8_t *LImage::getImageData() const {
@@ -56,7 +56,7 @@ void LImage::readFromBuffer(unsigned char *buff, int len) {
     imageData = stbi_load_from_memory(buff, len, &w, &h, &t, STBI_default);
     width = w;
     height = h;
-    type = t;
+    channelSize = t;
 
     LOGD("readFromBuffer width=%d, height=%d, channel=%d", width, height, t);
     LOGD("readFromBuffer cost time is %ld", Tools::getTimestamp() - timeStart);
@@ -76,7 +76,7 @@ void LImage::readFromFile(unsigned char *fileName) {
     memcpy(imageData, picData, picDataSize);
     width = w;
     height = h;
-    type = t;
+    channelSize = t;
 
 
     stbi_image_free(imageData);
@@ -86,7 +86,7 @@ void LImage::readFromFile(unsigned char *fileName) {
 void LImage::readFromGrayBuffer(unsigned char *buff) {
     long timeStart = Tools::getTimestamp();
 
-    int t, w, h = 0;
+//    int t, w, h = 0;
     /**
      * origin_x: double
      * origin_y: double
@@ -113,8 +113,8 @@ void LImage::readFromGrayBuffer(unsigned char *buff) {
 //        LOGD("readFromBuffer imageData[%d, %d] = %d == %d", i, line, imageData[line * width + i], buff[line * width + i + 32]);
 //    }
 
-    type = 1;
-    LOGD("readFromBuffer w=%d, h=%d, t=%d ", w, h, t);
+    channelSize = 1;
+//    LOGD("readFromBuffer w=%d, h=%d, t=%d ", w, h, t);
     LOGD("readFromBuffer width=%d, height=%d ", width, height);
     LOGD("readFromBuffer cost time is %ld,  width: %d,  height: %d", Tools::getTimestamp() - timeStart, width, height);
 }

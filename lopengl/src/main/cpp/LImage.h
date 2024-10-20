@@ -25,7 +25,7 @@ public:
 
     int getHeight() const;
 
-    int getType() const;
+    int getChannelSize() const;
 
     U8_t *getImageData() const;
 
@@ -38,7 +38,7 @@ public:
 private:
     int width = 0;
     int height = 0;
-    int type = 0;
+    int channelSize = 0;
     U8_t *imageData;
 };
 
