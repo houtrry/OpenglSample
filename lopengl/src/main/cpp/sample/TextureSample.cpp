@@ -78,7 +78,7 @@ int TextureSample::init(const char *vertexShapeFileName, const char *fragmentSha
     return 0;
 }
 
-void TextureSample::setData(LFloat5 *vertexArray, int size, const char *fileName) {
+void TextureSample::setData(LFloat5 *vertexArray, int size, const char *fileName, bool isSourceData) {
     LGlBuffer vbo(LGlBuffer::VertexBuffer, LGlBuffer::StaticDraw);
     LGlBuffer ebo(LGlBuffer::IndexBuffer, LGlBuffer::StaticDraw);
     glBindVertexArray(vao);
@@ -100,7 +100,8 @@ void TextureSample::setData(LFloat5 *vertexArray, int size, const char *fileName
     ebo.unbind();
 
 
-    texture->createTextureFromAssertManager(aAssetManager, fileName);
+//    texture->createTextureFromAssertManager(aAssetManager, fileName);
+    texture->createTextureFromAssertManager(aAssetManager, fileName, isSourceData);
 }
 
 void TextureSample::setAssertManager(AAssetManager *assetManager) {

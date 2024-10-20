@@ -13,6 +13,8 @@ public:
     static long getTimestamp();
 
     static const char *readTextFromAssertManager(AAssetManager *assetManager, const char *fileName);
+
+    static int bytesToInt(const unsigned char * bytes, int offset);
 };
 
 

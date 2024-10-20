@@ -26,7 +26,7 @@ const char *Tools::readTextFromAssertManager(AAssetManager *assetManager, const 
         return nullptr;
     }
     long startTimestamp = Tools::getTimestamp();
-    LOGD ("FileName is %s", fileName);
+    LOGD ("fileName is %s", fileName);
     AAsset *asset = AAssetManager_open(assetManager, fileName, AASSET_MODE_BUFFER);
     if (asset == nullptr) {
         LOGF("asset is NULL");
@@ -50,4 +50,12 @@ const char *Tools::readTextFromAssertManager(AAssetManager *assetManager, const 
 //    AAsset_read(file, sContentBuff, shaderSize);
 //    LOGD("SHADERS: %s",sContentBuff);
 //    return sContentBuff;
+}
+
+int Tools::bytesToInt(const unsigned char *bytes, int offset) {
+    int result = bytes[offset] & 0xff;
+    result |= ((bytes[offset + 1] << 8) & 0xff00);
+    result |= ((bytes[offset + 2] << 16) & 0xff0000);
+    result |= ((bytes[offset + 3] << 24) & 0xff0000);
+    return result;
 }

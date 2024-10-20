@@ -23,12 +23,18 @@ public:
 
     GLuint createTextureFromAssertManager(AAssetManager *assetManager, char const *fileName);
 
+    GLuint createTextureFromAssertManager(AAssetManager *assetManager, char const *fileName, bool isSourceData);
+
 private:
     GLuint generateTextureFromFile(char const *fileName);
 
     GLuint generateTextureFromAssertManager(AAssetManager *assetManager, char const *fileName);
 
+    GLuint generateTextureFromAssertManager(AAssetManager *assetManager, char const *fileName, bool isSourceData);
+
     GLuint createGlTexture(LImage *image);
+
+    GLuint createGrayGlTexture(LImage *image);
 
     GLuint glTextureId;
 };
