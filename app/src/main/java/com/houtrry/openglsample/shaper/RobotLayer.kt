@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.opengl.GLES20
 import android.util.Log
 import com.houtrry.openglsample.data.BitmapSize
+import com.houtrry.openglsample.data.MapMatrix
 import com.houtrry.openglsample.utils.OpenglUtils
 import com.houtrry.openglsample.utils.glGetUniformLocation
 import com.houtrry.openglsample.utils.toBuffer
@@ -45,12 +46,12 @@ class RobotLayer(
         Log.d(TAG, "glArrowTextureId: $glArrowTextureId")
     }
 
-    override fun onDraw() {
+    override fun onDraw(mapMatrix: MapMatrix) {
         val transformMatrix = OpenglUtils.getTargetMatrix(
-            0.0f,
-            0.0f,
-            240f.toFloat()/viewWidth,
-            240f.toFloat()/viewHeight,
+            mapMatrix.translate.x,
+            mapMatrix.translate.y,
+            240f.toFloat() / viewWidth,
+            240f.toFloat() / viewHeight,
             0f
         )
 

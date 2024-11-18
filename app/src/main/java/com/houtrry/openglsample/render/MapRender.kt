@@ -1,10 +1,13 @@
 package com.houtrry.openglsample.render
 
 import android.content.Context
+import android.graphics.PointF
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView.Renderer
 import android.util.Log
 import com.houtrry.openglsample.R
+import com.houtrry.openglsample.data.MapMatrix
+import com.houtrry.openglsample.data.Point
 import com.houtrry.openglsample.shaper.ILayer
 import com.houtrry.openglsample.utils.OpenglUtils
 import com.houtrry.openglsample.utils.readRawText
@@ -20,6 +23,8 @@ class MapRender(val context: Context?) : Renderer {
 
     private val layers = CopyOnWriteArrayList<ILayer>()
     private var mPrograms: Int = 0
+
+    private val mapMatrix = MapMatrix()
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         GLES20.glClearColor(0f, 0f, 0f, 1f)
@@ -72,7 +77,7 @@ class MapRender(val context: Context?) : Renderer {
         GLES20.glEnable(GLES20.GL_BLEND)
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
         layers.forEach { it.doBeforeDraw() }
-        layers.forEach { it.onDraw() }
+        layers.forEach { it.onDraw(mapMatrix) }
         layers.forEach { it.doAfterDraw() }
         GLES20.glDisable(GLES20.GL_BLEND)
     }

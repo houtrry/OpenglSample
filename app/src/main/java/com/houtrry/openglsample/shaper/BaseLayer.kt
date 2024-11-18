@@ -2,7 +2,7 @@ package com.houtrry.openglsample.shaper
 
 import android.content.Context
 
-open abstract class BaseLayer: ILayer {
+abstract class BaseLayer: ILayer {
 
     protected var viewWidth: Int = 0
     protected var viewHeight: Int = 0

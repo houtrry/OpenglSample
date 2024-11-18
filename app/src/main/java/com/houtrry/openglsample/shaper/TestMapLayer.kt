@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.opengl.GLES20
 import android.util.Log
 import com.houtrry.openglsample.data.BitmapSize
+import com.houtrry.openglsample.data.MapMatrix
 import com.houtrry.openglsample.utils.*
 import java.nio.FloatBuffer
 import java.nio.ShortBuffer
@@ -130,11 +131,17 @@ class TestMapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
         GLES20.glEnableVertexAttribArray(textureCoordinateLocation)
     }
 
-    override fun onDraw() {
+    override fun onDraw(mapMatrix: MapMatrix) {
         GLES20.glUniform1i(
             isMapUniformLocation, 1
         )
-        val transformMatrix = OpenglUtils.getTargetMatrix()
+        val transformMatrix = OpenglUtils.getTargetMatrix(mapMatrix.translate.x,
+            mapMatrix.translate.y,
+//            mapMatrix.zoom,
+//            mapMatrix.zoom,
+            mapBitmapSize.width * mapMatrix.zoom / viewWidth,
+            mapBitmapSize.height * mapMatrix.zoom / viewHeight,
+            mapMatrix.rotate)
         GLES20.glUniformMatrix4fv(transformMatrixLocation, 1, false, transformMatrix, 0);
 
         GLES20.glActiveTexture(glMapTextureId)

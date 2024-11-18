@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.opengl.GLES20
 import android.util.Log
 import com.houtrry.openglsample.R
+import com.houtrry.openglsample.data.MapMatrix
 import com.houtrry.openglsample.utils.OpenglUtils
 import com.houtrry.openglsample.utils.glGetUniformLocation
 import com.houtrry.openglsample.utils.readRawText
@@ -103,7 +104,7 @@ class BitmapLayer(private val bitmap: Bitmap) : BaseLayer() {
         )
     }
 
-    override fun onDraw() {
+    override fun onDraw(mapMatrix: MapMatrix) {
         val position = GLES20.glGetAttribLocation(program, "vPosition")
         GLES20.glEnableVertexAttribArray(position)
         GLES20.glVertexAttribPointer(
