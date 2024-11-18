@@ -39,7 +39,7 @@ class MainActivity : AppCompatActivity() {
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        startActivity(Intent(this, OpenglNativeTestActivity::class.java))
+//        startActivity(Intent(this, OpenglNativeTestActivity::class.java))
         binding.nativeOpengl.setOnClickListener {
             startActivity(Intent(this, OpenglNativeTestActivity::class.java))
         }

@@ -3,11 +3,13 @@ package com.houtrry.openglsample.utils
 import android.graphics.Bitmap
 import android.opengl.GLES20
 import android.opengl.GLUtils
+import android.opengl.Matrix
 import android.util.Log
 
 object OpenglUtils {
 
     fun loadShaper(type: Int, shaderCode: String): Int? {
+        Log.d("loadShaper", "type: $type, shaderCode: \n$shaderCode")
         //创建顶点着色器、片源着色器
         //并返回着色器id
         val shaper = GLES20.glCreateShader(type)
@@ -112,5 +114,16 @@ object OpenglUtils {
         return textureHandle
     }
 
-
+    fun getTargetMatrix(
+        translateX: Float = 0f, translateY: Float = 0f,
+        scaleX: Float = 1f, scaleY: Float = 1f,
+        rotate: Float = 0f,
+    ): FloatArray {
+        val transformMatrix = FloatArray(16)
+        Matrix.setIdentityM(transformMatrix, 0)
+        Matrix.translateM(transformMatrix, 0, translateX, translateY, 0f)
+        Matrix.rotateM(transformMatrix, 0, rotate, 0f, 0f,1f)
+        Matrix.scaleM(transformMatrix, 0, scaleX, scaleY, 1f)
+        return transformMatrix
+    }
 }

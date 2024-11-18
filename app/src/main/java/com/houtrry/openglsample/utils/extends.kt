@@ -45,6 +45,15 @@ fun Int.glGetUniformLocation(name: String): Int {
     return GLES20.glGetUniformLocation(this, name)
 }
 
+fun Int.glGetAttribLocation(name: String): Int {
+    return GLES20.glGetAttribLocation(this, name)
+}
+fun Int.glDisableVertexAttribArray() {
+    if (this >=0 ) {
+        GLES20.glDisableVertexAttribArray(this)
+    }
+}
+
 fun <E, T, R> notNull(e: E?, t: T?, callback: ((E, T) -> R)): R? {
     return if (e == null || t == null) {
         null

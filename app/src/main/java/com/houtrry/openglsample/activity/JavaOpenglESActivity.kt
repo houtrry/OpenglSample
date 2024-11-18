@@ -1,20 +1,11 @@
 package com.houtrry.openglsample.activity
 
-import android.graphics.BitmapFactory
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.util.Log
 import android.view.ViewGroup
 import android.widget.FrameLayout
-import com.houtrry.openglsample.R
 import com.houtrry.openglsample.databinding.ActivityJavaOpenglEsactivityBinding
-import com.houtrry.openglsample.shaper.MapShaper
-import com.houtrry.openglsample.utils.readRawText
 import com.houtrry.openglsample.weight.MapView
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import kotlin.system.measureTimeMillis
 
 class JavaOpenglESActivity : AppCompatActivity() {
 

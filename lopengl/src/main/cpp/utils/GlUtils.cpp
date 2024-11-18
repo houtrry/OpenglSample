@@ -118,7 +118,7 @@ bool GlUtils::checkErrorInfoLog(GlUtils::OperationType operationType, GLuint tar
 
         }
     };
-    LOGTE(tag, "error reason is %s", buf);
+    LOGTE(tag, "load %d error reason is %s", operationType, buf);
     free(buf);
     return true;
 }

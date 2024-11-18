@@ -53,10 +53,10 @@ void LOpenglRender::init() {
 //    triangleSample.setData(arr, sizeof(arr));
     textureSample.build();
     LFloat5 arr[] = {
-            {-0.5, 0.1, -0.1, 0.0, 0.0},
-            {-0.5, 0.9, -0.1, 0.0, 1.0},
-            {0.5,  0.9, -0.1, 1.0, 1.0},
-            {0.5,  0.1, -0.1, 1.0, 0.0},
+            {-1.0, -1.0, -0.1, 0.0, 0.0},
+            {-1.0, 1.0, -0.1, 0.0, 1.0},
+            {1.0,  1.0, -0.1, 1.0, 1.0},
+            {1.0,  -1.0, -0.1, 1.0, 0.0},
 //            {-0.5, 0.1, -0.1, 1.0, 0.0},
 //            {-0.5, 0.9, -0.1, 0.0, 1.0},
 //            {0.5,  0.9, -0.1, 1.0, 1.0},
@@ -68,7 +68,7 @@ void LOpenglRender::init() {
 //    textureSample.setData(arr, sizeof(arr), "2.png", false);
 //    textureSample.setData(arr, sizeof(arr), "optemap_22k.png", false);
     textureSample.init("texture_gray_vertex.glsl", "texture_gray_fragment.glsl");
-    textureSample.setData(arr, sizeof(arr), "optemap_area_2k", true);
+    textureSample.setData(arr, sizeof(arr), "optemap_area_75k", true);
 }
 
 void LOpenglRender::resize(int width, int height) {

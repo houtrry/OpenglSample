@@ -3,7 +3,6 @@ package com.houtrry.openglsample.shaper
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
-import android.graphics.RectF
 import android.opengl.GLES20
 import android.util.Log
 import com.houtrry.openglsample.R
@@ -14,7 +13,7 @@ import com.houtrry.openglsample.utils.toBuffer
 import java.nio.FloatBuffer
 import java.nio.ShortBuffer
 
-open class BaseBitmapShaper(private val bitmap: Bitmap) : IShaper {
+class BitmapLayer(private val bitmap: Bitmap) : BaseLayer() {
 
     companion object {
         private const val TAG = "BitmapShaper"
@@ -58,8 +57,6 @@ open class BaseBitmapShaper(private val bitmap: Bitmap) : IShaper {
     //四个顶点的绘制顺序数组的缓冲数组
     private val drawListBuffer: ShortBuffer = drawOrder.toBuffer()
 
-    private var vPMatrixHande: Int = 0
-    private var mPrograms: Int = 0
     private val vertexStride: Int = COORDS_PRE_VERTEX * 4
     private val textVertexStride: Int = COORDS_PRE_TEXTURE_VERTEX * 4
 
@@ -67,57 +64,14 @@ open class BaseBitmapShaper(private val bitmap: Bitmap) : IShaper {
         Log.d(TAG, "init start")
     }
 
-    open fun getVertexShade(context: Context): String {
-        return context.readRawText(R.raw.bitmap_vertex)
-    }
-
-    open fun getFragmentShade(context: Context): String {
-        return context.readRawText(R.raw.bitmap_vertex)
-    }
-
-    open fun getDisplayRect() : RectF {
-        return RectF(0.0f, 0.0f, 1.0f, 1.0f)
-    }
-
-    override fun onCreate(context: Context) {
+    override fun onCreate() {
         //编译顶点着色器
-        val vertexShaper: Int = OpenglUtils.loadShaper(
-            GLES20.GL_VERTEX_SHADER, getVertexShade(context)
-        ) ?: kotlin.run {
-            Log.e(TAG, "compile vertex shape failure")
-            return
-        }
-        Log.d(TAG, "vertexShaper: $vertexShaper")
-        //编译片源着色器
-        val fragmentShaper: Int = OpenglUtils.loadShaper(
-            GLES20.GL_FRAGMENT_SHADER, getFragmentShade(context)
-        ) ?: kotlin.run {
-            Log.e(TAG, "compile fragment shape failure")
-            return
-        }
-        Log.d(TAG, "fragmentShaper: $fragmentShaper")
-        //创建着色器程序
-        mPrograms = OpenglUtils.linkProgram(
-            vertexShaper, fragmentShaper
-        ) ?: kotlin.run {
-            Log.e(TAG, "link program failure")
-            return
-        }
-        Log.d(TAG, "mPrograms: $mPrograms")
-        if (!OpenglUtils.isValidateProgram(mPrograms)) {
-            Log.e(TAG, "program status isn`t validate")
-            return
-        }
         glTextureId = OpenglUtils.createTexture(
             bitmap,
             GLES20.GL_NEAREST, GLES20.GL_LINEAR,
             GLES20.GL_CLAMP_TO_EDGE, GLES20.GL_CLAMP_TO_EDGE
         )
         Log.d(TAG, "glTextureId: $glTextureId")
-    }
-
-    override fun onSizeChange() {
-
     }
 
     private fun String.colorToFloatArray(): FloatArray {
@@ -141,7 +95,7 @@ open class BaseBitmapShaper(private val bitmap: Bitmap) : IShaper {
     }
 
     private fun initColorValue(name: String, color: FloatArray) {
-        val centerColorUniformLocation = mPrograms.glGetUniformLocation(name)
+        val centerColorUniformLocation = program.glGetUniformLocation(name)
         GLES20.glUniform4fv(
             centerColorUniformLocation, 1,
             color,
@@ -150,13 +104,11 @@ open class BaseBitmapShaper(private val bitmap: Bitmap) : IShaper {
     }
 
     override fun onDraw() {
-        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
-        GLES20.glUseProgram(mPrograms)
-        val position = GLES20.glGetAttribLocation(mPrograms, "vPosition")
+        val position = GLES20.glGetAttribLocation(program, "vPosition")
         GLES20.glEnableVertexAttribArray(position)
         GLES20.glVertexAttribPointer(
             position, COORDS_PRE_VERTEX, GLES20.GL_FLOAT,
-            false, vertexStride, getVertexBuffer()
+            false, vertexStride, vertexBuffer
         )
 
         initColorValue("center_color", centerColor)
@@ -166,7 +118,7 @@ open class BaseBitmapShaper(private val bitmap: Bitmap) : IShaper {
         GLES20.glActiveTexture(glTextureId)
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, glTextureId)
 
-        val textureCoordinate = GLES20.glGetAttribLocation(mPrograms, "inputTextureCoordinate")
+        val textureCoordinate = GLES20.glGetAttribLocation(program, "inputTextureCoordinate")
         GLES20.glEnableVertexAttribArray(textureCoordinate)
 
         GLES20.glVertexAttribPointer(
@@ -181,9 +133,5 @@ open class BaseBitmapShaper(private val bitmap: Bitmap) : IShaper {
 
         GLES20.glDisableVertexAttribArray(position)
         GLES20.glDisableVertexAttribArray(textureCoordinate)
-    }
-
-    private fun getVertexBuffer(): FloatBuffer {
-        return floatArrayOf().toBuffer()
     }
 }
