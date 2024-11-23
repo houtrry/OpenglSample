@@ -176,3 +176,13 @@ fun Bitmap.toGrayFile(file: File) {
 //        Log.d("toGrayFile", "g[$i, ${h / 2}] = $color)")
 //    }
 }
+
+fun Double.clamp(min: Double, max: Double): Double {
+    return if (this < min) {
+        min
+    } else if (this > max) {
+        max
+    } else {
+        this
+    }
+}

@@ -1,6 +1,7 @@
 package com.houtrry.openglsample.shaper
 
 import android.content.Context
+import android.view.MotionEvent
 
 abstract class BaseLayer: ILayer {
 
@@ -28,5 +29,9 @@ abstract class BaseLayer: ILayer {
 
     override fun doAfterDraw() {
 
+    }
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        return false
     }
 }

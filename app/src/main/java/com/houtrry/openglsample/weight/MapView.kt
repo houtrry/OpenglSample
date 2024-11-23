@@ -4,8 +4,10 @@ import android.content.Context
 import android.graphics.BitmapFactory
 import android.opengl.GLSurfaceView
 import android.util.AttributeSet
+import android.view.MotionEvent
 import com.houtrry.openglsample.R
 import com.houtrry.openglsample.render.MapRender
+import com.houtrry.openglsample.shaper.CameraControlLayer
 import com.houtrry.openglsample.shaper.ILayer
 import com.houtrry.openglsample.shaper.RobotLayer
 import com.houtrry.openglsample.shaper.TestMapLayer
@@ -21,6 +23,7 @@ class MapView(context: Context?, attrs: AttributeSet? = null) : GLSurfaceView(co
         setRenderer(mapRender)
         renderMode = RENDERMODE_CONTINUOUSLY
         notNull(context, context?.resources) { ctx, resources ->
+            addLayer(CameraControlLayer(mapRender))
             addLayer(
                 TestMapLayer(
                     BitmapFactory.decodeResource(resources, R.drawable.optemap_217k),
@@ -32,6 +35,10 @@ class MapView(context: Context?, attrs: AttributeSet? = null) : GLSurfaceView(co
                 )
             )
         }
+    }
+
+    override fun onTouchEvent(event: MotionEvent?): Boolean {
+        return event?.let { mapRender.onTouchEvent(event) } ?: false
     }
 
     private fun addLayer(shaper: ILayer) {

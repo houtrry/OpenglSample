@@ -115,7 +115,7 @@ object OpenglUtils {
     }
 
     fun getTargetMatrix(
-        translateX: Float = 0f, translateY: Float = 0f,
+        translateX: Float = 0.0f, translateY: Float = 0f,
         scaleX: Float = 1f, scaleY: Float = 1f,
         rotate: Float = 0f,
     ): FloatArray {

@@ -2,6 +2,7 @@ package com.houtrry.openglsample.shaper
 
 import android.graphics.Bitmap
 import android.opengl.GLES20
+import android.opengl.Matrix
 import android.util.Log
 import com.houtrry.openglsample.data.BitmapSize
 import com.houtrry.openglsample.data.MapMatrix
@@ -48,13 +49,13 @@ class RobotLayer(
 
     override fun onDraw(mapMatrix: MapMatrix) {
         val transformMatrix = OpenglUtils.getTargetMatrix(
-            mapMatrix.translate.x,
-            mapMatrix.translate.y,
+            mapMatrix.getTranslateX(),
+            mapMatrix.getTranslateY(),
             240f.toFloat() / viewWidth,
             240f.toFloat() / viewHeight,
             0f
         )
-
+        Log.d(TAG, "translateX: ${mapMatrix.getTransformMatrix()[3]}, translateY: ${mapMatrix.getTransformMatrix()[7]}, matrix: ${mapMatrix.getTransformMatrix().contentToString()}")
         val transformMatrixLocation = program.glGetUniformLocation("u_TransformMatrix")
         GLES20.glActiveTexture(glArrowTextureId)
         GLES20.glUniformMatrix4fv(transformMatrixLocation, 1, false, transformMatrix, 0)

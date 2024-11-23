@@ -5,6 +5,7 @@ import android.graphics.PointF
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView.Renderer
 import android.util.Log
+import android.view.MotionEvent
 import com.houtrry.openglsample.R
 import com.houtrry.openglsample.data.MapMatrix
 import com.houtrry.openglsample.data.Point
@@ -86,8 +87,21 @@ class MapRender(val context: Context?) : Renderer {
         layers.add(layer)
     }
 
+    fun getMapMatrix() = mapMatrix
+
     fun removeLayer(layer:ILayer) {
         layers.remove(layer)
+    }
+
+    fun onTouchEvent(event: MotionEvent): Boolean {
+        run loop@ {
+            layers.forEach {
+                if (it.onTouchEvent(event)) {
+                    return true
+                }
+            }
+        }
+        return false
     }
 
 }

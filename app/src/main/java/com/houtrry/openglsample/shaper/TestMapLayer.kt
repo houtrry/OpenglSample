@@ -3,6 +3,7 @@ package com.houtrry.openglsample.shaper
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.opengl.GLES20
+import android.opengl.Matrix
 import android.util.Log
 import com.houtrry.openglsample.data.BitmapSize
 import com.houtrry.openglsample.data.MapMatrix
@@ -113,7 +114,7 @@ class TestMapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
     override fun doBeforeDraw() {
         super.doBeforeDraw()
         positionLocation = program.glGetAttribLocation("vPosition")
-        Log.d(TAG, "positionLocation: $positionLocation")
+//        Log.d(TAG, "positionLocation: $positionLocation")
         GLES20.glEnableVertexAttribArray(positionLocation)
         GLES20.glVertexAttribPointer(
             positionLocation, COORDS_PRE_VERTEX, GLES20.GL_FLOAT,
@@ -123,7 +124,7 @@ class TestMapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
         outerColorLocation = initColorValue("outer_color", outerColor)
         wallColorLocation = initColorValue("wall_color", wallColor)
         isMapUniformLocation = program.glGetUniformLocation("isMap")
-        Log.d(TAG, "isMapUniformLocation: $isMapUniformLocation")
+//        Log.d(TAG, "isMapUniformLocation: $isMapUniformLocation")
         transformMatrixLocation = program.glGetUniformLocation("u_TransformMatrix")
         GLES20.glEnableVertexAttribArray(transformMatrixLocation)
 
@@ -131,18 +132,30 @@ class TestMapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
         GLES20.glEnableVertexAttribArray(textureCoordinateLocation)
     }
 
+    private val mMVPMatrix = FloatArray(16) // MVP 矩阵
+
+    private val mMatrix = FloatArray(16) // 用于变换的矩阵
+
     override fun onDraw(mapMatrix: MapMatrix) {
         GLES20.glUniform1i(
             isMapUniformLocation, 1
         )
-        val transformMatrix = OpenglUtils.getTargetMatrix(mapMatrix.translate.x,
-            mapMatrix.translate.y,
-//            mapMatrix.zoom,
-//            mapMatrix.zoom,
-            mapBitmapSize.width * mapMatrix.zoom / viewWidth,
-            mapBitmapSize.height * mapMatrix.zoom / viewHeight,
-            mapMatrix.rotate)
-        GLES20.glUniformMatrix4fv(transformMatrixLocation, 1, false, transformMatrix, 0);
+        val projectionMatrix = FloatArray(16)
+        val viewMatrix = FloatArray(16)
+//        Matrix.setLookAtM(viewMatrix, 0, 0f, 0f, -5f, 0f, 0f, 0f, 0f, 1f, 0f) // 向上方向
+//
+//        Matrix.frustumM(projectionMatrix, 0, -1f, 1f, -1f, 1f, 3f, 7f)
+        // 计算 MVP 矩阵
+//        Matrix.multiplyMM(mMVPMatrix, 0, mMVPMatrix, 0, mapMatrix.getTransformMatrix(), 0);
+//        val transformMatrix = OpenglUtils.getTargetMatrix(0f,
+//            0f,
+////            mapMatrix.zoom,
+////            mapMatrix.zoom,
+//            mapBitmapSize.width * mapMatrix.zoom / viewWidth,
+//            mapBitmapSize.height * mapMatrix.zoom / viewHeight,
+//            0f)
+//        Matrix.multiplyMM()
+        GLES20.glUniformMatrix4fv(transformMatrixLocation, 1, false, mapMatrix.getTransformMatrix(), 0);
 
         GLES20.glActiveTexture(glMapTextureId)
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, glMapTextureId)
