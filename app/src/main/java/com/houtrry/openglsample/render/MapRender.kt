@@ -77,9 +77,11 @@ class MapRender(val context: Context?) : Renderer {
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
         GLES20.glEnable(GLES20.GL_BLEND)
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
-        layers.forEach { it.doBeforeDraw() }
-        layers.forEach { it.onDraw(mapMatrix) }
-        layers.forEach { it.doAfterDraw() }
+        synchronized(mapMatrix) {
+            layers.forEach { it.doBeforeDraw() }
+            layers.forEach { it.onDraw(mapMatrix) }
+            layers.forEach { it.doAfterDraw() }
+        }
         GLES20.glDisable(GLES20.GL_BLEND)
     }
 

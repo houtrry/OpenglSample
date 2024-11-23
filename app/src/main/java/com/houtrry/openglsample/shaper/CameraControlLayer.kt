@@ -10,6 +10,7 @@ import android.view.ScaleGestureDetector.SimpleOnScaleGestureListener
 import androidx.core.view.GestureDetectorCompat
 import com.houtrry.openglsample.data.MapMatrix
 import com.houtrry.openglsample.gesture.RotateGestureDetector
+import com.houtrry.openglsample.gesture.ZoomRotateGestureDetector
 import com.houtrry.openglsample.render.MapRender
 
 class CameraControlLayer(val mapRender: MapRender) : BaseLayer() {
@@ -21,6 +22,7 @@ class CameraControlLayer(val mapRender: MapRender) : BaseLayer() {
     private var translateGesture: GestureDetectorCompat? = null
     private var zoomGesture: ScaleGestureDetector? = null
     private var rotateGestureDetector: RotateGestureDetector? = null
+    private var zoomRotateGestureDetector: ZoomRotateGestureDetector? = null
     private val mainHandler: Handler by lazy { Handler(Looper.getMainLooper()) }
 
     init {
@@ -41,8 +43,7 @@ class CameraControlLayer(val mapRender: MapRender) : BaseLayer() {
                     distanceX: Float, distanceY: Float
                 ): Boolean {
                     mapRender.getMapMatrix()
-                        .translate(-distanceX * 2 / viewWidth, distanceY * 2 / viewHeight)
-                    Log.d(TAG, "onScroll $distanceX, $distanceY")
+                        .translate(-distanceX / (viewWidth * 0.5f), distanceY / (viewHeight * 0.5f))
                     return true
                 }
             })
@@ -56,8 +57,8 @@ class CameraControlLayer(val mapRender: MapRender) : BaseLayer() {
                         val focusY = detector.focusY
                         val factor = detector.scaleFactor
                         mapRender.getMapMatrix().zoom(
-                            (focusX - viewWidth * 0.5f) / (viewWidth * 0.5f),
-                            (viewHeight * 0.5f - focusY) / (viewHeight * 0.5f),
+                            focusX / (viewWidth * 0.5f) - 1f,
+                            1f - focusY / (viewHeight * 0.5f),
                             factor
                         )
                         return true
@@ -65,8 +66,17 @@ class CameraControlLayer(val mapRender: MapRender) : BaseLayer() {
                 })
             rotateGestureDetector = RotateGestureDetector{ focusX, focusY, rotate ->
                 mapRender.getMapMatrix().rotate(
-                    (focusX - viewWidth * 0.5f) / (viewWidth * 0.5f),
-                    (viewHeight * 0.5f - focusY) / (viewHeight * 0.5f),
+                    focusX / (viewWidth * 0.5f) - 1f,
+                    1f - focusY / (viewHeight * 0.5f),
+                    rotate
+                )
+                true
+            }
+            zoomRotateGestureDetector = ZoomRotateGestureDetector { focusX, focusY, scale, rotate ->
+                mapRender.getMapMatrix().rotateWithZoom(
+                    focusX / (viewWidth * 0.5f) - 1f,
+                    1f - focusY / (viewHeight * 0.5f),
+                    scale,
                     rotate
                 )
                 true
@@ -80,13 +90,17 @@ class CameraControlLayer(val mapRender: MapRender) : BaseLayer() {
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         val translateGestureResult = translateGesture?.onTouchEvent(event) ?: false
-        val zoomGestureResult = zoomGesture?.onTouchEvent(event) ?: false
-        val rotateGestureResult = rotateGestureDetector?.onTouchEvent(event) ?: false
+        val zoomGestureResult = /*zoomGesture?.onTouchEvent(event) ?:*/ false
+        val rotateGestureResult = /*rotateGestureDetector?.onTouchEvent(event) ?:*/ false
+        val zoomRotateGestureResult = zoomRotateGestureDetector?.onTouchEvent(event) ?: false
         Log.d(
             TAG,
             "event: $event, translateGestureResult: $translateGestureResult, zoomGestureResult: $zoomGestureResult, rotateGestureResult： $rotateGestureResult"
         )
-        return translateGestureResult || zoomGestureResult || rotateGestureResult
+        return translateGestureResult
+//                || zoomGestureResult
+    //                || rotateGestureResult
+                || zoomRotateGestureResult
     }
 
     private fun handleTouchEvent(event: MotionEvent) {

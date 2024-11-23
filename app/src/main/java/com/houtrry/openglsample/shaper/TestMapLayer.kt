@@ -142,20 +142,19 @@ class TestMapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
         )
         val projectionMatrix = FloatArray(16)
         val viewMatrix = FloatArray(16)
-//        Matrix.setLookAtM(viewMatrix, 0, 0f, 0f, -5f, 0f, 0f, 0f, 0f, 1f, 0f) // 向上方向
-//
-//        Matrix.frustumM(projectionMatrix, 0, -1f, 1f, -1f, 1f, 3f, 7f)
+        Matrix.setLookAtM(viewMatrix, 0,
+            0f, 0f, -5f,
+            0f, 0f, 0f,
+            0f, 1f, 0f) // 向上方向
+
+
+        Matrix.frustumM(projectionMatrix, 0,
+            1f, -1f, -1f, 1f,
+            3f, 7f)
         // 计算 MVP 矩阵
-//        Matrix.multiplyMM(mMVPMatrix, 0, mMVPMatrix, 0, mapMatrix.getTransformMatrix(), 0);
-//        val transformMatrix = OpenglUtils.getTargetMatrix(0f,
-//            0f,
-////            mapMatrix.zoom,
-////            mapMatrix.zoom,
-//            mapBitmapSize.width * mapMatrix.zoom / viewWidth,
-//            mapBitmapSize.height * mapMatrix.zoom / viewHeight,
-//            0f)
-//        Matrix.multiplyMM()
-        GLES20.glUniformMatrix4fv(transformMatrixLocation, 1, false, mapMatrix.getTransformMatrix(), 0);
+        Matrix.multiplyMM(mMVPMatrix, 0, projectionMatrix, 0, viewMatrix, 0);
+        Matrix.multiplyMM(mMVPMatrix, 0, mMVPMatrix, 0, mapMatrix.getTransformMatrix(), 0);
+        GLES20.glUniformMatrix4fv(transformMatrixLocation, 1, false, mMVPMatrix, 0);
 
         GLES20.glActiveTexture(glMapTextureId)
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, glMapTextureId)

@@ -26,6 +26,7 @@ class MapMatrix(
         Matrix.setIdentityM(transformMatrix, 0)
     }
 
+    @Synchronized
     fun translate(translateX: Float, translateY: Float) {
         this.translate.x += translateX
         this.translate.y += translateY
@@ -33,6 +34,7 @@ class MapMatrix(
         Log.d(TAG, "transformMatrix: $transformMatrix")
     }
 
+    @Synchronized
     fun zoom(focusX: Float, focusY: Float, zoom: Float) {
         Matrix.translateM(transformMatrix, 0, focusX, focusY, 0f)
         Matrix.scaleM(transformMatrix, 0, zoom, zoom, 1f)
@@ -40,11 +42,24 @@ class MapMatrix(
         this.zoom *= zoom
     }
 
+    @Synchronized
     fun rotate(focusX: Float, focusY: Float, rotate: Float) {
         Matrix.translateM(transformMatrix, 0, focusX, focusY, 0f)
         Matrix.rotateM(transformMatrix, 0, rotate, 0f, 0f, 1f)
         Matrix.translateM(transformMatrix, 0, -focusX, -focusY, 0f)
         this.rotate += rotate
+    }
+
+    @Synchronized
+    fun rotateWithZoom(focusX: Float, focusY: Float, scale: Float, rotate: Float) {
+        Matrix.translateM(transformMatrix, 0, focusX, focusY, 0f)
+        Matrix.scaleM(transformMatrix, 0, scale, scale, 1f)
+        Matrix.rotateM(transformMatrix, 0, rotate, 0f, 0f, 1f)
+        Matrix.translateM(transformMatrix, 0, -focusX, -focusY, 0f)
+        this.rotate += rotate
+        this.zoom *= scale
+//        zoom(focusX, focusY, zoom)
+//        rotate(focusX, focusY, rotate)
     }
 
     fun getTransformMatrix() = transformMatrix
