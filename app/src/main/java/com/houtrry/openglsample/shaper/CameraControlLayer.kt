@@ -34,7 +34,6 @@ class CameraControlLayer(val mapRender: MapRender) : BaseLayer() {
             translateGesture = GestureDetectorCompat(context, object : SimpleOnGestureListener() {
                 override fun onDown(e: MotionEvent): Boolean {
                     // This must return true in order for onScroll() to trigger.
-                    Log.d(TAG, "onDown ")
                     return true
                 }
 
@@ -43,7 +42,8 @@ class CameraControlLayer(val mapRender: MapRender) : BaseLayer() {
                     distanceX: Float, distanceY: Float
                 ): Boolean {
                     mapRender.getMapMatrix()
-                        .translate(-distanceX / (viewWidth * 0.5f), distanceY / (viewHeight * 0.5f))
+                        .translate(-distanceX / (viewHeight * 0.5f), distanceY / (viewHeight * 0.5f))
+                    mapRender.requestRender()
                     return true
                 }
             })
@@ -58,28 +58,30 @@ class CameraControlLayer(val mapRender: MapRender) : BaseLayer() {
                         val factor = detector.scaleFactor
                         mapRender.getMapMatrix().zoom(
                             factor,
-                            focusX / (viewWidth * 0.5f) - 1f,
+                            focusX / (viewHeight * 0.5f) - 1f,
                             1f - focusY / (viewHeight * 0.5f)
                         )
+                        mapRender.requestRender()
                         return true
                     }
                 })
             rotateGestureDetector = RotateGestureDetector{ focusX, focusY, rotate ->
                 mapRender.getMapMatrix().rotate(
                     rotate,
-                    focusX / (viewWidth * 0.5f) - 1f,
+                    focusX / (viewHeight * 0.5f) - 1f,
                     1f - focusY / (viewHeight * 0.5f),
-
                 )
+                mapRender.requestRender()
                 true
             }
             zoomRotateGestureDetector = ZoomRotateGestureDetector { focusX, focusY, scale, rotate ->
                 mapRender.getMapMatrix().rotateWithZoom(
                     scale,
                     rotate,
-                    focusX / (viewWidth * 0.5f) - 1f,
+                    focusX / (viewHeight * 0.5f) - 1f,
                     1f - focusY / (viewHeight * 0.5f),
                 )
+                mapRender.requestRender()
                 true
             }
         }
@@ -104,7 +106,8 @@ class CameraControlLayer(val mapRender: MapRender) : BaseLayer() {
                 || zoomRotateGestureResult
     }
 
-    private fun handleTouchEvent(event: MotionEvent) {
-
+    override fun onSizeChange(width: Int, height: Int) {
+        super.onSizeChange(width, height)
+        mapMatrix.frustumM(width, height)
     }
 }

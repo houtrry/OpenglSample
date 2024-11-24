@@ -16,7 +16,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
-class MapRender(val context: Context?) : Renderer {
+class MapRender(val context: Context?, private val renderCallback: () -> Unit) : Renderer {
 
     companion object {
         private const val TAG = "MapRender"
@@ -106,4 +106,7 @@ class MapRender(val context: Context?) : Renderer {
         return false
     }
 
+    fun requestRender() {
+        renderCallback.invoke()
+    }
 }

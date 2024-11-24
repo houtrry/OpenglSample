@@ -46,19 +46,23 @@ class RobotLayer(
 
         Log.d(TAG, "glArrowTextureId: $glArrowTextureId")
     }
+    private val mMVPMatrix = FloatArray(16) // MVP 矩阵
 
     override fun onDraw() {
         val transformMatrix = OpenglUtils.getTargetMatrix(
             mapMatrix.getTranslateX(),
             mapMatrix.getTranslateY(),
-            240f.toFloat() / viewWidth,
+            240f.toFloat() / viewHeight,
             240f.toFloat() / viewHeight,
             0f
         )
         Log.d(TAG, "translateX: ${mapMatrix.getTransformMatrix()[3]}, translateY: ${mapMatrix.getTransformMatrix()[7]}, matrix: ${mapMatrix.getTransformMatrix().contentToString()}")
+        Matrix.setIdentityM(mMVPMatrix, 0)
+        Matrix.multiplyMM(mMVPMatrix, 0, mapMatrix.getViewMatrix(), 0, transformMatrix, 0);
+        Matrix.multiplyMM(mMVPMatrix, 0, mapMatrix.getProjectionMatrix(), 0, mMVPMatrix, 0);
         val transformMatrixLocation = program.glGetUniformLocation("u_TransformMatrix")
         GLES20.glActiveTexture(glArrowTextureId)
-        GLES20.glUniformMatrix4fv(transformMatrixLocation, 1, false, transformMatrix, 0)
+        GLES20.glUniformMatrix4fv(transformMatrixLocation, 1, false, mMVPMatrix, 0)
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, glArrowTextureId)
         GLES20.glDrawElements(
             GLES20.GL_TRIANGLE_STRIP, drawOrder.size,

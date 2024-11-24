@@ -16,12 +16,12 @@ import com.houtrry.openglsample.utils.readRawText
 
 class MapView(context: Context?, attrs: AttributeSet? = null) : GLSurfaceView(context, attrs) {
 
-    private val mapRender: MapRender by lazy { MapRender(context) }
+    private val mapRender: MapRender by lazy { MapRender(context) { requestRenderIfNeed() } }
 
     init {
         setEGLContextClientVersion(2)
         setRenderer(mapRender)
-        renderMode = RENDERMODE_CONTINUOUSLY
+        renderMode = RENDERMODE_WHEN_DIRTY
         notNull(context, context?.resources) { ctx, resources ->
             addLayer(CameraControlLayer(mapRender))
             addLayer(

@@ -61,9 +61,6 @@ class TestMapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
 
     private val mMVPMatrix = FloatArray(16) // MVP 矩阵
 
-    private val projectionMatrix = FloatArray(16) // 用于变换的矩阵
-    private val viewMatrix = FloatArray(16)
-
     init {
         Log.d(TAG, "init start")
     }
@@ -76,10 +73,6 @@ class TestMapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
             GLES20.GL_CLAMP_TO_EDGE, GLES20.GL_CLAMP_TO_EDGE
         )
         Log.d(TAG, "glTextureId: $glMapTextureId")
-        Matrix.setLookAtM(viewMatrix, 0,
-            0f, 0f, 2f,
-            0f, 0f, 0f,
-            0f, 1f, 0f)
     }
 
     private fun String.colorToFloatArray(): FloatArray {
@@ -97,10 +90,6 @@ class TestMapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
         super.onSizeChange(width, height)
         aspectRatio = width * 1f / height
         Log.d(TAG, "onSizeChange $viewWidth, $viewHeight, $width, $height")
-        Matrix.frustumM(projectionMatrix, 0,
-            -aspectRatio, aspectRatio,
-            -1f, 1f,
-            1f, 100.0f)
     }
 
     private val centerColor: FloatArray by lazy {
@@ -163,13 +152,12 @@ class TestMapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
         // 计算缩放因子
         val scaleX: Float = if (aspectRatio > 1) 1f else aspectRatio // 根据宽高比计算缩放
         val scaleY: Float = if (aspectRatio < 1) 1f else 1 / aspectRatio
-//        mapMatrix.scale(1f, 1 / aspectRatio)
 
         val mvpMatrix = mapMatrix.getTransformMatrix().copyOf()
         Matrix.scaleM(mvpMatrix, 0, scaleX, scaleY, 1f)
 
-        Matrix.multiplyMM(mMVPMatrix, 0, viewMatrix, 0, mvpMatrix, 0);
-        Matrix.multiplyMM(mMVPMatrix, 0, projectionMatrix, 0, mMVPMatrix, 0);
+        Matrix.multiplyMM(mMVPMatrix, 0, mapMatrix.getViewMatrix(), 0, mvpMatrix, 0);
+        Matrix.multiplyMM(mMVPMatrix, 0, mapMatrix.getProjectionMatrix(), 0, mMVPMatrix, 0);
         GLES20.glUniformMatrix4fv(transformMatrixLocation, 1, false, mMVPMatrix, 0);
 //        GLES20.glUniformMatrix4fv(transformMatrixLocation, 1, false, mapMatrix.getTransformMatrix(), 0);
 
