@@ -6,10 +6,10 @@ import android.opengl.GLES20
 import android.opengl.Matrix
 import android.util.Log
 import com.houtrry.openglsample.data.BitmapSize
-import com.houtrry.openglsample.data.MapMatrix
 import com.houtrry.openglsample.utils.*
 import java.nio.FloatBuffer
 import java.nio.ShortBuffer
+
 
 class TestMapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
 
@@ -59,6 +59,11 @@ class TestMapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
     private val textVertexStride: Int = COORDS_PRE_TEXTURE_VERTEX * 4
     private lateinit var mapBitmapSize: BitmapSize
 
+    private val mMVPMatrix = FloatArray(16) // MVP 矩阵
+
+    private val projectionMatrix = FloatArray(16) // 用于变换的矩阵
+    private val viewMatrix = FloatArray(16)
+
     init {
         Log.d(TAG, "init start")
     }
@@ -71,6 +76,10 @@ class TestMapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
             GLES20.GL_CLAMP_TO_EDGE, GLES20.GL_CLAMP_TO_EDGE
         )
         Log.d(TAG, "glTextureId: $glMapTextureId")
+        Matrix.setLookAtM(viewMatrix, 0,
+            0f, 0f, 2f,
+            0f, 0f, 0f,
+            0f, 1f, 0f)
     }
 
     private fun String.colorToFloatArray(): FloatArray {
@@ -81,6 +90,17 @@ class TestMapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
             Color.blue(color) / 255f,
             Color.alpha(color) / 255f
         )
+    }
+
+    private var aspectRatio = 1f
+    override fun onSizeChange(width: Int, height: Int) {
+        super.onSizeChange(width, height)
+        aspectRatio = width * 1f / height
+        Log.d(TAG, "onSizeChange $viewWidth, $viewHeight, $width, $height")
+        Matrix.frustumM(projectionMatrix, 0,
+            -aspectRatio, aspectRatio,
+            -1f, 1f,
+            1f, 100.0f)
     }
 
     private val centerColor: FloatArray by lazy {
@@ -132,29 +152,26 @@ class TestMapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
         GLES20.glEnableVertexAttribArray(textureCoordinateLocation)
     }
 
-    private val mMVPMatrix = FloatArray(16) // MVP 矩阵
-
-    private val mMatrix = FloatArray(16) // 用于变换的矩阵
-
-    override fun onDraw(mapMatrix: MapMatrix) {
+    override fun onDraw() {
         GLES20.glUniform1i(
             isMapUniformLocation, 1
         )
-        val projectionMatrix = FloatArray(16)
-        val viewMatrix = FloatArray(16)
-        Matrix.setLookAtM(viewMatrix, 0,
-            0f, 0f, -5f,
-            0f, 0f, 0f,
-            0f, 1f, 0f) // 向上方向
+//        mapMatrix.testAutoRotate()
 
+        // Apply a ModelView Projection transformation
+        Matrix.setIdentityM(mMVPMatrix, 0)
+        // 计算缩放因子
+        val scaleX: Float = if (aspectRatio > 1) 1f else aspectRatio // 根据宽高比计算缩放
+        val scaleY: Float = if (aspectRatio < 1) 1f else 1 / aspectRatio
+//        mapMatrix.scale(1f, 1 / aspectRatio)
 
-        Matrix.frustumM(projectionMatrix, 0,
-            1f, -1f, -1f, 1f,
-            3f, 7f)
-        // 计算 MVP 矩阵
-        Matrix.multiplyMM(mMVPMatrix, 0, projectionMatrix, 0, viewMatrix, 0);
-        Matrix.multiplyMM(mMVPMatrix, 0, mMVPMatrix, 0, mapMatrix.getTransformMatrix(), 0);
+        val mvpMatrix = mapMatrix.getTransformMatrix().copyOf()
+        Matrix.scaleM(mvpMatrix, 0, scaleX, scaleY, 1f)
+
+        Matrix.multiplyMM(mMVPMatrix, 0, viewMatrix, 0, mvpMatrix, 0);
+        Matrix.multiplyMM(mMVPMatrix, 0, projectionMatrix, 0, mMVPMatrix, 0);
         GLES20.glUniformMatrix4fv(transformMatrixLocation, 1, false, mMVPMatrix, 0);
+//        GLES20.glUniformMatrix4fv(transformMatrixLocation, 1, false, mapMatrix.getTransformMatrix(), 0);
 
         GLES20.glActiveTexture(glMapTextureId)
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, glMapTextureId)

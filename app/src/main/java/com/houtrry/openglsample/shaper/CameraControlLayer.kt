@@ -57,34 +57,35 @@ class CameraControlLayer(val mapRender: MapRender) : BaseLayer() {
                         val focusY = detector.focusY
                         val factor = detector.scaleFactor
                         mapRender.getMapMatrix().zoom(
+                            factor,
                             focusX / (viewWidth * 0.5f) - 1f,
-                            1f - focusY / (viewHeight * 0.5f),
-                            factor
+                            1f - focusY / (viewHeight * 0.5f)
                         )
                         return true
                     }
                 })
             rotateGestureDetector = RotateGestureDetector{ focusX, focusY, rotate ->
                 mapRender.getMapMatrix().rotate(
+                    rotate,
                     focusX / (viewWidth * 0.5f) - 1f,
                     1f - focusY / (viewHeight * 0.5f),
-                    rotate
+
                 )
                 true
             }
             zoomRotateGestureDetector = ZoomRotateGestureDetector { focusX, focusY, scale, rotate ->
                 mapRender.getMapMatrix().rotateWithZoom(
+                    scale,
+                    rotate,
                     focusX / (viewWidth * 0.5f) - 1f,
                     1f - focusY / (viewHeight * 0.5f),
-                    scale,
-                    rotate
                 )
                 true
             }
         }
     }
 
-    override fun onDraw(mapMatrix: MapMatrix) {
+    override fun onDraw() {
 
     }
 

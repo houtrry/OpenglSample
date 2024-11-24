@@ -47,7 +47,7 @@ class RobotLayer(
         Log.d(TAG, "glArrowTextureId: $glArrowTextureId")
     }
 
-    override fun onDraw(mapMatrix: MapMatrix) {
+    override fun onDraw() {
         val transformMatrix = OpenglUtils.getTargetMatrix(
             mapMatrix.getTranslateX(),
             mapMatrix.getTranslateY(),

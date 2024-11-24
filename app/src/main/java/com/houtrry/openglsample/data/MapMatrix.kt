@@ -35,7 +35,7 @@ class MapMatrix(
     }
 
     @Synchronized
-    fun zoom(focusX: Float, focusY: Float, zoom: Float) {
+    fun zoom(zoom: Float, focusX: Float = 0f, focusY: Float = 0f) {
         Matrix.translateM(transformMatrix, 0, focusX, focusY, 0f)
         Matrix.scaleM(transformMatrix, 0, zoom, zoom, 1f)
         Matrix.translateM(transformMatrix, 0, -focusX, -focusY, 0f)
@@ -43,7 +43,18 @@ class MapMatrix(
     }
 
     @Synchronized
-    fun rotate(focusX: Float, focusY: Float, rotate: Float) {
+    fun scale(scaleX: Float, scaleY: Float, focusX: Float = 0f, focusY: Float = 0f) {
+        if (scaleX == 0f && scaleY == 0f) {
+            Matrix.scaleM(transformMatrix, 0, scaleX, scaleY, 1f)
+        } else {
+            Matrix.translateM(transformMatrix, 0, focusX, focusY, 0f)
+            Matrix.scaleM(transformMatrix, 0, scaleX, scaleY, 1f)
+            Matrix.translateM(transformMatrix, 0, -focusX, -focusY, 0f)
+        }
+    }
+
+    @Synchronized
+    fun rotate(rotate: Float, focusX: Float = 0f, focusY: Float = 0f) {
         Matrix.translateM(transformMatrix, 0, focusX, focusY, 0f)
         Matrix.rotateM(transformMatrix, 0, rotate, 0f, 0f, 1f)
         Matrix.translateM(transformMatrix, 0, -focusX, -focusY, 0f)
@@ -51,10 +62,10 @@ class MapMatrix(
     }
 
     @Synchronized
-    fun rotateWithZoom(focusX: Float, focusY: Float, scale: Float, rotate: Float) {
+    fun rotateWithZoom(scale: Float, rotate: Float, focusX: Float = 0f, focusY: Float = 0f) {
         Matrix.translateM(transformMatrix, 0, focusX, focusY, 0f)
-        Matrix.scaleM(transformMatrix, 0, scale, scale, 1f)
         Matrix.rotateM(transformMatrix, 0, rotate, 0f, 0f, 1f)
+        Matrix.scaleM(transformMatrix, 0, scale, scale, 1f)
         Matrix.translateM(transformMatrix, 0, -focusX, -focusY, 0f)
         this.rotate += rotate
         this.zoom *= scale
@@ -67,4 +78,8 @@ class MapMatrix(
     fun getTranslateX() = transformMatrix[12]
     fun getTranslateY() = transformMatrix[13]
     fun getTranslateZ() = transformMatrix[14]
+
+    fun testAutoRotate() {
+        Matrix.rotateM(transformMatrix, 0, 0.5f, 0f, 0f, 1f)
+    }
 }

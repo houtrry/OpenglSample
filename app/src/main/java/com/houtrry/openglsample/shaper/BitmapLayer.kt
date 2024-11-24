@@ -104,7 +104,7 @@ class BitmapLayer(private val bitmap: Bitmap) : BaseLayer() {
         )
     }
 
-    override fun onDraw(mapMatrix: MapMatrix) {
+    override fun onDraw() {
         val position = GLES20.glGetAttribLocation(program, "vPosition")
         GLES20.glEnableVertexAttribArray(position)
         GLES20.glVertexAttribPointer(
