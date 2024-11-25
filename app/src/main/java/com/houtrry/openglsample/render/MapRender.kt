@@ -28,7 +28,7 @@ class MapRender(val context: Context?, private val renderCallback: () -> Unit) :
     private val mapMatrix = MapMatrix()
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
-        GLES20.glClearColor(0f, 0f, 0f, 1f)
+        GLES20.glClearColor(0f, 1.0f, 1.0f, 1f)
         if (context == null) {
             return
         }

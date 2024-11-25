@@ -26,7 +26,8 @@ class MapView(context: Context?, attrs: AttributeSet? = null) : GLSurfaceView(co
             addLayer(CameraControlLayer(mapRender))
             addLayer(
                 TestMapLayer(
-                    BitmapFactory.decodeResource(resources, R.drawable.optemap_217k),
+//                    BitmapFactory.decodeResource(resources, R.drawable.optemap_22k),
+                    BitmapFactory.decodeResource(resources, R.mipmap.t6),
                 )
             )
             addLayer(

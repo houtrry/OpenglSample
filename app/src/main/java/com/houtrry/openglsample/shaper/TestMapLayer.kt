@@ -89,7 +89,7 @@ class TestMapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
     override fun onSizeChange(width: Int, height: Int) {
         super.onSizeChange(width, height)
         aspectRatio = width * 1f / height
-        Log.d(TAG, "onSizeChange $viewWidth, $viewHeight, $width, $height")
+        Log.d(TAG, "onSizeChange $viewWidth, $viewHeight, $width, $height, ${mapBitmapSize.width}, ${mapBitmapSize.height}")
     }
 
     private val centerColor: FloatArray by lazy {
@@ -143,15 +143,16 @@ class TestMapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
 
     override fun onDraw() {
         GLES20.glUniform1i(
-            isMapUniformLocation, 1
+            isMapUniformLocation, 0
         )
 //        mapMatrix.testAutoRotate()
 
         // Apply a ModelView Projection transformation
         Matrix.setIdentityM(mMVPMatrix, 0)
         // 计算缩放因子
-        val scaleX: Float = if (aspectRatio > 1) 1f else aspectRatio // 根据宽高比计算缩放
-        val scaleY: Float = if (aspectRatio < 1) 1f else 1 / aspectRatio
+        aspectRatio = mapBitmapSize.width * 1f / mapBitmapSize.height
+        val scaleX: Float = 1f // 根据宽高比计算缩放
+        val scaleY: Float = 1f / aspectRatio
 
         val mvpMatrix = mapMatrix.getTransformMatrix().copyOf()
         Matrix.scaleM(mvpMatrix, 0, scaleX, scaleY, 1f)
