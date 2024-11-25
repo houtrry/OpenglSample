@@ -11,6 +11,7 @@ import com.houtrry.openglsample.shaper.CameraControlLayer
 import com.houtrry.openglsample.shaper.ILayer
 import com.houtrry.openglsample.shaper.RobotLayer
 import com.houtrry.openglsample.shaper.TestMapLayer
+import com.houtrry.openglsample.utils.getAssertBitmap
 import com.houtrry.openglsample.utils.notNull
 import com.houtrry.openglsample.utils.readRawText
 
@@ -27,7 +28,9 @@ class MapView(context: Context?, attrs: AttributeSet? = null) : GLSurfaceView(co
             addLayer(
                 TestMapLayer(
 //                    BitmapFactory.decodeResource(resources, R.drawable.optemap_22k),
-                    BitmapFactory.decodeResource(resources, R.mipmap.t6),
+//                    BitmapFactory.decodeResource(resources, R.mipmap.t4),
+//                    ctx.getAssertBitmap("4.png")
+                    ctx.getAssertBitmap("optemap_22k.png")
                 )
             )
             addLayer(

@@ -62,7 +62,7 @@ class TestMapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
     private val mMVPMatrix = FloatArray(16) // MVP 矩阵
 
     init {
-        Log.d(TAG, "init start")
+        Log.d(TAG, "init start, ${mapBitmap.width}, ${mapBitmap.height}")
     }
 
     override fun onCreate() {
@@ -151,8 +151,8 @@ class TestMapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
         Matrix.setIdentityM(mMVPMatrix, 0)
         // 计算缩放因子
         aspectRatio = mapBitmapSize.width * 1f / mapBitmapSize.height
-        val scaleX: Float = 1f // 根据宽高比计算缩放
-        val scaleY: Float = 1f / aspectRatio
+        val scaleX = mapBitmapSize.width * 1f / viewHeight // 根据宽高比计算缩放
+        val scaleY = mapBitmapSize.height * 1f / viewHeight
 
         val mvpMatrix = mapMatrix.getTransformMatrix().copyOf()
         Matrix.scaleM(mvpMatrix, 0, scaleX, scaleY, 1f)

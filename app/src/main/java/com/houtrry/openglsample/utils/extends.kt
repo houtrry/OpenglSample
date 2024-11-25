@@ -186,3 +186,9 @@ fun Double.clamp(min: Double, max: Double): Double {
         this
     }
 }
+
+fun Context.getAssertBitmap(name: String): Bitmap {
+    return assets.open(name).use {
+        BitmapFactory.decodeStream(it)
+    }
+}
