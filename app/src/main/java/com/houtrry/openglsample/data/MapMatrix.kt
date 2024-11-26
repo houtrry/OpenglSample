@@ -4,6 +4,8 @@ import android.graphics.PointF
 import android.opengl.Matrix
 import android.util.Log
 import com.houtrry.openglsample.utils.OpenglUtils
+import com.houtrry.openglsample.utils.formatMatrixString
+import kotlin.math.sqrt
 
 /**
  * @author: houtrry
@@ -23,10 +25,12 @@ class MapMatrix {
 
     init {
         Matrix.setIdentityM(transformMatrix, 0)
-        Matrix.setLookAtM(viewMatrix, 0,
+        Matrix.setLookAtM(
+            viewMatrix, 0,
             0f, 0f, 1f,
             0f, 0f, 0f,
-            0f, 1f, 0f)
+            0f, 1f, 0f
+        )
     }
 
     @Synchronized
@@ -90,13 +94,37 @@ class MapMatrix {
 
     fun frustumM(width: Int, height: Int) {
         val aspectRatio = width * 1f / height
-        Matrix.frustumM(projectionMatrix, 0,
+        Matrix.frustumM(
+            projectionMatrix, 0,
             -aspectRatio, aspectRatio,
             -1f, 1f,
-            1f, 100.0f)
+            1f, 100.0f
+        )
     }
 
     fun getViewMatrix() = viewMatrix
 
     fun getProjectionMatrix() = projectionMatrix
+
+    fun getTransformMatrixWithoutRotate(scale: Float, matrix: FloatArray) {
+        Log.d(
+            TAG,
+            "scale: $scale, zoom: $zoom, transformMatrix: ${transformMatrix.formatMatrixString()}"
+        )
+
+//        Matrix.setIdentityM(matrix, 0)
+        transformMatrix.copyInto(matrix)
+        val sx = calcFloatArraySqrt(matrix[0], matrix[4])
+        val sy = calcFloatArraySqrt(matrix[1], matrix[5])
+        matrix[0] *= scale / sx
+        matrix[4] *= scale / sx
+        matrix[1] *= scale / sy
+        matrix[5] *= scale / sy
+        Log.d(TAG, "zoom: $zoom , sx:$sx, sy: $sy, transformMatrix: ${matrix.formatMatrixString()}")
+
+    }
+
+    private fun calcFloatArraySqrt(vararg args: Float): Float {
+        return sqrt(args.sumOf { it.toDouble() * it }).toFloat()
+    }
 }

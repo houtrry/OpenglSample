@@ -192,3 +192,10 @@ fun Context.getAssertBitmap(name: String): Bitmap {
         BitmapFactory.decodeStream(it)
     }
 }
+
+fun FloatArray.formatMatrixString(): String {
+    return "\n[${get(0)}, ${get(4)}, ${get(8)}, ${get(12)}, \n" +
+            " ${get(1)}, ${get(5)}, ${get(9)}, ${get(13)}, \n" +
+            " ${get(2)}, ${get(6)}, ${get(10)}, ${get(14)}, \n" +
+            " ${get(3)}, ${get(7)}, ${get(11)}, ${get(15)}]"
+}

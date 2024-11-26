@@ -7,6 +7,7 @@ import android.util.Log
 import com.houtrry.openglsample.data.BitmapSize
 import com.houtrry.openglsample.data.MapMatrix
 import com.houtrry.openglsample.utils.OpenglUtils
+import com.houtrry.openglsample.utils.formatMatrixString
 import com.houtrry.openglsample.utils.glGetUniformLocation
 import com.houtrry.openglsample.utils.toBuffer
 import java.nio.ShortBuffer
@@ -31,6 +32,7 @@ class RobotLayer(
     private val drawListBuffer: ShortBuffer = drawOrder.toBuffer()
 
     private lateinit var arrowBitmapSize: BitmapSize
+    private val transformMatrix: FloatArray = FloatArray(16)
 
     init {
         Log.d(TAG, "init start")
@@ -44,18 +46,20 @@ class RobotLayer(
             GLES20.GL_CLAMP_TO_EDGE, GLES20.GL_CLAMP_TO_EDGE
         )
 
-        Log.d(TAG, "glArrowTextureId: $glArrowTextureId")
+        Log.d(TAG, "glArrowTextureId: $glArrowTextureId, ${arrowBitmapSize.width} * ${arrowBitmapSize.height}")
     }
     private val mMVPMatrix = FloatArray(16) // MVP 矩阵
 
     override fun onDraw() {
-        val transformMatrix = OpenglUtils.getTargetMatrix(
-            mapMatrix.getTranslateX(),
-            mapMatrix.getTranslateY(),
-            240f.toFloat() / viewHeight,
-            240f.toFloat() / viewHeight,
-            0f
-        )
+//        val transformMatrix = OpenglUtils.getTargetMatrix(
+//            mapMatrix.getTranslateX(),
+//            mapMatrix.getTranslateY(),
+//            240f.toFloat() / viewHeight,
+//            240f.toFloat() / viewHeight,
+//            0f
+//        )
+        mapMatrix.getTransformMatrixWithoutRotate(300f.toFloat() / viewHeight, transformMatrix)
+        Log.d(TAG, "transformMatrix: ${mapMatrix.getTransformMatrix().formatMatrixString()}")
         Log.d(TAG, "translateX: ${mapMatrix.getTransformMatrix()[3]}, translateY: ${mapMatrix.getTransformMatrix()[7]}, matrix: ${mapMatrix.getTransformMatrix().contentToString()}")
         Matrix.setIdentityM(mMVPMatrix, 0)
         Matrix.multiplyMM(mMVPMatrix, 0, mapMatrix.getViewMatrix(), 0, transformMatrix, 0);

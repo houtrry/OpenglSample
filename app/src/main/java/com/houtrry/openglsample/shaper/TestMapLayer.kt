@@ -143,7 +143,7 @@ class TestMapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
 
     override fun onDraw() {
         GLES20.glUniform1i(
-            isMapUniformLocation, 0
+            isMapUniformLocation, 1
         )
 //        mapMatrix.testAutoRotate()
 
