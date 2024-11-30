@@ -12,12 +12,10 @@ import com.houtrry.openglsample.utils.glGetUniformLocation
 import com.houtrry.openglsample.utils.toBuffer
 import java.nio.ShortBuffer
 
-class RobotLayer(
-    private val arrowBitmap: Bitmap,
-) : BaseLayer() {
+class PointLayer: BaseLayer() {
 
     companion object {
-        private const val TAG = "RobotLayer"
+        private const val TAG = "PointLayer"
     }
 
     private var glArrowTextureId: Int = 0
@@ -31,7 +29,7 @@ class RobotLayer(
     //四个顶点的绘制顺序数组的缓冲数组
     private val drawListBuffer: ShortBuffer = drawOrder.toBuffer()
 
-    private lateinit var arrowBitmapSize: BitmapSize
+//    private lateinit var arrowBitmapSize: BitmapSize
     private val transformMatrix: FloatArray = FloatArray(16)
 
     init {
@@ -39,14 +37,14 @@ class RobotLayer(
     }
 
     override fun onCreate() {
-        arrowBitmapSize = BitmapSize(arrowBitmap.width, arrowBitmap.height)
-        glArrowTextureId = OpenglUtils.createTexture(
-            arrowBitmap,
-            GLES20.GL_NEAREST, GLES20.GL_LINEAR,
-            GLES20.GL_CLAMP_TO_EDGE, GLES20.GL_CLAMP_TO_EDGE
-        )
-
-        Log.d(TAG, "glArrowTextureId: $glArrowTextureId, ${arrowBitmapSize.width} * ${arrowBitmapSize.height}")
+//        arrowBitmapSize = BitmapSize(arrowBitmap.width, arrowBitmap.height)
+//        glArrowTextureId = OpenglUtils.createTexture(
+//            arrowBitmap,
+//            GLES20.GL_NEAREST, GLES20.GL_LINEAR,
+//            GLES20.GL_CLAMP_TO_EDGE, GLES20.GL_CLAMP_TO_EDGE
+//        )
+//
+//        Log.d(TAG, "glArrowTextureId: $glArrowTextureId, ${arrowBitmapSize.width} * ${arrowBitmapSize.height}")
     }
     private val mMVPMatrix = FloatArray(16) // MVP 矩阵
 

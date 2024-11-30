@@ -11,10 +11,10 @@ import java.nio.FloatBuffer
 import java.nio.ShortBuffer
 
 
-class TestMapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
+class MapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
 
     companion object {
-        private const val TAG = "TestMapLayer"
+        private const val TAG = "MapLayer"
 
         //每个顶点的坐标数
         private const val COORDS_PRE_VERTEX = 3

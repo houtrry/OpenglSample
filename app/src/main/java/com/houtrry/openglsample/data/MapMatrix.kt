@@ -1,9 +1,7 @@
 package com.houtrry.openglsample.data
 
-import android.graphics.PointF
 import android.opengl.Matrix
 import android.util.Log
-import com.houtrry.openglsample.utils.OpenglUtils
 import com.houtrry.openglsample.utils.formatMatrixString
 import kotlin.math.sqrt
 
@@ -20,8 +18,6 @@ class MapMatrix {
     private val transformMatrix = FloatArray(16)
     private val projectionMatrix = FloatArray(16) // 用于变换的矩阵
     private val viewMatrix = FloatArray(16)
-
-    private var zoom: Float = 1.0f
 
     init {
         Matrix.setIdentityM(transformMatrix, 0)
@@ -42,7 +38,7 @@ class MapMatrix {
         Matrix.multiplyMV(translateMatrix, 0, translateInverse, 0, vMatrix, 0)
 
         Matrix.translateM(transformMatrix, 0, translateMatrix[0], translateMatrix[1], 0f)
-        Log.d(TAG, "translate, zoom: $zoom, transformMatrix: ${transformMatrix.contentToString()}")
+        Log.d(TAG, "translate, transformMatrix: ${transformMatrix.contentToString()}")
     }
 
     @Synchronized
@@ -50,7 +46,6 @@ class MapMatrix {
         Matrix.translateM(transformMatrix, 0, focusX, focusY, 0f)
         Matrix.scaleM(transformMatrix, 0, zoom, zoom, 1f)
         Matrix.translateM(transformMatrix, 0, -focusX, -focusY, 0f)
-        this.zoom *= zoom
     }
 
     @Synchronized
@@ -77,9 +72,6 @@ class MapMatrix {
         Matrix.rotateM(transformMatrix, 0, rotate, 0f, 0f, 1f)
         Matrix.scaleM(transformMatrix, 0, scale, scale, 1f)
         Matrix.translateM(transformMatrix, 0, -focusX, -focusY, 0f)
-        this.zoom *= scale
-//        zoom(focusX, focusY, zoom)
-//        rotate(focusX, focusY, rotate)
     }
 
     fun getTransformMatrix() = transformMatrix
@@ -109,7 +101,7 @@ class MapMatrix {
     fun getTransformMatrixWithoutRotate(scale: Float, matrix: FloatArray) {
         Log.d(
             TAG,
-            "scale: $scale, zoom: $zoom, transformMatrix: ${transformMatrix.formatMatrixString()}"
+            "scale: $scale, transformMatrix: ${transformMatrix.formatMatrixString()}"
         )
 
 //        Matrix.setIdentityM(matrix, 0)
@@ -120,10 +112,11 @@ class MapMatrix {
         matrix[4] *= scale / sx
         matrix[1] *= scale / sy
         matrix[5] *= scale / sy
-        Log.d(TAG, "zoom: $zoom , sx:$sx, sy: $sy, transformMatrix: ${matrix.formatMatrixString()}")
+        Log.d(TAG, "sx:$sx, sy: $sy, transformMatrix: ${matrix.formatMatrixString()}")
 
     }
 
+    //变长数组的每项平方求和后，取其开根值
     private fun calcFloatArraySqrt(vararg args: Float): Float {
         return sqrt(args.sumOf { it.toDouble() * it }).toFloat()
     }
