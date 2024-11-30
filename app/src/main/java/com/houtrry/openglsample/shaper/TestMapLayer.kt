@@ -69,7 +69,7 @@ class TestMapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
         mapBitmapSize = BitmapSize(mapBitmap.width, mapBitmap.height)
         glMapTextureId = OpenglUtils.createTexture(
             mapBitmap,
-            GLES20.GL_NEAREST, GLES20.GL_LINEAR,
+            GLES20.GL_NEAREST, GLES20.GL_NEAREST,
             GLES20.GL_CLAMP_TO_EDGE, GLES20.GL_CLAMP_TO_EDGE
         )
         Log.d(TAG, "glTextureId: $glMapTextureId")
