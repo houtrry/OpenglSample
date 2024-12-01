@@ -1,6 +1,7 @@
 package com.houtrry.openglsample.utils
 
 import android.content.Context
+import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
@@ -8,6 +9,7 @@ import android.graphics.Color
 import android.opengl.GLES20
 import android.os.Build
 import android.util.Log
+import android.util.TypedValue
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
@@ -199,3 +201,31 @@ fun FloatArray.formatMatrixString(): String {
             " ${get(2)}, ${get(6)}, ${get(10)}, ${get(14)}, \n" +
             " ${get(3)}, ${get(7)}, ${get(11)}, ${get(15)}]"
 }
+
+val Int.dp: Float
+    get() = TypedValue.applyDimension(
+        TypedValue.COMPLEX_UNIT_DIP,
+        this.toFloat(),
+        Resources.getSystem().displayMetrics
+    )
+
+val Float.dp: Float
+    get() = TypedValue.applyDimension(
+        TypedValue.COMPLEX_UNIT_DIP,
+        this,
+        Resources.getSystem().displayMetrics
+    )
+
+val Int.sp: Float
+    get() = TypedValue.applyDimension(
+        TypedValue.COMPLEX_UNIT_SP,
+        this.toFloat(),
+        Resources.getSystem().displayMetrics
+    )
+
+val Float.sp: Float
+    get() = TypedValue.applyDimension(
+        TypedValue.COMPLEX_UNIT_SP,
+        this,
+        Resources.getSystem().displayMetrics
+    )
