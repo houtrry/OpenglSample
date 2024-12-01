@@ -69,58 +69,58 @@ class MainActivity : AppCompatActivity() {
                     BubbleTextLayoutParam(),
                     getVectorDrawable(R.drawable.ic_1)?.let { BubbleTextDrawable(it, gravity = Gravity.TOP) }
                 ),
-//                BubbleText(
-//                    "点位2",
-//                    Vector3(0.0, 0.0, 0.0),
-//                    BubbleTextLayoutParam(),
-//                    getVectorDrawable(R.drawable.ic_2)?.let { BubbleTextDrawable(it, gravity = Gravity.END) }
-//                ),
-//                BubbleText(
-//                    "点位3",
-//                    Vector3(0.0, 0.0, 0.0),
-//                    BubbleTextLayoutParam()
-//                ),
-//                BubbleText(
-//                    "点位4",
-//                    Vector3(0.0, 0.0, 0.0),
-//                    BubbleTextLayoutParam(),
-//                    getVectorDrawable(R.drawable.ic_1)?.let { BubbleTextDrawable(it, gravity = Gravity.BOTTOM) }
-//                ),
-//                BubbleText(
-//                    "点位5",
-//                    Vector3(0.0, 0.0, 0.0),
-//                    BubbleTextLayoutParam(),
-//                    getVectorDrawable(R.drawable.ic_2)?.let { BubbleTextDrawable(it, gravity = Gravity.LEFT) }
-//                ),
-//                BubbleText(
-//                    "点位6",
-//                    Vector3(0.0, 0.0, 0.0),
-//                    BubbleTextLayoutParam()
-//                ),
-//                BubbleText(
-//                    "点位7",
-//                    Vector3(0.0, 0.0, 0.0),
-//                    BubbleTextLayoutParam(),
-//                    getVectorDrawable(R.drawable.ic_1)?.let { BubbleTextDrawable(it, gravity = Gravity.RIGHT) }
-//                ),
-//                BubbleText(
-//                    "点位8",
-//                    Vector3(0.0, 0.0, 0.0),
-//                    BubbleTextLayoutParam(),
-//                    getVectorDrawable(R.drawable.ic_2)?.let { BubbleTextDrawable(it, 40.dp, 40.dp, 12.dp, Gravity.START) }
-//                ),
-//                BubbleText(
-//                    "长河落日圆",
-//                    Vector3(0.0, 0.0, 0.0),
-//                    BubbleTextLayoutParam(),
-//                    getVectorDrawable(R.drawable.ic_1)?.let { BubbleTextDrawable(it) }
-//                ),
-//                BubbleText(
-//                    "点位10",
-//                    Vector3(0.0, 0.0, 0.0),
-//                    BubbleTextLayoutParam(),
-//                    getVectorDrawable(R.drawable.ic_2)?.let { BubbleTextDrawable(it) }
-//                ),
+                BubbleText(
+                    "点位22",
+                    Vector3(0.0, 0.0, 0.0),
+                    BubbleTextLayoutParam(),
+                    getVectorDrawable(R.drawable.ic_2)?.let { BubbleTextDrawable(it, gravity = Gravity.END) }
+                ),
+                BubbleText(
+                    "点位3",
+                    Vector3(0.0, 0.0, 0.0),
+                    BubbleTextLayoutParam()
+                ),
+                BubbleText(
+                    "点位4",
+                    Vector3(0.0, 0.0, 0.0),
+                    BubbleTextLayoutParam(),
+                    getVectorDrawable(R.drawable.ic_1)?.let { BubbleTextDrawable(it, gravity = Gravity.BOTTOM) }
+                ),
+                BubbleText(
+                    "点位5",
+                    Vector3(0.0, 0.0, 0.0),
+                    BubbleTextLayoutParam(),
+                    getVectorDrawable(R.drawable.ic_2)?.let { BubbleTextDrawable(it, gravity = Gravity.LEFT) }
+                ),
+                BubbleText(
+                    "点位6",
+                    Vector3(0.0, 0.0, 0.0),
+                    BubbleTextLayoutParam()
+                ),
+                BubbleText(
+                    "点位7",
+                    Vector3(0.0, 0.0, 0.0),
+                    BubbleTextLayoutParam(),
+                    getVectorDrawable(R.drawable.ic_1)?.let { BubbleTextDrawable(it, gravity = Gravity.RIGHT) }
+                ),
+                BubbleText(
+                    "点位8",
+                    Vector3(0.0, 0.0, 0.0),
+                    BubbleTextLayoutParam(),
+                    getVectorDrawable(R.drawable.ic_2)?.let { BubbleTextDrawable(it, 80.dp, 80.dp, 12.dp, Gravity.TOP) }
+                ),
+                BubbleText(
+                    "长河落日圆",
+                    Vector3(0.0, 0.0, 0.0),
+                    BubbleTextLayoutParam(),
+                    getVectorDrawable(R.drawable.ic_1)?.let { BubbleTextDrawable(it) }
+                ),
+                BubbleText(
+                    "点位10",
+                    Vector3(0.0, 0.0, 0.0),
+                    BubbleTextLayoutParam(),
+                    getVectorDrawable(R.drawable.ic_2)?.let { BubbleTextDrawable(it) }
+                ),
 
 
             )

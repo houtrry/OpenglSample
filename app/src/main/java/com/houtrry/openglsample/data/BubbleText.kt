@@ -78,8 +78,8 @@ data class BubbleTextLayoutParam(
     /**
      * 背景色
      */
-//    val backgroundColor: Int = Color.argb(120, 234, 234, 234),
-    val backgroundColor: Int = Color.argb(255, 255, 0, 0),
+    val backgroundColor: Int = Color.argb(120, 234, 234, 234),
+//    val backgroundColor: Int = Color.argb(255, 255, 0, 0),
     /**
      * 圆角半径
      */
@@ -96,28 +96,29 @@ data class BubbleTextLayoutParam(
     var borderStokeColor: Int = Color.BLACK,
 )
 
-fun BubbleText.getBubbleSize(paint: Paint, rect: Rect): Size {
+fun BubbleText.getBubbleSize(paint: Paint): Size {
     paint.textSize = textParams.textSize
     paint.strokeWidth = textParams.textStokeWidthSize
-    paint.getTextBounds(text, 0, text.length, rect)
-    var width: Int = textParams.paddingStart + textParams.paddingEnd
-    var height: Int =
-        textParams.paddingTop + textParams.paddingBottom + textParams.arrowHeight
+    val textWidth = paint.measureText(text)
+    val textHeight = paint.fontMetrics.let { it.bottom - it.top }
+    var width: Float = (textParams.paddingStart + textParams.paddingEnd).toFloat()
+    var height: Float =
+        (textParams.paddingTop + textParams.paddingBottom + textParams.arrowHeight).toFloat()
     when (drawable?.gravity) {
         null -> {
-            width += rect.width()
-            height += rect.height()
+            width += textWidth
+            height += textHeight
         }
         Gravity.TOP, Gravity.BOTTOM -> {
-            width += max(rect.width(), drawable.width.toInt())
-            height += (drawable.height + drawable.drawablePadding + rect.height()).toInt()
+            width += max(textWidth, drawable.width)
+            height += drawable.height + drawable.drawablePadding + textHeight
         }
         else -> {
-            width += (drawable.width + drawable.drawablePadding + rect.width()).toInt()
-            height += max(rect.height(), drawable.height.toInt())
+            width += drawable.width + drawable.drawablePadding + textWidth
+            height += max(textHeight, drawable.height)
         }
     }
-    return Size(width, height)
+    return Size(width.toInt(), height.toInt())
 }
 
 
@@ -157,7 +158,7 @@ fun BubbleText.drawDrawable(
         }
         Gravity.BOTTOM -> {
             left = (size.width * 0.5f - drawable.width * 0.5f).toInt()
-            top = (size.height - textParams.arrowHeight - drawable.height).toInt()
+            top = (size.height - textParams.arrowHeight - drawable.height - textParams.paddingBottom).toInt()
         }
         else -> {
             val isLeft =
@@ -186,30 +187,34 @@ fun BubbleText.drawText(canvas: Canvas, paint: Paint, size: Size, offsetX: Int, 
     paint.textSize = textParams.textSize
     paint.color = textParams.textColor
     paint.strokeWidth = textParams.textStokeWidthSize
-    val rect = Rect()
-    paint.getTextBounds(text, 0, text.length, rect)
+    paint.style = Paint.Style.FILL
+    val textWidth = paint.measureText(text)
+    val dyText = paint.fontMetrics.let {
+        (it.bottom - it.top) * 0.5f - it.bottom
+    }
     when (drawable?.gravity) {
         null -> {
-            left = size.width * 0.5f - rect.width() * 0.5f
-            bottom = (size.height - textParams.arrowHeight) * 0.5f + rect.height() * 0.5f
+            left = size.width * 0.5f - textWidth * 0.5f
+            bottom = (size.height - textParams.arrowHeight) * 0.5f + dyText
         }
         Gravity.TOP -> {
-            left = size.width * 0.5f - rect.width() * 0.5f
-            bottom = (size.height - textParams.arrowHeight) - textParams.paddingBottom.toFloat()
+            left = size.width * 0.5f - textWidth * 0.5f
+//            bottom = (size.height - textParams.arrowHeight) - textParams.paddingBottom.toFloat()
+            bottom = textParams.paddingTop + drawable.height + drawable.drawablePadding + paint.fontMetrics.let { it.bottom - it.top } * 0.5f + dyText
         }
         Gravity.BOTTOM -> {
-            left = size.width * 0.5f - rect.width() * 0.5f
-            bottom = textParams.paddingTop.toFloat() + rect.height()
+            left = size.width * 0.5f - textWidth * 0.5f
+            bottom = textParams.paddingTop.toFloat() + paint.fontMetrics.let { it.bottom - it.top } * 0.5f + dyText
         }
         else -> {
             val isLeft =
                 (isLTR && (drawable.gravity == Gravity.START || drawable.gravity == Gravity.LEFT)) || (!isLTR && (drawable.gravity == Gravity.END || drawable.gravity == Gravity.RIGHT))
             if (isLeft) {
                 left = (textParams.paddingStart + drawable.drawablePadding + drawable.width).toFloat()
-                bottom = (size.height - textParams.arrowHeight) * 0.5f + rect.height() * 0.5f
+                bottom = (size.height - textParams.arrowHeight) * 0.5f + dyText
             } else {
                 left = textParams.paddingStart.toFloat()
-                bottom =(size.height - textParams.arrowHeight) * 0.5f + rect.height() * 0.5f
+                bottom =(size.height - textParams.arrowHeight) * 0.5f + dyText
             }
         }
     }
@@ -235,56 +240,60 @@ private fun BubbleTextLayoutParam.drawBubbleBackground(
     path.rLineTo(size.width - connerRadius * 2, 0f)
 
     //右上圆角
-    path.addArc(
+    path.arcTo(
         offsetX + size.width - connerRadius * 2 + offsetInner,
         offsetInner,
         offsetX + size.width - offsetInner,
         connerRadius * 2 - offsetInner,
         270f,
-        90f
+        90f,
+        false
     )
     path.rLineTo(0f, size.height - connerRadius * 2 - arrowHeight)
 
     //右下圆角
-    path.addArc(
+    path.arcTo(
         offsetX + size.width - connerRadius * 2 + offsetInner,
         size.height - connerRadius * 2 + offsetInner - arrowHeight,
         offsetX + size.width - offsetInner,
         size.height - offsetInner - arrowHeight,
         0f,
-        90f
+        90f,
+        false
     )
 //    path.rLineTo(connerRadius * 2 - size.width, 0f)
-
-    /**
-     * 画箭头
-     */
+//
+//    /**
+//     * 画箭头
+//     */
     path.rLineTo(-size.width * 0.5f + arrowMargin + connerRadius + arrowWidth * 0.5f, 0f)
     path.rLineTo(-arrowWidth * 0.5f, arrowHeight.toFloat())
     path.rLineTo(-arrowWidth * 0.5f, -arrowHeight.toFloat())
     path.rLineTo(-size.width * 0.5f - arrowMargin + connerRadius + arrowWidth * 0.5f, 0f)
-
-    //左下圆角
-    path.addArc(
+//
+//    //左下圆角
+    path.arcTo(
         offsetX + offsetInner,
         size.height - connerRadius * 2 + offsetInner - arrowHeight,
         offsetX + connerRadius * 2 - offsetInner,
         size.height - offsetInner - arrowHeight,
         90f,
-        90f
+        90f,
+        false
     )
-
-    path.rLineTo(0f, -size.height + connerRadius * 2 + arrowHeight)
-
-
-    //左上圆角
-    path.addArc(
+//
+//    path.rLineTo(0f, -size.height + connerRadius * 2 + arrowHeight)
+//
+//
+//    //左上圆角
+    path.arcTo(
         offsetX + offsetInner,
         offsetInner,
         offsetX + connerRadius * 2 - offsetInner,
         connerRadius * 2 - offsetInner,
         180f,
-        90f
+        90f,
+        false
     )
     path.close()
     paint.style = Paint.Style.FILL

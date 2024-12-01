@@ -85,7 +85,7 @@ class BubbleTextLayer: BaseLayer() {
         }
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
         val rect = Rect()
-        val bubbleTextSizeList = bubbleTextList.map { it.getBubbleSize(paint, rect) }.toMutableList()
+        val bubbleTextSizeList = bubbleTextList.map { it.getBubbleSize(paint) }.toMutableList()
         val bitmapWidth = bubbleTextSizeList.sumOf { it.width }
         val bitmapHeight = bubbleTextSizeList.maxOf { it.height }
         val bitmap = Bitmap.createBitmap(bitmapWidth, bitmapHeight, Bitmap.Config.ARGB_8888)
