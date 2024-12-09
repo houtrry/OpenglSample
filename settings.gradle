@@ -15,3 +15,5 @@ dependencyResolutionManagement {
 rootProject.name = "OpenglSample"
 include ':app'
 include ':lopengl'
+include ':ljavaopengles20'
+include ':common_map'

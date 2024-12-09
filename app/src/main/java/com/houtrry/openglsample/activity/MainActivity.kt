@@ -15,16 +15,10 @@ import android.view.Gravity
 import android.widget.Toast
 import androidx.annotation.Nullable
 import androidx.appcompat.app.AppCompatActivity
-import com.houtrry.openglsample.R
-import com.houtrry.openglsample.data.BubbleText
-import com.houtrry.openglsample.data.BubbleTextDrawable
-import com.houtrry.openglsample.data.BubbleTextLayoutParam
-import com.houtrry.openglsample.data.Vector3
+import com.houtrry.common_map.utils.toGrayFile
+import com.houtrry.lopengl.OpenglNativeTestActivity
+import com.houtrry.lopengles20.activity.JavaOpenglES20Activity
 import com.houtrry.openglsample.databinding.ActivityMainBinding
-import com.houtrry.openglsample.shaper.BubbleTextLayer
-import com.houtrry.openglsample.utils.dp
-import com.houtrry.openglsample.utils.getVectorDrawable
-import com.houtrry.openglsample.utils.toGrayFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -46,89 +40,12 @@ class MainActivity : AppCompatActivity() {
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-//        startActivity(Intent(this, JavaOpenglESActivity::class.java))
+        startActivity(Intent(this, JavaOpenglES20Activity::class.java))
         binding.nativeOpengl.setOnClickListener {
-//            startActivity(Intent(this, OpenglNativeTestActivity::class.java))
-            val bubbleTextLayer = BubbleTextLayer()
-            val bubbleTextList = mutableListOf<BubbleText>(
-                BubbleText(
-                    "点位1",
-                    Vector3(0.0, 0.0, 0.0),
-                    BubbleTextLayoutParam(borderStokeWidth = 3.dp),
-                    getVectorDrawable(R.drawable.ic_1)?.let { BubbleTextDrawable(it) }
-                ),
-                BubbleText(
-                    "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-                    Vector3(0.0, 0.0, 0.0),
-                    BubbleTextLayoutParam(borderStokeWidth = 3.dp),
-                    getVectorDrawable(R.drawable.ic_2)?.let { BubbleTextDrawable(it, gravity = Gravity.START) }
-                ),
-                BubbleText(
-                    "点位2",
-                    Vector3(0.0, 0.0, 0.0),
-                    BubbleTextLayoutParam(),
-                    getVectorDrawable(R.drawable.ic_1)?.let { BubbleTextDrawable(it, gravity = Gravity.TOP) }
-                ),
-                BubbleText(
-                    "点位22",
-                    Vector3(0.0, 0.0, 0.0),
-                    BubbleTextLayoutParam(),
-                    getVectorDrawable(R.drawable.ic_2)?.let { BubbleTextDrawable(it, gravity = Gravity.END) }
-                ),
-                BubbleText(
-                    "点位3",
-                    Vector3(0.0, 0.0, 0.0),
-                    BubbleTextLayoutParam()
-                ),
-                BubbleText(
-                    "点位4",
-                    Vector3(0.0, 0.0, 0.0),
-                    BubbleTextLayoutParam(),
-                    getVectorDrawable(R.drawable.ic_1)?.let { BubbleTextDrawable(it, gravity = Gravity.BOTTOM) }
-                ),
-                BubbleText(
-                    "点位5",
-                    Vector3(0.0, 0.0, 0.0),
-                    BubbleTextLayoutParam(),
-                    getVectorDrawable(R.drawable.ic_2)?.let { BubbleTextDrawable(it, gravity = Gravity.LEFT) }
-                ),
-                BubbleText(
-                    "点位6",
-                    Vector3(0.0, 0.0, 0.0),
-                    BubbleTextLayoutParam()
-                ),
-                BubbleText(
-                    "点位7",
-                    Vector3(0.0, 0.0, 0.0),
-                    BubbleTextLayoutParam(),
-                    getVectorDrawable(R.drawable.ic_1)?.let { BubbleTextDrawable(it, gravity = Gravity.RIGHT) }
-                ),
-                BubbleText(
-                    "点位8",
-                    Vector3(0.0, 0.0, 0.0),
-                    BubbleTextLayoutParam(),
-                    getVectorDrawable(R.drawable.ic_2)?.let { BubbleTextDrawable(it, 80.dp, 80.dp, 12.dp, Gravity.TOP) }
-                ),
-                BubbleText(
-                    "长河落日圆",
-                    Vector3(0.0, 0.0, 0.0),
-                    BubbleTextLayoutParam(),
-                    getVectorDrawable(R.drawable.ic_1)?.let { BubbleTextDrawable(it) }
-                ),
-                BubbleText(
-                    "点位10",
-                    Vector3(0.0, 0.0, 0.0),
-                    BubbleTextLayoutParam(),
-                    getVectorDrawable(R.drawable.ic_2)?.let { BubbleTextDrawable(it) }
-                ),
-
-
-            )
-            val bitmap = bubbleTextLayer.generateBubbleTextSpan(bubbleTextList)
-            Log.d(TAG, "bitmap: $bitmap")
+            startActivity(Intent(this, OpenglNativeTestActivity::class.java))
         }
         binding.javaOpengl.setOnClickListener {
-            startActivity(Intent(this, JavaOpenglESActivity::class.java))
+            startActivity(Intent(this, JavaOpenglES20Activity::class.java))
         }
         binding.grayToRgb.setOnClickListener {
             startActivity(Intent(this, GrayToRgbActivity::class.java))
