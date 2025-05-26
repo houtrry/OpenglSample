@@ -40,7 +40,7 @@ class MainActivity : AppCompatActivity() {
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        startActivity(Intent(this, JavaOpenglES20Activity::class.java))
+//        startActivity(Intent(this, JavaOpenglES20Activity::class.java))
         binding.nativeOpengl.setOnClickListener {
             startActivity(Intent(this, OpenglNativeTestActivity::class.java))
         }
@@ -49,6 +49,9 @@ class MainActivity : AppCompatActivity() {
         }
         binding.grayToRgb.setOnClickListener {
             startActivity(Intent(this, GrayToRgbActivity::class.java))
+        }
+        binding.testOpengl.setOnClickListener {
+            startActivity(Intent(this, TestActivity::class.java))
         }
         binding.generateGrayImageFile.setOnClickListener {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
