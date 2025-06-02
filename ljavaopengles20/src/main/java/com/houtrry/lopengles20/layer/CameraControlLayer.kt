@@ -107,6 +107,6 @@ class CameraControlLayer(val mapRender: MapRender) : BaseLayer() {
 
     override fun onSizeChange(width: Int, height: Int) {
         super.onSizeChange(width, height)
-        mapMatrix.frustumM(width, height)
+        mapMatrix.orthoM(width, height)
     }
 }
