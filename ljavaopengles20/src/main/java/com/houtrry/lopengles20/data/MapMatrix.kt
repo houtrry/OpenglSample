@@ -4,6 +4,7 @@ import android.graphics.PointF
 import android.opengl.Matrix
 import android.util.Log
 import com.houtrry.common_map.utils.formatMatrixString
+import com.houtrry.lopengles20.utils.identityM
 import kotlin.math.sqrt
 
 /**
@@ -18,14 +19,13 @@ class MapMatrix {
         private const val TAG = "MapMatrix"
     }
 
-    private val modelMatrix = FloatArray(16)
-    private val projectionMatrix = FloatArray(16) // 用于变换的矩阵
-    private val viewMatrix = FloatArray(16) //用户手势操作的变换
-    private val worldMatrix = FloatArray(16) // 地图本身的变换
-    private val resolutionMatrix = FloatArray(16)
+    private val modelMatrix = FloatArray(16).identityM()
+    private val projectionMatrix = FloatArray(16).identityM() // 用于变换的矩阵
+    private val viewMatrix = FloatArray(16).identityM() //用户手势操作的变换
+    private val worldMatrix = FloatArray(16).identityM() // 地图本身的变换
+    private val resolutionMatrix = FloatArray(16).identityM()
 
     init {
-        Matrix.setIdentityM(modelMatrix, 0)
         Matrix.setLookAtM(
             viewMatrix, 0,
             0f, 0f, 1f,
