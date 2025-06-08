@@ -148,5 +148,4 @@ class MapMatrix {
 
         return PointF(point[0], point[1])
     }
-
 }

@@ -1,5 +1,6 @@
 package com.houtrry.openglsample.activity
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.*
 import android.graphics.drawable.BitmapDrawable
@@ -17,6 +18,8 @@ import android.view.ScaleGestureDetector
 import androidx.annotation.DrawableRes
 import androidx.core.content.ContextCompat
 import com.houtrry.common_map.utils.dp
+import com.houtrry.lopengles20.utils.getScale
+import com.houtrry.lopengles20.utils.identityM
 import com.houtrry.openglsample.R
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -30,6 +33,7 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
     companion object {
         private const val TAG = "TestActivity"
     }
+
     // 顶点着色器代码
     private val vertexShaderCode = """
     uniform mat4 uMVPMatrix;
@@ -93,19 +97,19 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
     private val modelMatrix = FloatArray(16).also {
         Matrix.setIdentityM(it, 0)
     }
+
+    //mvpMatrix = projectionMatrix * viewMatrix * modelMatrix
     private val mvpMatrix = FloatArray(16).also {
         Matrix.setIdentityM(it, 0)
     }
 
     // 手势相关变量
-    private var previousX = 0f
-    private var previousY = 0f
+    private var previousPointF = PointF()
     private var scaleFactor = 1f
-    private var rotationAngle = 0f
     private var mapProgram = -1
     private var textProgram = -1
-    private var mapWidth = 1024f // 根据实际地图尺寸设置
-    private var mapHeight = 768f // 根据实际地图尺寸设置
+    private var viewWidth = 0
+    private var viewHeight = 0
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         glSurfaceView = GLSurfaceView(this).apply {
@@ -125,17 +129,14 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
     }
 
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
+        this.viewWidth = width
+        this.viewHeight = height
         GLES20.glViewport(0, 0, width, height)
         Matrix.orthoM(
-            projectionMatrix, 0, 0f,
-            width.toFloat(), 0f, height.toFloat(), -1f, 1f
-        )
-        mapVertices = floatArrayOf(
-            // 位置坐标     // 纹理坐标
-            0f, 0f, 0f, 1f,
-            width.toFloat(), 0f, 1f, 1f,
-            0f, height.toFloat(), 0f, 0f,
-            width.toFloat(), height.toFloat(), 1f, 0f
+            projectionMatrix, 0,
+            -width * 0.5f, width * 0.5f,
+            -height * 0.5f, height * 0.5f,
+            -1f, 1f
         )
     }
 
@@ -195,9 +196,18 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
             )
 
             // 加载位图到纹理
-            val bitmap = BitmapFactory.decodeResource(resources, R.drawable.optemap_22k)
+            val bitmap = BitmapFactory.decodeResource(resources, R.drawable.optemap_217k)
             GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)
+            val bitmapWidth = bitmap.width
+            val bitmapHeight = bitmap.height
             bitmap.recycle()
+            mapVertices = floatArrayOf(
+                // 位置坐标     // 纹理坐标
+                -bitmapWidth * 0.5f, -bitmapHeight * 0.5f, 0f, 1f,
+                bitmapWidth * 0.5f, -bitmapHeight * 0.5f, 1f, 1f,
+                -bitmapWidth * 0.5f, bitmapHeight * 0.5f, 0f, 0f,
+                bitmapWidth * 0.5f, bitmapHeight * 0.5f, 1f, 0f
+            )
 
             mapTextureId = textureHandle[0]
         }
@@ -237,8 +247,9 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
             vertexBuffer.apply { position(2) })
 
         // 计算MVP矩阵
-        val mvpMatrix = FloatArray(16)
-        Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
+        val mvpMatrix = mvpMatrix.identityM()
+        Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, modelMatrix, 0)
+        Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, mvpMatrix, 0)
         // 传递MVP矩阵
         GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0)
 
@@ -257,77 +268,41 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
 
     // 成员变量
     private var previousAngle = 0f
-    private var previousVectorLength = 0f
-    private var pivotX = 0f // 旋转中心 X
-    private var pivotY = 0f // 旋转中心 Y
-    private var translateX = 0f // 平移 X
-    private var translateY = 0f // 平移 Y
+
     // 成员变量
     private var initialDistance = 0f
-    private var initialScaleFactor = 1f  // 初始缩放值
 
+    @SuppressLint("ClickableViewAccessibility")
     private fun setupGestureListeners() {
-        val gestureDetector =
-            GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
-                override fun onScroll(
-                    e1: MotionEvent,
-                    e2: MotionEvent,
-                    distanceX: Float,
-                    distanceY: Float
-                ): Boolean {
-                    // 单指平移
-                    if (e2.pointerCount == 1) {
-                        translateMap(-distanceX, distanceY)
-                        return true
-                    }
-                    return false
-                }
-            })
-
-        val scaleGestureDetector = ScaleGestureDetector(
-            this,
-            object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
-                override fun onScale(detector: ScaleGestureDetector): Boolean {
-                    // 双指缩放
-                    scaleFactor *= detector.scaleFactor
-                    scaleFactor = scaleFactor.coerceIn(0.5f, 5.0f) // 限制缩放范围
-                    updateViewMatrix()
-                    return true
-                }
-            })
-
         glSurfaceView.setOnTouchListener { _, event ->
-            when (event.actionMasked) {
+            return@setOnTouchListener when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     // 单指按下，记录初始位置
-                    previousX = event.x
-                    previousY = event.y
+                    Log.d(TAG, "ACTION_DOWN ${event.pointerCount} point, (${event.getX(0)}, ${event.getY(0)}) -> (${event.x}, ${event.y})")
+                    previousPointF = PointF(event.x, event.y)
                     true
                 }
                 MotionEvent.ACTION_POINTER_DOWN -> {
+                    Log.d(TAG, "ACTION_POINTER_DOWN ${event.pointerCount} point, (${event.getX(0)}, ${event.getY(0)}) -> (${event.x}, ${event.y})")
                     if (event.pointerCount == 2) {
                         // 双指按下，初始化旋转/缩放参数
                         val dx = event.getX(1) - event.getX(0)
                         val dy = event.getY(1) - event.getY(0)
                         initialDistance = sqrt(dx * dx + dy * dy)
-                        initialScaleFactor = scaleFactor
-                        previousAngle = atan2(dy.toDouble(), dx.toDouble()).toFloat()
+                        previousAngle = atan2(-dy.toDouble(), dx.toDouble()).toFloat()
 
                         // ✅ 计算并存储当前中心点（转换为OpenGL坐标）
-                        pivotX = (event.getX(0) + event.getX(1)) / 2
-                        pivotY = (event.getY(0) + event.getY(1)) / 2
-                        convertScreenToGL(pivotX, pivotY)  // 转换到OpenGL坐标系
+//                        convertScreenToGL((event.getX(0) + event.getX(1)) / 2, (event.getY(0) + event.getY(1)) / 2)  // 转换到OpenGL坐标系
                     }
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
                     if (event.pointerCount == 1) {
+                        Log.d(TAG, "ACTION_MOVE only one point")
                         // 单指拖动
-                        val dx = event.x - previousX
-                        val dy = event.y - previousY
-                        translateMap(dx, -dy)  // Y轴需反向
-                        previousX = event.x
-                        previousY = event.y
+                        val point = PointF(event.x, event.y)
+                        translateMap(point.x - previousPointF.x, point.y - previousPointF.y)  // Y轴需反向
+                        previousPointF = point
                     } else if (event.pointerCount == 2) {
                         // 双指操作
                         val x1 = event.getX(0)
@@ -336,31 +311,44 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
                         val y2 = event.getY(1)
 
                         // ✅ 实时更新中心点（并转换坐标系）
-                        pivotX = (x1 + x2) / 2
-                        pivotY = (y1 + y2) / 2
-                        convertScreenToGL(pivotX, pivotY)
+                        val pivot = convertScreenToGL((x1 + x2) / 2, (y1 + y2) / 2)
 
                         // 计算旋转
                         val dx = x2 - x1
                         val dy = y2 - y1
                         val currentAngle = atan2(-dy.toDouble(), dx.toDouble()).toFloat()
-                        if (previousAngle != 0f) {
-                            rotationAngle += Math.toDegrees((currentAngle - previousAngle).toDouble()).toFloat()
+                        val rotationAngle = if (previousAngle != 0f) {
+                            Math.toDegrees((currentAngle - previousAngle).toDouble())
+                                .toFloat()
+                        } else {
+                            0f
                         }
                         previousAngle = currentAngle
 
                         // 计算缩放
                         val currentDistance = sqrt(dx * dx + dy * dy)
-                        scaleFactor = initialScaleFactor * (currentDistance / initialDistance)
-
-                        updateViewMatrix()
+                        scaleFactor = (currentDistance / initialDistance)
+                        initialDistance = currentDistance
+                        updateViewMatrix(pivot, rotationAngle, scaleFactor)
+                        glSurfaceView.requestRender()
                     }
                     true
                 }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
+                MotionEvent.ACTION_UP -> {
                     // 重置状态
+                    Log.d(TAG, "ACTION_UP ${event.pointerCount} point, (${event.getX(0)}, ${event.getY(0)}) -> (${event.x}, ${event.y})")
                     previousAngle = 0f
                     initialDistance = 0f
+                    true
+                }
+                MotionEvent.ACTION_POINTER_UP -> {
+                    Log.d(TAG, "ACTION_POINTER_UP ${event.pointerCount} point, (${event.getX(0)}, ${event.getY(0)}) -> (${event.x}, ${event.y})")
+                    if (event.pointerCount == 2) {
+                        val remainIndex = if (event.actionIndex == 0) 1 else 0
+                        previousPointF = PointF(event.getX(remainIndex), event.getY(remainIndex))
+                        previousAngle = 0f
+                        initialDistance = 0f
+                    }
                     true
                 }
                 else -> false
@@ -370,34 +358,51 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
     }
 
     private fun translateMap(dx: Float, dy: Float) {
-        translateX += dx
-        translateY += dy
-        updateViewMatrix()
+        synchronized(modelMatrix) {
+            val p0 = convertScreenToGL(0f, 0f)
+            val pxy = convertScreenToGL(dx, dy)
+            Matrix.translateM(modelMatrix, 0, pxy.x - p0.x, pxy.y - p0.y, 0f)
+        }
     }
 
-    private fun convertScreenToGL(screenX: Float, screenY: Float) {
-        // 假设 orthoM 投影范围为 (0, width, 0, height)
-        pivotX = screenX  // X方向一致
-        pivotY = glSurfaceView.height - screenY  // Y轴翻转（屏幕坐标系 → OpenGL坐标系）
+    private fun convertScreenToGL(screenX: Float, screenY: Float): PointF {
+        val tempMatrix = FloatArray(16).identityM()
+        val invertedMatrix = FloatArray(16).identityM()
+        val ndcX = screenX / (viewWidth * 0.5f) - 1.0f
+        val ndcY = 1.0f - screenY / (viewHeight * 0.5f) // Y轴翻转
+
+        // 2. 创建MVP矩阵
+        Matrix.multiplyMM(tempMatrix, 0, projectionMatrix, 0, modelMatrix, 0)
+
+        // 3. 求逆矩阵
+        Matrix.invertM(invertedMatrix, 0, tempMatrix, 0)
+
+        // 4. 变换坐标
+        val inVec = floatArrayOf(ndcX, ndcY, 0f, 1f)
+        val outVec = FloatArray(4)
+        Matrix.multiplyMV(outVec, 0, invertedMatrix, 0, inVec, 0)
+
+        // 5. 透视除法
+        if (outVec[3] != 0f) {
+            outVec[0] /= outVec[3]
+            outVec[1] /= outVec[3]
+        }
+
+        return PointF(outVec[0], outVec[1])
     }
 
-    private fun updateViewMatrix() {
-        Matrix.setIdentityM(viewMatrix, 0)
+    private fun updateViewMatrix(pivot: PointF, rotate: Float, scale: Float) {
+//        Log.d(TAG, "updateViewMatrix start, pivot: $pivot, rotate: $rotate, scale: $scale")
+        synchronized(modelMatrix) {
+            // 2. 移动到当前操作中心点
+            Matrix.translateM(modelMatrix, 0, pivot.x, pivot.y, 0f)
 
-        // 1. 应用全局平移（用户拖拽）
-        Matrix.translateM(viewMatrix, 0, translateX, translateY, 0f)
-
-        // 2. 移动到当前操作中心点
-        Matrix.translateM(viewMatrix, 0, pivotX, pivotY, 0f)
-
-        // 3. 应用旋转和缩放
-        Matrix.rotateM(viewMatrix, 0, rotationAngle, 0f, 0f, 1f)
-        Matrix.scaleM(viewMatrix, 0, scaleFactor, scaleFactor, 1f)
-
-        // 4. 移回原点
-        Matrix.translateM(viewMatrix, 0, -pivotX, -pivotY, 0f)
-
-        glSurfaceView.requestRender()
+            // 3. 应用旋转和缩放
+            Matrix.rotateM(modelMatrix, 0, rotate, 0f, 0f, 1f)
+            Matrix.scaleM(modelMatrix, 0, scale, scale, 1f)
+            // 4. 移回原点
+            Matrix.translateM(modelMatrix, 0, -pivot.x, -pivot.y, 0f)
+        }
     }
 
     // 标记点数据类
@@ -438,7 +443,12 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
                         GLES20.GL_LINEAR
                     )
 
-                    val bitmap = loadVectorDrawableAsBitmap(this@TestActivity, marker.iconResId, 24.dp.toInt(), 24.dp.toInt())
+                    val bitmap = loadVectorDrawableAsBitmap(
+                        this@TestActivity,
+                        marker.iconResId,
+                        24.dp.toInt(),
+                        24.dp.toInt()
+                    )
                     Log.e(TAG, "bitmap: $bitmap")
                     GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)
                     bitmap?.recycle()
@@ -449,7 +459,12 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         }
     }
 
-    private fun loadVectorDrawableAsBitmap(context: Context, @DrawableRes resId: Int, width: Int, height: Int): Bitmap? {
+    private fun loadVectorDrawableAsBitmap(
+        context: Context,
+        @DrawableRes resId: Int,
+        width: Int,
+        height: Int
+    ): Bitmap? {
         val vectorDrawable = ContextCompat.getDrawable(context, resId) as? VectorDrawable
             ?: return null
 
@@ -482,9 +497,9 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
 
         val vertices = floatArrayOf(
             // 顶点坐标     // 纹理坐标（修正）
-            left,  top,    0f, 1f,  // 左上 → 左下
-            right, top,    1f, 1f,  // 右上 → 右下
-            left,  bottom, 0f, 0f,  // 左下 → 左上
+            left, top, 0f, 1f,  // 左上 → 左下
+            right, top, 1f, 1f,  // 右上 → 右下
+            left, bottom, 0f, 0f,  // 左下 → 左上
             right, bottom, 1f, 0f   // 右下 → 右上
         )
 
@@ -590,8 +605,16 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
 
         if (textureIds[0] != 0) {
             GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureIds[0])
-            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
-            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
+            GLES20.glTexParameteri(
+                GLES20.GL_TEXTURE_2D,
+                GLES20.GL_TEXTURE_MIN_FILTER,
+                GLES20.GL_LINEAR
+            )
+            GLES20.glTexParameteri(
+                GLES20.GL_TEXTURE_2D,
+                GLES20.GL_TEXTURE_MAG_FILTER,
+                GLES20.GL_LINEAR
+            )
             GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)
         }
         bitmap.recycle()
@@ -604,10 +627,10 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
 
         val vertices = floatArrayOf(
             // 顶点坐标       // 纹理坐标
-            left,  bottom,  0f, 0f,  // 左下
-            right, bottom,  1f, 0f,  // 右下
-            left,  top,     0f, 1f,  // 左上
-            right, top,     1f, 1f   // 右上
+            left, bottom, 0f, 0f,  // 左下
+            right, bottom, 1f, 0f,  // 右下
+            left, top, 0f, 1f,  // 左上
+            right, top, 1f, 1f   // 右上
         )
 
         // 9. 准备顶点缓冲区
