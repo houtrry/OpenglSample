@@ -18,7 +18,10 @@ import android.view.ScaleGestureDetector
 import androidx.annotation.DrawableRes
 import androidx.core.content.ContextCompat
 import com.houtrry.common_map.utils.dp
+import com.houtrry.common_map.utils.formatMatrixString
+import com.houtrry.lopengles20.utils.getRotation
 import com.houtrry.lopengles20.utils.getScale
+import com.houtrry.lopengles20.utils.getTranslation
 import com.houtrry.lopengles20.utils.identityM
 import com.houtrry.openglsample.R
 import java.nio.ByteBuffer
@@ -175,6 +178,8 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         }
     }
 
+    private val mapSize = Point(0, 0)
+
     private fun loadMapTexture() {
         val textureHandle = IntArray(1)
         GLES20.glGenTextures(1, textureHandle, 0)
@@ -200,6 +205,8 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
             GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)
             val bitmapWidth = bitmap.width
             val bitmapHeight = bitmap.height
+            mapSize.x = bitmapWidth
+            mapSize.y = bitmapHeight
             bitmap.recycle()
             mapVertices = floatArrayOf(
                 // 位置坐标     // 纹理坐标
@@ -264,6 +271,7 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         // 禁用顶点属性数组
         GLES20.glDisableVertexAttribArray(positionHandle)
         GLES20.glDisableVertexAttribArray(texCoordHandle)
+        GLES20.glUseProgram(0)
     }
 
     // 成员变量
@@ -278,12 +286,20 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
             return@setOnTouchListener when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     // 单指按下，记录初始位置
-                    Log.d(TAG, "ACTION_DOWN ${event.pointerCount} point, (${event.getX(0)}, ${event.getY(0)}) -> (${event.x}, ${event.y})")
+                    Log.d(
+                        TAG,
+                        "ACTION_DOWN ${event.pointerCount} point, (${event.getX(0)}, ${event.getY(0)}) -> (${event.x}, ${event.y})"
+                    )
                     previousPointF = PointF(event.x, event.y)
                     true
                 }
                 MotionEvent.ACTION_POINTER_DOWN -> {
-                    Log.d(TAG, "ACTION_POINTER_DOWN ${event.pointerCount} point, (${event.getX(0)}, ${event.getY(0)}) -> (${event.x}, ${event.y})")
+                    Log.d(
+                        TAG,
+                        "ACTION_POINTER_DOWN ${event.pointerCount} point, (${event.getX(0)}, ${
+                            event.getY(0)
+                        }) -> (${event.x}, ${event.y})"
+                    )
                     if (event.pointerCount == 2) {
                         // 双指按下，初始化旋转/缩放参数
                         val dx = event.getX(1) - event.getX(0)
@@ -301,7 +317,10 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
                         Log.d(TAG, "ACTION_MOVE only one point")
                         // 单指拖动
                         val point = PointF(event.x, event.y)
-                        translateMap(point.x - previousPointF.x, point.y - previousPointF.y)  // Y轴需反向
+                        translateMap(
+                            point.x - previousPointF.x,
+                            point.y - previousPointF.y
+                        )  // Y轴需反向
                         previousPointF = point
                     } else if (event.pointerCount == 2) {
                         // 双指操作
@@ -336,13 +355,21 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
                 }
                 MotionEvent.ACTION_UP -> {
                     // 重置状态
-                    Log.d(TAG, "ACTION_UP ${event.pointerCount} point, (${event.getX(0)}, ${event.getY(0)}) -> (${event.x}, ${event.y})")
+                    Log.d(
+                        TAG,
+                        "ACTION_UP ${event.pointerCount} point, (${event.getX(0)}, ${event.getY(0)}) -> (${event.x}, ${event.y})"
+                    )
                     previousAngle = 0f
                     initialDistance = 0f
                     true
                 }
                 MotionEvent.ACTION_POINTER_UP -> {
-                    Log.d(TAG, "ACTION_POINTER_UP ${event.pointerCount} point, (${event.getX(0)}, ${event.getY(0)}) -> (${event.x}, ${event.y})")
+                    Log.d(
+                        TAG,
+                        "ACTION_POINTER_UP ${event.pointerCount} point, (${event.getX(0)}, ${
+                            event.getY(0)
+                        }) -> (${event.x}, ${event.y})"
+                    )
                     if (event.pointerCount == 2) {
                         val remainIndex = if (event.actionIndex == 0) 1 else 0
                         previousPointF = PointF(event.getX(remainIndex), event.getY(remainIndex))
@@ -411,13 +438,77 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         val y: Float,
         val iconResId: Int,
         val text: String,
-        val textColor: Int = Color.WHITE
-    )
+        val textColor: Int = Color.WHITE,
+        val iconSize: Int = 40,
+        val followRotate: Boolean = false,
+        val modelMatrix: FloatArray = FloatArray(16)
+    ) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as MapMarker
+
+            if (x != other.x) return false
+            if (y != other.y) return false
+            if (iconResId != other.iconResId) return false
+            if (text != other.text) return false
+            if (textColor != other.textColor) return false
+            if (iconSize != other.iconSize) return false
+            if (followRotate != other.followRotate) return false
+            if (!modelMatrix.contentEquals(other.modelMatrix)) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = x.hashCode()
+            result = 31 * result + y.hashCode()
+            result = 31 * result + iconResId
+            result = 31 * result + text.hashCode()
+            result = 31 * result + textColor
+            result = 31 * result + iconSize
+            result = 31 * result + followRotate.hashCode()
+            result = 31 * result + modelMatrix.contentHashCode()
+            return result
+        }
+    }
+
+    private fun MapMarker.reCalcModelMatrixOfMarker(
+        mapModelMatrix: FloatArray,
+        mapWidth: Int,
+        mapHeight: Int
+    ): FloatArray {
+        // 1. 提取地图平移和旋转
+        val translation = mapModelMatrix.getTranslation()
+
+        val rotation = if (followRotate) {
+            mapModelMatrix.getRotation()
+        } else {
+            null
+        }
+
+        // 2. 计算人在世界空间的位置
+        val worldX = translation[0] + x * mapWidth
+        val worldY = translation[1] + y * mapHeight
+
+        // 3. 创建独立模型矩阵
+        return modelMatrix.apply {
+            Matrix.setIdentityM(this, 0)
+            Matrix.translateM(this, 0, worldX, worldY, 0f)
+            // 继承旋转
+            rotation?.let { Matrix.multiplyMM(this, 0, this, 0, it, 0) }
+            Matrix.scaleM(this, 0, iconSize.toFloat(), iconSize.toFloat(), 1f)    // 固定大小
+        }
+    }
 
     // 标记点列表
     private val markers = listOf(
-        MapMarker(100f, 200f, R.drawable.ic_launcher_background, "位置1"),
-        MapMarker(300f, 400f, R.drawable.ic_launcher_background, "位置2"),
+        MapMarker(0f, 0f, R.mipmap.robot, "", iconSize = 16, followRotate = true),
+//        MapMarker(0.7f, 0.25f, R.mipmap.icon_start_point, "初始点0", iconSize = 10),
+//        MapMarker(-0.15f, -0.555f, R.mipmap.icon_start_point, "初始点1", iconSize = 10),
+//        MapMarker(0.212f, -0.9450f, R.mipmap.icon_target, "初始点1", iconSize = 10),
+//        MapMarker(300f, 400f, R.drawable.ic_launcher_background, "位置2"),
         // 添加更多标记点...
     )
 
@@ -443,11 +534,9 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
                         GLES20.GL_LINEAR
                     )
 
-                    val bitmap = loadVectorDrawableAsBitmap(
-                        this@TestActivity,
+                    val bitmap = BitmapFactory.decodeResource(
+                        resources,
                         marker.iconResId,
-                        24.dp.toInt(),
-                        24.dp.toInt()
                     )
                     Log.e(TAG, "bitmap: $bitmap")
                     GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)
@@ -459,22 +548,22 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         }
     }
 
-    private fun loadVectorDrawableAsBitmap(
-        context: Context,
-        @DrawableRes resId: Int,
-        width: Int,
-        height: Int
-    ): Bitmap? {
-        val vectorDrawable = ContextCompat.getDrawable(context, resId) as? VectorDrawable
-            ?: return null
-
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        vectorDrawable.setBounds(0, 0, canvas.width, canvas.height)
-        vectorDrawable.draw(canvas)
-
-        return bitmap
-    }
+//    private fun loadVectorDrawableAsBitmap(
+//        context: Context,
+//        @DrawableRes resId: Int,
+//        width: Int,
+//        height: Int
+//    ): Bitmap? {
+//        val vectorDrawable = ContextCompat.getDrawable(context, resId) as? VectorDrawable
+//            ?: return null
+//
+//        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+//        val canvas = Canvas(bitmap)
+//        vectorDrawable.setBounds(0, 0, canvas.width, canvas.height)
+//        vectorDrawable.draw(canvas)
+//
+//        return bitmap
+//    }
 
     private fun drawMarkers() {
         markers.forEach { marker ->
@@ -484,16 +573,20 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
     }
 
     private fun drawMarkerIcon(marker: MapMarker) {
-        val textureId = markerTextures[marker.iconResId] ?: return
-
+        Log.d(TAG, "drawMarkerIcon start for $marker")
+        val textureId = markerTextures[marker.iconResId]
+        if (textureId == null) {
+            Log.d(TAG, "no found textureId for $marker")
+            return
+        }
         // 图标大小
-        val iconSize = 32f * scaleFactor
+        val iconSize = marker.iconSize * scaleFactor
 
         // 计算图标顶点
-        val left = marker.x - iconSize / 2
-        val right = marker.x + iconSize / 2
-        val top = marker.y - iconSize / 2
-        val bottom = marker.y + iconSize / 2
+        val left = marker.x * mapSize.x - iconSize / 2
+        val right = marker.x * mapSize.x + iconSize / 2
+        val top = marker.y * mapSize.y - iconSize / 2
+        val bottom = marker.y * mapSize.y + iconSize / 2
 
         val vertices = floatArrayOf(
             // 顶点坐标     // 纹理坐标（修正）
@@ -503,6 +596,7 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
             right, bottom, 1f, 0f   // 右下 → 右上
         )
 
+        Log.d(TAG, "${marker.text} -> vertices: ${vertices.formatMatrixString()}")
         // 使用地图着色器程序
         GLES20.glUseProgram(mapProgram)
 
@@ -536,9 +630,7 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
             vertexBuffer.apply { position(2) })
 
         // 计算MVP矩阵
-        val modelMatrix = FloatArray(16)
-        Matrix.setIdentityM(modelMatrix, 0)
-        Matrix.translateM(modelMatrix, 0, 0f, 0f, 0f)
+        val modelMatrix = marker.reCalcModelMatrixOfMarker(mapModelMatrix = modelMatrix, mapSize.x, mapSize.y)
 
         val mvpMatrix = FloatArray(16)
         Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
@@ -558,9 +650,13 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         // 禁用顶点属性数组
         GLES20.glDisableVertexAttribArray(positionHandle)
         GLES20.glDisableVertexAttribArray(texCoordHandle)
+        GLES20.glUseProgram(0)
     }
 
     private fun drawMarkerText(marker: MapMarker) {
+        if (marker.text.isNotEmpty()) {
+            return
+        }
         // 1. 准备文字绘制参数
         val textSize = 24f * scaleFactor // 根据缩放调整文字大小
         val textPadding = 5f * scaleFactor // 文字与图标的间距
@@ -672,8 +768,7 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         )
 
         // 14. 计算MVP矩阵
-        val modelMatrix = FloatArray(16)
-        Matrix.setIdentityM(modelMatrix, 0)
+        val modelMatrix = marker.reCalcModelMatrixOfMarker(mapModelMatrix = modelMatrix, mapSize.x, mapSize.y)
 
         val mvpMatrix = FloatArray(16)
         Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
@@ -706,6 +801,7 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
 
         // 19. 删除临时纹理
         GLES20.glDeleteTextures(1, textureIds, 0)
+        GLES20.glUseProgram(0)
     }
 
 }
