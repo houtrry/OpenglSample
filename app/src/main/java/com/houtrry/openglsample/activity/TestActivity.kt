@@ -12,17 +12,9 @@ import android.opengl.Matrix
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
-import android.view.GestureDetector
 import android.view.MotionEvent
-import android.view.ScaleGestureDetector
-import androidx.annotation.DrawableRes
-import androidx.core.content.ContextCompat
-import com.houtrry.common_map.utils.dp
 import com.houtrry.common_map.utils.formatMatrixString
-import com.houtrry.lopengles20.utils.getRotation
-import com.houtrry.lopengles20.utils.getScale
-import com.houtrry.lopengles20.utils.getTranslation
-import com.houtrry.lopengles20.utils.identityM
+import com.houtrry.lopengles20.utils.*
 import com.houtrry.openglsample.R
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -118,7 +110,7 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         glSurfaceView = GLSurfaceView(this).apply {
             setEGLContextClientVersion(2)
             setRenderer(this@TestActivity)
-            renderMode = GLSurfaceView.RENDERMODE_CONTINUOUSLY
+            renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
         }
         setContentView(glSurfaceView)
         setupGestureListeners()
@@ -202,6 +194,7 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
 
             // 加载位图到纹理
             val bitmap = BitmapFactory.decodeResource(resources, R.drawable.optemap_217k)
+//            val bitmap = BitmapFactory.decodeResource(resources, R.mipmap.t1)
             GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)
             val bitmapWidth = bitmap.width
             val bitmapHeight = bitmap.height
@@ -322,6 +315,7 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
                             point.y - previousPointF.y
                         )  // Y轴需反向
                         previousPointF = point
+                        glSurfaceView.requestRender()
                     } else if (event.pointerCount == 2) {
                         // 双指操作
                         val x1 = event.getX(0)
@@ -439,10 +433,12 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         val iconResId: Int,
         val text: String,
         val textColor: Int = Color.WHITE,
-        val iconSize: Int = 40,
+        val iconSize: Int = 400,
         val followRotate: Boolean = false,
-        val modelMatrix: FloatArray = FloatArray(16)
+        val modelMatrix: FloatArray = FloatArray(16),
+        val glCenter: PointF = PointF()
     ) {
+
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
@@ -479,35 +475,46 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         mapWidth: Int,
         mapHeight: Int
     ): FloatArray {
-        // 1. 提取地图平移和旋转
-        val translation = mapModelMatrix.getTranslation()
+//        // 2. 创建标记点的局部平移矩阵（相对于地图中心）
+        val localTranslation = FloatArray(16).identityM()
+        Matrix.translateM(localTranslation, 0, glCenter.x, glCenter.y, 0f)
+//
+//        // 3. 将标记点位置转换到世界空间
+        val worldPosition = FloatArray(16).identityM()
+        Matrix.multiplyMM(worldPosition, 0, mapModelMatrix, 0, localTranslation, 0)
 
-        val rotation = if (followRotate) {
-            mapModelMatrix.getRotation()
+        // 5. 创建标记点缩放矩阵（转换为像素大小）
+        val markerScaleMatrix = FloatArray(16).identityM()
+        Matrix.scaleM(markerScaleMatrix, 0, 1f, 1f, 1f)
+
+        // 6. 组合最终矩阵
+        val resultMatrix = FloatArray(16)
+        Matrix.multiplyMM(resultMatrix, 0, worldPosition, 0, markerScaleMatrix, 0)
+        Log.d(TAG, "reCalcModelMatrixOfMarker start ---------------------------------------------------")
+        Log.d(TAG, "reCalcModelMatrixOfMarker worldPosition: ${worldPosition.formatMatrixString()}")
+        Log.d(TAG, "reCalcModelMatrixOfMarker resultMatrix: ${resultMatrix.formatMatrixString()}")
+
+        val result = if (followRotate) {
+            resultMatrix.getTransformMatrixWithoutScale(iconSize.toFloat(), modelMatrix)
         } else {
-            null
+            modelMatrix.apply {
+                this.identityM()
+                Matrix.translateM(this, 0, resultMatrix.getTranslation()[0],
+                    resultMatrix.getTranslation()[1], resultMatrix.getTranslation()[2])
+                Matrix.scaleM(this, 0, iconSize.toFloat(), iconSize.toFloat(), 0f)
+            }
         }
-
-        // 2. 计算人在世界空间的位置
-        val worldX = translation[0] + x * mapWidth
-        val worldY = translation[1] + y * mapHeight
-
-        // 3. 创建独立模型矩阵
-        return modelMatrix.apply {
-            Matrix.setIdentityM(this, 0)
-            Matrix.translateM(this, 0, worldX, worldY, 0f)
-            // 继承旋转
-            rotation?.let { Matrix.multiplyMM(this, 0, this, 0, it, 0) }
-            Matrix.scaleM(this, 0, iconSize.toFloat(), iconSize.toFloat(), 1f)    // 固定大小
-        }
+        Log.d(TAG, "reCalcModelMatrixOfMarker followRotate: $followRotate, result: ${result.formatMatrixString()}")
+        Log.d(TAG, "reCalcModelMatrixOfMarker end   ---------------------------------------------------")
+        return result
     }
 
     // 标记点列表
     private val markers = listOf(
-        MapMarker(0f, 0f, R.mipmap.robot, "", iconSize = 16, followRotate = true),
-//        MapMarker(0.7f, 0.25f, R.mipmap.icon_start_point, "初始点0", iconSize = 10),
-//        MapMarker(-0.15f, -0.555f, R.mipmap.icon_start_point, "初始点1", iconSize = 10),
-//        MapMarker(0.212f, -0.9450f, R.mipmap.icon_target, "初始点1", iconSize = 10),
+        MapMarker(0f, 0f, R.mipmap.robot, "", iconSize = 400, followRotate = true),
+        MapMarker(10.0f, 10.005f, R.mipmap.icon_start_point, "初始点0", iconSize = 100),
+        MapMarker(-10.15f, -7.555f, R.mipmap.icon_start_point, "初始点1", iconSize = 100),
+        MapMarker(12.212f, -4.9450f, R.mipmap.icon_target, "初始点1", iconSize = 100),
 //        MapMarker(300f, 400f, R.drawable.ic_launcher_background, "位置2"),
         // 添加更多标记点...
     )
@@ -538,7 +545,7 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
                         resources,
                         marker.iconResId,
                     )
-                    Log.e(TAG, "bitmap: $bitmap")
+                    Log.e(TAG, "bitmap: $bitmap, ${marker.text}")
                     GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)
                     bitmap?.recycle()
 
@@ -546,6 +553,7 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
                 }
             }
         }
+        Log.d(TAG, "markerTextures: $markerTextures, markers: $markers")
     }
 
 //    private fun loadVectorDrawableAsBitmap(
@@ -573,27 +581,31 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
     }
 
     private fun drawMarkerIcon(marker: MapMarker) {
-        Log.d(TAG, "drawMarkerIcon start for $marker")
         val textureId = markerTextures[marker.iconResId]
+        Log.d(TAG, "drawMarkerIcon $textureId start for $marker")
         if (textureId == null) {
             Log.d(TAG, "no found textureId for $marker")
             return
         }
         // 图标大小
-        val iconSize = marker.iconSize * scaleFactor
+        val iconSize = marker.iconSize
 
+        val markerCenter = worldToGl(marker.x, marker.y)
+        marker.glCenter.x = markerCenter.x
+        marker.glCenter.y = markerCenter.y
         // 计算图标顶点
-        val left = marker.x * mapSize.x - iconSize / 2
-        val right = marker.x * mapSize.x + iconSize / 2
-        val top = marker.y * mapSize.y - iconSize / 2
-        val bottom = marker.y * mapSize.y + iconSize / 2
+//        val left = markerCenter.x - iconSize / 2
+//        val right = markerCenter.x + iconSize / 2
+//        val top = markerCenter.y - iconSize / 2
+//        val bottom = markerCenter.y + iconSize / 2
 
+        Log.d(TAG, "drawMarkerIcon ${marker.text} -> $markerCenter -> $iconSize -> ($viewWidth, $viewHeight)")
         val vertices = floatArrayOf(
             // 顶点坐标     // 纹理坐标（修正）
-            left, top, 0f, 1f,  // 左上 → 左下
-            right, top, 1f, 1f,  // 右上 → 右下
-            left, bottom, 0f, 0f,  // 左下 → 左上
-            right, bottom, 1f, 0f   // 右下 → 右上
+            -0.5f, -0.5f, 0f, 1f,  // 左上 → 左下
+            0.5f, -0.5f, 1f, 1f,  // 右上 → 右下
+            -0.5f, 0.5f, 0f, 0f,  // 左下 → 左上
+            0.5f, 0.5f, 1f, 0f   // 右下 → 右上
         )
 
         Log.d(TAG, "${marker.text} -> vertices: ${vertices.formatMatrixString()}")
@@ -630,11 +642,13 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
             vertexBuffer.apply { position(2) })
 
         // 计算MVP矩阵
-        val modelMatrix = marker.reCalcModelMatrixOfMarker(mapModelMatrix = modelMatrix, mapSize.x, mapSize.y)
+        val modelMatrix1 = marker.reCalcModelMatrixOfMarker(mapModelMatrix = modelMatrix, mapSize.x, mapSize.y).copyOf()
 
+        val modelMatrix = marker.modelMatrix.identityM()
+        Log.d(TAG, "${marker.text} -> modelMatrix: ${modelMatrix.formatMatrixString()}, modelMatrix1: ${modelMatrix1.formatMatrixString()}, modelMatrix: ${modelMatrix.formatMatrixString()}")
         val mvpMatrix = FloatArray(16)
         Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
-        Matrix.multiplyMM(mvpMatrix, 0, mvpMatrix, 0, modelMatrix, 0)
+        Matrix.multiplyMM(mvpMatrix, 0, mvpMatrix, 0, modelMatrix1, 0)
 
         // 传递MVP矩阵
         GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0)
@@ -804,4 +818,31 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         GLES20.glUseProgram(0)
     }
 
+//    private val bitmapInfo = BitmapInfo(
+//        -13.55f,
+//        -3.5f,
+//        0.05f
+//    )
+    private val bitmapInfo = BitmapInfo(
+        -0f,
+        -0f,
+        0.05f
+    )
+    private fun worldToGl(x: Float, y: Float): PointF {
+//        return convertScreenToGL(
+//            (x - bitmapInfo.resolution * mapSize.x * 0.5f - bitmapInfo.originX) / bitmapInfo.resolution,
+//            (y - bitmapInfo.resolution * mapSize.y * 0.5f - bitmapInfo.originY) / bitmapInfo.resolution,
+//        )
+
+        return PointF(
+            (x - bitmapInfo.resolution * mapSize.x * 0.5f - bitmapInfo.originX) / bitmapInfo.resolution,
+            (y - bitmapInfo.resolution * mapSize.y * 0.5f - bitmapInfo.originY) / bitmapInfo.resolution,
+        )
+    }
+
+    private data class BitmapInfo(
+        val originX: Float,
+        val originY: Float,
+        val resolution: Float,
+    )
 }
