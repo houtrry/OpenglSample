@@ -29,7 +29,7 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         private const val TAG = "TestActivity"
         private const val MAP_DEPTH = -1f
         private const val MARKER_DEPTH = 0f
-        private const val TEXT_DEPTH = 1f
+        private const val TEXT_DEPTH = 10f
     }
 
     // 顶点着色器代码
@@ -272,29 +272,13 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
     }
 
     private fun drawMarkers() {
-        markers.forEach { marker ->
-            drawMarkerIcon(marker)
-            if (marker.text.isNotEmpty()) {
-                drawMarkerText(marker)
-            }
-        }
+        // 先绘制所有Marker图标
+        drawAllMarkerIcons()
+        // 再绘制所有文字
+        drawAllMarkerTexts()
     }
 
-    private fun drawMarkerIcon(marker: MapMarker) {
-        val textureId = markerTextures[marker.iconResId] ?: return
-
-        val markerCenter = worldToGl(marker.x, marker.y)
-        marker.glCenter.x = markerCenter.x
-        marker.glCenter.y = markerCenter.y
-
-        val vertices = floatArrayOf(
-            // 顶点坐标     // 纹理坐标
-            -0.5f, -0.5f, MARKER_DEPTH, 0f, 1f,
-            0.5f, -0.5f, MARKER_DEPTH, 1f, 1f,
-            -0.5f, 0.5f, MARKER_DEPTH, 0f, 0f,
-            0.5f, 0.5f, MARKER_DEPTH, 1f, 0f
-        )
-
+    private fun drawAllMarkerIcons() {
         GLES20.glUseProgram(mapProgram)
 
         val positionHandle = GLES20.glGetAttribLocation(mapProgram, "vPosition")
@@ -305,91 +289,55 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         GLES20.glEnableVertexAttribArray(positionHandle)
         GLES20.glEnableVertexAttribArray(texCoordHandle)
 
-        val vertexBuffer = ByteBuffer.allocateDirect(vertices.size * 4)
-            .order(ByteOrder.nativeOrder())
-            .asFloatBuffer()
-            .apply {
-                put(vertices)
-                position(0)
-            }
+        // 所有Marker使用相同的深度值，按绘制顺序渲染
+        markers.forEachIndexed { index, marker ->
+            val textureId = markerTextures[marker.iconResId] ?: return@forEachIndexed
 
-        GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 20, vertexBuffer)
-        GLES20.glVertexAttribPointer(texCoordHandle, 2, GLES20.GL_FLOAT, false, 20, vertexBuffer.apply { position(3) })
+            val markerCenter = worldToGl(marker.x, marker.y)
+            marker.glCenter.x = markerCenter.x
+            marker.glCenter.y = markerCenter.y
 
-        val markerModelMatrix = marker.reCalcModelMatrixOfMarker(modelMatrix, mapSize.x, mapSize.y)
-        val mvpMatrix = FloatArray(16)
-        Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
-        Matrix.multiplyMM(mvpMatrix, 0, mvpMatrix, 0, markerModelMatrix, 0)
+            val vertices = floatArrayOf(
+                // 顶点坐标     // 纹理坐标
+                -0.5f, -0.5f, MARKER_DEPTH, 0f, 1f,
+                0.5f, -0.5f, MARKER_DEPTH, 1f, 1f,
+                -0.5f, 0.5f, MARKER_DEPTH, 0f, 0f,
+                0.5f, 0.5f, MARKER_DEPTH, 1f, 0f
+            )
 
-        GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0)
+            val vertexBuffer = ByteBuffer.allocateDirect(vertices.size * 4)
+                .order(ByteOrder.nativeOrder())
+                .asFloatBuffer()
+                .apply {
+                    put(vertices)
+                    position(0)
+                }
 
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId)
-        GLES20.glUniform1i(textureHandle, 0)
+            GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 20, vertexBuffer)
+            GLES20.glVertexAttribPointer(texCoordHandle, 2, GLES20.GL_FLOAT, false, 20, vertexBuffer.apply { position(3) })
 
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
+            val markerModelMatrix = marker.reCalcModelMatrixOfMarker(modelMatrix, mapSize.x, mapSize.y)
+            val mvpMatrix = FloatArray(16)
+            Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
+            Matrix.multiplyMM(mvpMatrix, 0, mvpMatrix, 0, markerModelMatrix, 0)
+
+            GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0)
+
+            GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId)
+            GLES20.glUniform1i(textureHandle, 0)
+
+            GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
+        }
 
         GLES20.glDisableVertexAttribArray(positionHandle)
         GLES20.glDisableVertexAttribArray(texCoordHandle)
         GLES20.glUseProgram(0)
     }
 
-    private fun drawMarkerText(marker: MapMarker) {
-        val textSize = 24f * scaleFactor
-        val textPadding = 5f * scaleFactor
-
-        val paint = Paint().apply {
-            color = marker.textColor
-            this.textSize = textSize
-            isAntiAlias = true
-            textAlign = Paint.Align.CENTER
-            typeface = Typeface.DEFAULT_BOLD
-        }
-
-        val textWidth = paint.measureText(marker.text)
-        val textHeight = paint.descent() - paint.ascent()
-
-        val bitmap = Bitmap.createBitmap(
-            textWidth.toInt() + 2,
-            textHeight.toInt() + 2,
-            Bitmap.Config.ARGB_8888
-        )
-
-        Canvas(bitmap).apply {
-            drawText(
-                marker.text,
-                width / 2f,
-                height / 2f - (paint.ascent() + paint.descent()) / 2,
-                paint
-            )
-        }
-
-        val textureIds = IntArray(1)
-        GLES20.glGenTextures(1, textureIds, 0)
-
-        if (textureIds[0] != 0) {
-            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureIds[0])
-            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
-            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
-            GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)
-        }
-        bitmap.recycle()
-
-        val vertices = floatArrayOf(
-            // 顶点坐标       // 纹理坐标
-            -textWidth / 2, -textHeight / 2, TEXT_DEPTH, 0f, 0f,
-            textWidth / 2, -textHeight / 2, TEXT_DEPTH, 1f, 0f,
-            -textWidth / 2, textHeight / 2, TEXT_DEPTH, 0f, 1f,
-            textWidth / 2, textHeight / 2, TEXT_DEPTH, 1f, 1f
-        )
-
-        val vertexBuffer = ByteBuffer.allocateDirect(vertices.size * 4)
-            .order(ByteOrder.nativeOrder())
-            .asFloatBuffer()
-            .apply {
-                put(vertices)
-                position(0)
-            }
+    private fun drawAllMarkerTexts() {
+        val textMarkers = markers.filter { it.text.isNotEmpty() }
+        if (textMarkers.isEmpty()) return
 
         GLES20.glUseProgram(textProgram)
 
@@ -402,27 +350,101 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         GLES20.glEnableVertexAttribArray(positionHandle)
         GLES20.glEnableVertexAttribArray(texCoordHandle)
 
-        vertexBuffer.position(0)
-        GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 20, vertexBuffer)
-        vertexBuffer.position(3)
-        GLES20.glVertexAttribPointer(texCoordHandle, 2, GLES20.GL_FLOAT, false, 20, vertexBuffer)
+        textMarkers.forEach { marker ->
+            val textSize = 24f * scaleFactor
+            val textPadding = 5f * scaleFactor
 
-        val markerModelMatrix = marker.reCalcModelMatrixOfMarker(modelMatrix, mapSize.x, mapSize.y)
-        val mvpMatrix = FloatArray(16)
-        Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
-        Matrix.multiplyMM(mvpMatrix, 0, mvpMatrix, 0, markerModelMatrix, 0)
+            val paint = Paint().apply {
+                color = marker.textColor
+                this.textSize = textSize
+                isAntiAlias = true
+                textAlign = Paint.Align.CENTER
+                typeface = Typeface.DEFAULT_BOLD
+            }
 
-        GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0)
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureIds[0])
-        GLES20.glUniform1i(textureHandle, 0)
-        GLES20.glUniform4f(textColorHandle, 1f, 1f, 1f, 1f)
+            val textWidth = paint.measureText(marker.text)
+            val textHeight = paint.descent() - paint.ascent()
 
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
+            val bitmap = Bitmap.createBitmap(
+                textWidth.toInt() + 2,
+                textHeight.toInt() + 2,
+                Bitmap.Config.ARGB_8888
+            )
+
+            Canvas(bitmap).apply {
+                drawText(
+                    marker.text,
+                    width / 2f,
+                    height / 2f - (paint.ascent() + paint.descent()) / 2,
+                    paint
+                )
+            }
+
+            val textureIds = IntArray(1)
+            GLES20.glGenTextures(1, textureIds, 0)
+
+            if (textureIds[0] != 0) {
+                GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureIds[0])
+                GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
+                GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
+                GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)
+            }
+            bitmap.recycle()
+
+            val vertices = floatArrayOf(
+                // 顶点坐标       // 纹理坐标
+                -textWidth / 2, -textHeight / 2, TEXT_DEPTH, 0f, 0f,
+                textWidth / 2, -textHeight / 2, TEXT_DEPTH, 1f, 0f,
+                -textWidth / 2, textHeight / 2, TEXT_DEPTH, 0f, 1f,
+                textWidth / 2, textHeight / 2, TEXT_DEPTH, 1f, 1f
+            )
+
+            val vertexBuffer = ByteBuffer.allocateDirect(vertices.size * 4)
+                .order(ByteOrder.nativeOrder())
+                .asFloatBuffer()
+                .apply {
+                    put(vertices)
+                    position(0)
+                }
+
+            vertexBuffer.position(0)
+            GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 20, vertexBuffer)
+            vertexBuffer.position(3)
+            GLES20.glVertexAttribPointer(texCoordHandle, 2, GLES20.GL_FLOAT, false, 20, vertexBuffer)
+
+            // 计算文字位置：在Marker上方显示
+            val markerCenter = worldToGl(marker.x, marker.y)
+            val textOffsetY = marker.iconSize * 0.5f + textPadding + textHeight * 0.5f
+            
+            // 创建文字专用的模型矩阵
+            val textModelMatrix = FloatArray(16).identityM()
+            Matrix.translateM(textModelMatrix, 0, markerCenter.x, markerCenter.y + textOffsetY, 0f)
+            Matrix.scaleM(textModelMatrix, 0, 1f, 1f, 1f)
+
+            val mvpMatrix = FloatArray(16)
+            Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
+            Matrix.multiplyMM(mvpMatrix, 0, mvpMatrix, 0, textModelMatrix, 0)
+
+            GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0)
+            GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureIds[0])
+            GLES20.glUniform1i(textureHandle, 0)
+            
+            // 设置文字颜色
+            val color = marker.textColor
+            val red = Color.red(color) / 255f
+            val green = Color.green(color) / 255f
+            val blue = Color.blue(color) / 255f
+            val alpha = Color.alpha(color) / 255f
+            GLES20.glUniform4f(textColorHandle, red, green, blue, alpha)
+
+            GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
+
+            GLES20.glDeleteTextures(1, textureIds, 0)
+        }
 
         GLES20.glDisableVertexAttribArray(positionHandle)
         GLES20.glDisableVertexAttribArray(texCoordHandle)
-        GLES20.glDeleteTextures(1, textureIds, 0)
         GLES20.glUseProgram(0)
     }
 
