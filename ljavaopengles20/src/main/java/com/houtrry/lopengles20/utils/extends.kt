@@ -31,14 +31,14 @@ fun FloatArray.getRotation(): FloatArray {
     )
 }
 
-fun FloatArray.getTransformMatrixWithoutScale(scale: Float, matrix: FloatArray): FloatArray {
+fun FloatArray.getTransformMatrixWithoutScale(scaleX: Float, scaleY: Float, matrix: FloatArray): FloatArray {
     this.copyInto(matrix)
     val sx = calcFloatArraySqrt(matrix[0], matrix[4])
     val sy = calcFloatArraySqrt(matrix[1], matrix[5])
-    matrix[0] *= scale / sx
-    matrix[4] *= scale / sx
-    matrix[1] *= scale / sy
-    matrix[5] *= scale / sy
+    matrix[0] *= scaleX / sx
+    matrix[4] *= scaleX / sx
+    matrix[1] *= scaleY / sy
+    matrix[5] *= scaleY / sy
     return matrix
 }
 
