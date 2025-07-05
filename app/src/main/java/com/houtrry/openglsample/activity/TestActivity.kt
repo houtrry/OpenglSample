@@ -190,6 +190,17 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
                 GLES20.GL_TEXTURE_MAG_FILTER,
                 GLES20.GL_LINEAR
             )
+            // 设置纹理包装模式以支持透明度
+            GLES20.glTexParameteri(
+                GLES20.GL_TEXTURE_2D,
+                GLES20.GL_TEXTURE_WRAP_S,
+                GLES20.GL_CLAMP_TO_EDGE
+            )
+            GLES20.glTexParameteri(
+                GLES20.GL_TEXTURE_2D,
+                GLES20.GL_TEXTURE_WRAP_T,
+                GLES20.GL_CLAMP_TO_EDGE
+            )
 
             // 加载位图到纹理
             val bitmap = BitmapFactory.decodeResource(resources, R.drawable.optemap_217k)
@@ -541,6 +552,17 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
                         GLES20.GL_TEXTURE_MAG_FILTER,
                         GLES20.GL_LINEAR
                     )
+                    // 设置纹理包装模式以支持透明度
+                    GLES20.glTexParameteri(
+                        GLES20.GL_TEXTURE_2D,
+                        GLES20.GL_TEXTURE_WRAP_S,
+                        GLES20.GL_CLAMP_TO_EDGE
+                    )
+                    GLES20.glTexParameteri(
+                        GLES20.GL_TEXTURE_2D,
+                        GLES20.GL_TEXTURE_WRAP_T,
+                        GLES20.GL_CLAMP_TO_EDGE
+                    )
 
                     val bitmap = BitmapFactory.decodeResource(
                         resources,
@@ -568,6 +590,17 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
                         GLES20.GL_TEXTURE_2D,
                         GLES20.GL_TEXTURE_MAG_FILTER,
                         GLES20.GL_LINEAR
+                    )
+                    // 设置纹理包装模式以支持透明度
+                    GLES20.glTexParameteri(
+                        GLES20.GL_TEXTURE_2D,
+                        GLES20.GL_TEXTURE_WRAP_S,
+                        GLES20.GL_CLAMP_TO_EDGE
+                    )
+                    GLES20.glTexParameteri(
+                        GLES20.GL_TEXTURE_2D,
+                        GLES20.GL_TEXTURE_WRAP_T,
+                        GLES20.GL_CLAMP_TO_EDGE
                     )
 
                     val bitmap = marker.text.generateBitmap(
@@ -690,8 +723,15 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId)
         GLES20.glUniform1i(textureHandle, 0)
 
+        // 启用混合模式以支持透明度
+        GLES20.glEnable(GLES20.GL_BLEND)
+        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
+
         // 绘制图标
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
+
+        // 禁用混合模式
+        GLES20.glDisable(GLES20.GL_BLEND)
 
         // 禁用顶点属性数组
         GLES20.glDisableVertexAttribArray(positionHandle)
@@ -779,8 +819,15 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, fontTextureInfo.textureId)
         GLES20.glUniform1i(textureHandle, 0)
 
+        // 启用混合模式以支持透明度
+        GLES20.glEnable(GLES20.GL_BLEND)
+        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
+
         // 绘制图标
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
+
+        // 禁用混合模式
+        GLES20.glDisable(GLES20.GL_BLEND)
 
         // 禁用顶点属性数组
         GLES20.glDisableVertexAttribArray(positionHandle)
@@ -1003,6 +1050,9 @@ private fun String.generateBitmap(textSize: Float,
         textHeight.toInt(),
         Bitmap.Config.ARGB_8888
     )
+
+    // 6. 清除位图，确保背景完全透明
+    bitmap.eraseColor(Color.TRANSPARENT)
 
     val canvas = Canvas(bitmap)
     canvas.drawText(this,
