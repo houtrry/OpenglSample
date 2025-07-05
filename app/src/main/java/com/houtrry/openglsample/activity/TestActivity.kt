@@ -112,9 +112,9 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
     // 标记点相关
     private val markers = listOf(
         MapMarker(0f, 0f, R.mipmap.robot, "", iconSize = 400, followRotate = true),
-        MapMarker(200.0f, 200.005f, R.mipmap.icon_start_point, "初始点0", iconSize = 100),
-        MapMarker(-10.15f, -7.555f, R.mipmap.icon_start_point, "初始点1", iconSize = 100),
-        MapMarker(120.212f, -40.9450f, R.mipmap.icon_target, "目标点", iconSize = 100),
+        MapMarker(100f, 100f, R.mipmap.icon_start_point, "初始点0", iconSize = 200),
+        MapMarker(-100f, -100f, R.mipmap.icon_start_point, "初始点1", iconSize = 200),
+        MapMarker(200f, -200f, R.mipmap.icon_target, "目标点", iconSize = 200),
     )
     private val markerTextures = mutableMapOf<Int, Int>()
 
@@ -297,6 +297,9 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
             marker.glCenter.x = markerCenter.x
             marker.glCenter.y = markerCenter.y
 
+            // 添加调试日志
+            Log.d(TAG, "Marker $index: world(${marker.x}, ${marker.y}) -> gl(${markerCenter.x}, ${markerCenter.y}), size=${marker.iconSize}")
+
             val vertices = floatArrayOf(
                 // 顶点坐标     // 纹理坐标
                 -0.5f, -0.5f, MARKER_DEPTH_BASE + index * 0.1f, 0f, 1f,
@@ -351,8 +354,11 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         GLES20.glEnableVertexAttribArray(texCoordHandle)
 
         textMarkers.forEach { marker ->
-            val textSize = 48f * scaleFactor  // 增大文字大小
-            val textPadding = 10f * scaleFactor
+            // 添加调试日志
+            Log.d(TAG, "Drawing text for marker: ${marker.text} at (${marker.x}, ${marker.y})")
+            
+            val textSize = 32f  // 使用固定大小
+            val textPadding = 20f
 
             val paint = Paint().apply {
                 color = marker.textColor
@@ -392,7 +398,7 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
             bitmap.recycle()
 
             val vertices = floatArrayOf(
-                // 顶点坐标       // 纹理坐标 (修正纹理坐标)
+                // 顶点坐标       // 纹理坐标
                 -textWidth / 2, -textHeight / 2, TEXT_DEPTH, 0f, 1f,
                 textWidth / 2, -textHeight / 2, TEXT_DEPTH, 1f, 1f,
                 -textWidth / 2, textHeight / 2, TEXT_DEPTH, 0f, 0f,
@@ -412,11 +418,11 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
             vertexBuffer.position(3)
             GLES20.glVertexAttribPointer(texCoordHandle, 2, GLES20.GL_FLOAT, false, 20, vertexBuffer)
 
-            // 计算文字位置：在Marker上方显示
+            // 简化文字位置计算
             val markerCenter = worldToGl(marker.x, marker.y)
             val textOffsetY = marker.iconSize * 0.5f + textPadding + textHeight * 0.5f
             
-            // 创建文字专用的模型矩阵，应用地图的变换
+            // 创建文字专用的模型矩阵
             val textModelMatrix = FloatArray(16).identityM()
             Matrix.translateM(textModelMatrix, 0, markerCenter.x, markerCenter.y + textOffsetY, 0f)
             
@@ -562,35 +568,24 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         mapWidth: Int,
         mapHeight: Int
     ): FloatArray {
-        val localTranslation = FloatArray(16).identityM()
-        Matrix.translateM(localTranslation, 0, glCenter.x, glCenter.y, 0f)
-
-        val worldPosition = FloatArray(16).identityM()
-        Matrix.multiplyMM(worldPosition, 0, mapModelMatrix, 0, localTranslation, 0)
-
-        val markerScaleMatrix = FloatArray(16).identityM()
-        Matrix.scaleM(markerScaleMatrix, 0, 1f, 1f, 1f)
-
-        val resultMatrix = FloatArray(16)
-        Matrix.multiplyMM(resultMatrix, 0, worldPosition, 0, markerScaleMatrix, 0)
-
-        return if (followRotate) {
-            resultMatrix.getTransformMatrixWithoutScale(iconSize.toFloat(), modelMatrix)
-        } else {
-            modelMatrix.apply {
-                identityM()
-                Matrix.translateM(this, 0, resultMatrix.getTranslation()[0],
-                    resultMatrix.getTranslation()[1], resultMatrix.getTranslation()[2])
-                Matrix.scaleM(this, 0, iconSize.toFloat(), iconSize.toFloat(), 1f)
-            }
-        }
+        // 简化矩阵计算
+        val resultMatrix = FloatArray(16).identityM()
+        
+        // 应用地图的变换
+        Matrix.multiplyMM(resultMatrix, 0, mapModelMatrix, 0, resultMatrix, 0)
+        
+        // 移动到marker位置
+        Matrix.translateM(resultMatrix, 0, glCenter.x, glCenter.y, 0f)
+        
+        // 应用缩放
+        Matrix.scaleM(resultMatrix, 0, iconSize.toFloat(), iconSize.toFloat(), 1f)
+        
+        return resultMatrix
     }
 
     private fun worldToGl(x: Float, y: Float): PointF {
-        return PointF(
-            (x - bitmapInfo.resolution * mapSize.x * 0.5f - bitmapInfo.originX) / bitmapInfo.resolution,
-            (y - bitmapInfo.resolution * mapSize.y * 0.5f - bitmapInfo.originY) / bitmapInfo.resolution,
-        )
+        // 简化坐标转换：直接使用世界坐标，因为地图已经居中显示
+        return PointF(x, y)
     }
 
     // 数据类
