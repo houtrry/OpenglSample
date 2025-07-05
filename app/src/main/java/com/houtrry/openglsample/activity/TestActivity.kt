@@ -85,6 +85,14 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
     private lateinit var glSurfaceView: GLSurfaceView
     private val viewMatrix = FloatArray(16).also {
         Matrix.setIdentityM(it, 0)
+        Log.d(TAG, "viewMatrix - start ${it.formatMatrixString()}")
+        Matrix.setLookAtM(
+            it, 0,
+            0f, 0f, 1f,
+            0f, 0f, 0f,
+            0f, 1f, 0f
+        )
+        Log.d(TAG, "viewMatrix - end   ${it.formatMatrixString()}")
     }
     private val projectionMatrix = FloatArray(16).also {
         Matrix.setIdentityM(it, 0)
@@ -131,13 +139,14 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
             projectionMatrix, 0,
             -width * 0.5f, width * 0.5f,
             -height * 0.5f, height * 0.5f,
-            -1f, 1f
+            1f, 100f
         )
     }
 
     override fun onDrawFrame(gl: GL10?) {
-        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
-
+        GLES20.glEnable(GLES20.GL_DEPTH_TEST);
+        GLES20.glDepthFunc(GLES20.GL_LESS);
+        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT  or GLES20.GL_DEPTH_BUFFER_BIT)
         drawMap()
 
         drawMarkers()
@@ -512,9 +521,9 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
     // 标记点列表
     private val markers = listOf(
         MapMarker(0f, 0f, R.mipmap.robot, "", iconSize = 400, followRotate = true),
-        MapMarker(10.0f, 10.005f, R.mipmap.icon_start_point, "初始点0", iconSize = 100),
+        MapMarker(200.0f, 200.005f, R.mipmap.icon_start_point, "初始点0", iconSize = 100),
         MapMarker(-10.15f, -7.555f, R.mipmap.icon_start_point, "初始点1", iconSize = 100),
-        MapMarker(12.212f, -4.9450f, R.mipmap.icon_target, "初始点1", iconSize = 100),
+        MapMarker(120.212f, -40.9450f, R.mipmap.icon_target, "初始点1", iconSize = 100),
 //        MapMarker(300f, 400f, R.drawable.ic_launcher_background, "位置2"),
         // 添加更多标记点...
     )
