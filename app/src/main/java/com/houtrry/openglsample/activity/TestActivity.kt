@@ -28,7 +28,7 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
     companion object {
         private const val TAG = "TestActivity"
         private const val MAP_DEPTH = -1f
-        private const val MARKER_DEPTH = 0f
+        private const val MARKER_DEPTH_BASE = 0f
         private const val TEXT_DEPTH = 10f
     }
 
@@ -132,7 +132,7 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         GLES20.glClearColor(0f, 0f, 0f, 1f)
         GLES20.glEnable(GLES20.GL_DEPTH_TEST)
-        GLES20.glDepthFunc(GLES20.GL_LESS)
+        GLES20.glDepthFunc(GLES20.GL_LEQUAL)
         GLES20.glEnable(GLES20.GL_BLEND)
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
         
@@ -299,10 +299,10 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
 
             val vertices = floatArrayOf(
                 // 顶点坐标     // 纹理坐标
-                -0.5f, -0.5f, MARKER_DEPTH, 0f, 1f,
-                0.5f, -0.5f, MARKER_DEPTH, 1f, 1f,
-                -0.5f, 0.5f, MARKER_DEPTH, 0f, 0f,
-                0.5f, 0.5f, MARKER_DEPTH, 1f, 0f
+                -0.5f, -0.5f, MARKER_DEPTH_BASE + index * 0.1f, 0f, 1f,
+                0.5f, -0.5f, MARKER_DEPTH_BASE + index * 0.1f, 1f, 1f,
+                -0.5f, 0.5f, MARKER_DEPTH_BASE + index * 0.1f, 0f, 0f,
+                0.5f, 0.5f, MARKER_DEPTH_BASE + index * 0.1f, 1f, 0f
             )
 
             val vertexBuffer = ByteBuffer.allocateDirect(vertices.size * 4)
@@ -351,8 +351,8 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         GLES20.glEnableVertexAttribArray(texCoordHandle)
 
         textMarkers.forEach { marker ->
-            val textSize = 24f * scaleFactor
-            val textPadding = 5f * scaleFactor
+            val textSize = 48f * scaleFactor  // 增大文字大小
+            val textPadding = 10f * scaleFactor
 
             val paint = Paint().apply {
                 color = marker.textColor
@@ -366,8 +366,8 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
             val textHeight = paint.descent() - paint.ascent()
 
             val bitmap = Bitmap.createBitmap(
-                textWidth.toInt() + 2,
-                textHeight.toInt() + 2,
+                textWidth.toInt() + 4,  // 增加边距
+                textHeight.toInt() + 4,
                 Bitmap.Config.ARGB_8888
             )
 
@@ -392,11 +392,11 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
             bitmap.recycle()
 
             val vertices = floatArrayOf(
-                // 顶点坐标       // 纹理坐标
-                -textWidth / 2, -textHeight / 2, TEXT_DEPTH, 0f, 0f,
-                textWidth / 2, -textHeight / 2, TEXT_DEPTH, 1f, 0f,
-                -textWidth / 2, textHeight / 2, TEXT_DEPTH, 0f, 1f,
-                textWidth / 2, textHeight / 2, TEXT_DEPTH, 1f, 1f
+                // 顶点坐标       // 纹理坐标 (修正纹理坐标)
+                -textWidth / 2, -textHeight / 2, TEXT_DEPTH, 0f, 1f,
+                textWidth / 2, -textHeight / 2, TEXT_DEPTH, 1f, 1f,
+                -textWidth / 2, textHeight / 2, TEXT_DEPTH, 0f, 0f,
+                textWidth / 2, textHeight / 2, TEXT_DEPTH, 1f, 0f
             )
 
             val vertexBuffer = ByteBuffer.allocateDirect(vertices.size * 4)
@@ -416,14 +416,17 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
             val markerCenter = worldToGl(marker.x, marker.y)
             val textOffsetY = marker.iconSize * 0.5f + textPadding + textHeight * 0.5f
             
-            // 创建文字专用的模型矩阵
+            // 创建文字专用的模型矩阵，应用地图的变换
             val textModelMatrix = FloatArray(16).identityM()
             Matrix.translateM(textModelMatrix, 0, markerCenter.x, markerCenter.y + textOffsetY, 0f)
-            Matrix.scaleM(textModelMatrix, 0, 1f, 1f, 1f)
+            
+            // 应用地图的变换到文字
+            val finalTextMatrix = FloatArray(16)
+            Matrix.multiplyMM(finalTextMatrix, 0, modelMatrix, 0, textModelMatrix, 0)
 
             val mvpMatrix = FloatArray(16)
             Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
-            Matrix.multiplyMM(mvpMatrix, 0, mvpMatrix, 0, textModelMatrix, 0)
+            Matrix.multiplyMM(mvpMatrix, 0, mvpMatrix, 0, finalTextMatrix, 0)
 
             GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0)
             GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
