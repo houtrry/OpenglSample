@@ -20,12 +20,11 @@ import javax.microedition.khronos.opengles.GL10
 import kotlin.math.atan2
 import kotlin.math.sqrt
 
-class OptimizedTestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
+class ES3OptimizedTestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
 
     companion object {
-        private const val TAG = "OptimizedTestActivity"
+        private const val TAG = "ES3OptimizedTestActivity"
         private const val MAX_MARKERS = 3000
-        private const val BATCH_SIZE = 100
     }
 
     // OpenGL ES 3.0 实例渲染着色器
@@ -169,7 +168,7 @@ class OptimizedTestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         super.onCreate(savedInstanceState)
         glSurfaceView = GLSurfaceView(this).apply {
             setEGLContextClientVersion(3) // 使用OpenGL ES 3.0
-            setRenderer(this@OptimizedTestActivity)
+            setRenderer(this@ES3OptimizedTestActivity)
             renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
         }
         setContentView(glSurfaceView)
@@ -261,7 +260,7 @@ class OptimizedTestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
             }
         GLES30.glBufferData(GLES30.GL_ARRAY_BUFFER, markerVertices.size * 4, buffer, GLES30.GL_STATIC_DRAW)
 
-        // 顶点属�?
+        // 顶点属性
         GLES30.glEnableVertexAttribArray(0) // vPosition
         GLES30.glVertexAttribPointer(0, 2, GLES30.GL_FLOAT, false, 16, 0)
         GLES30.glEnableVertexAttribArray(1) // vTexCoord
@@ -272,7 +271,7 @@ class OptimizedTestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         GLES30.glBufferData(GLES30.GL_ARRAY_BUFFER, markerInstanceData.size * 4, null, GLES30.GL_DYNAMIC_DRAW)
         GLES30.glEnableVertexAttribArray(2) // vInstanceData
         GLES30.glVertexAttribPointer(2, 4, GLES30.GL_FLOAT, false, 16, 0)
-        GLES30.glVertexAttribDivisor(2, 1) // 每个实例更新一�?
+        GLES30.glVertexAttribDivisor(2, 1) // 每个实例更新一次
 
         // 设置Text VAO
         GLES30.glBindVertexArray(textVAO)
@@ -289,7 +288,7 @@ class OptimizedTestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         GLES30.glBufferData(GLES30.GL_ARRAY_BUFFER, textInstanceData.size * 4, null, GLES30.GL_DYNAMIC_DRAW)
         GLES30.glEnableVertexAttribArray(2) // vInstanceData
         GLES30.glVertexAttribPointer(2, 4, GLES30.GL_FLOAT, false, 16, 0)
-        GLES30.glVertexAttribDivisor(2, 1) // 每个实例更新一�?
+        GLES30.glVertexAttribDivisor(2, 1) // 每个实例更新一次
 
         GLES30.glBindVertexArray(0)
     }
@@ -371,7 +370,7 @@ class OptimizedTestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         val canvas = Canvas(atlasBitmap)
         canvas.drawColor(Color.TRANSPARENT)
 
-        val texts = listOf("初始�?", "初始�?", "重生之我在初始点2", "位置3", "位置4", "位置5")
+        val texts = listOf("初始点0", "初始点1", "重生之我在初始点2", "位置3", "位置4", "位置5")
         val charsPerRow = 6
         val charSize = atlasSize / charsPerRow
 

@@ -58,15 +58,11 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
     uniform mat4 uMVPMatrix;
     attribute vec4 vPosition;
     attribute vec2 vTexCoord;
-    attribute vec4 vInstanceData; // x,y:位置, z:纹理索引, w:缩放
     varying vec2 texCoord;
-    varying float vTextureIndex;
     
     void main() {
-        vec4 worldPos = vec4(vInstanceData.xy, 0.0, 1.0);
-        gl_Position = uMVPMatrix * (worldPos + vPosition * vInstanceData.w);
+        gl_Position = uMVPMatrix * vec4(vPosition.xy, 0.0, 1.0);
         texCoord = vTexCoord;
-        vTextureIndex = vInstanceData.z;
     }
 """.trimIndent()
 
@@ -74,17 +70,10 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
     private val batchFragmentShaderCode = """
     precision mediump float;
     uniform sampler2D uTextureAtlas;
-    uniform vec2 uAtlasSize;
     varying vec2 texCoord;
-    varying float vTextureIndex;
     
     void main() {
-        // 计算在纹理图集中的实际坐标
-        vec2 atlasCoord = texCoord / uAtlasSize;
-        atlasCoord.x += mod(vTextureIndex, uAtlasSize.x) / uAtlasSize.x;
-        atlasCoord.y += floor(vTextureIndex / uAtlasSize.x) / uAtlasSize.y;
-        
-        gl_FragColor = texture2D(uTextureAtlas, atlasCoord);
+        gl_FragColor = texture2D(uTextureAtlas, texCoord);
     }
 """.trimIndent()
 
@@ -93,33 +82,22 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
     uniform mat4 uMVPMatrix;
     attribute vec4 vPosition;
     attribute vec2 vTexCoord;
-    attribute vec4 vInstanceData; // x,y:位置, z:文字索引, w:缩放
     varying vec2 texCoord;
-    varying float vTextIndex;
     
     void main() {
-        vec4 worldPos = vec4(vInstanceData.xy, 0.0, 1.0);
-        gl_Position = uMVPMatrix * (worldPos + vPosition * vInstanceData.w);
+        gl_Position = uMVPMatrix * vec4(vPosition.xy, 0.0, 1.0);
         texCoord = vTexCoord;
-        vTextIndex = vInstanceData.z;
     }
 """.trimIndent()
 
     private val textFragmentShaderCode = """
     precision mediump float;
     uniform sampler2D uFontAtlas;
-    uniform vec2 uFontAtlasSize;
     uniform vec4 uTextColor;
     varying vec2 texCoord;
-    varying float vTextIndex;
     
     void main() {
-        // 计算在字体图集中的实际坐标
-        vec2 atlasCoord = texCoord / uFontAtlasSize;
-        atlasCoord.x += mod(vTextIndex, uFontAtlasSize.x) / uFontAtlasSize.x;
-        atlasCoord.y += floor(vTextIndex / uFontAtlasSize.x) / uFontAtlasSize.y;
-        
-        float distance = texture2D(uFontAtlas, atlasCoord).r;
+        float distance = texture2D(uFontAtlas, texCoord).r;
         float alpha = smoothstep(0.4, 0.6, distance);
         gl_FragColor = vec4(uTextColor.rgb, alpha * uTextColor.a);
     }
@@ -222,9 +200,9 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
             GLES20.glLinkProgram(it)
         }
 
-        // 批量渲染着色器（OpenGL ES 2.0兼容版本）
-        val batchVertexShader = loadShader(GLES20.GL_VERTEX_SHADER, batchVertexShaderCodeES2)
-        val batchFragmentShader = loadShader(GLES20.GL_FRAGMENT_SHADER, batchFragmentShaderCodeES2)
+        // 批量渲染着色器
+        val batchVertexShader = loadShader(GLES20.GL_VERTEX_SHADER, batchVertexShaderCode)
+        val batchFragmentShader = loadShader(GLES20.GL_FRAGMENT_SHADER, batchFragmentShaderCode)
 
         batchProgram = GLES20.glCreateProgram().also {
             GLES20.glAttachShader(it, batchVertexShader)
@@ -232,9 +210,9 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
             GLES20.glLinkProgram(it)
         }
 
-        // 文字渲染着色器（OpenGL ES 2.0兼容版本）
-        val textVertexShader = loadShader(GLES20.GL_VERTEX_SHADER, textVertexShaderCodeES2)
-        val textFragmentShader = loadShader(GLES20.GL_FRAGMENT_SHADER, textFragmentShaderCodeES2)
+        // 文字渲染着色器
+        val textVertexShader = loadShader(GLES20.GL_VERTEX_SHADER, textVertexShaderCode)
+        val textFragmentShader = loadShader(GLES20.GL_FRAGMENT_SHADER, textFragmentShaderCode)
 
         textProgram = GLES20.glCreateProgram().also {
             GLES20.glAttachShader(it, textVertexShader)
@@ -242,73 +220,6 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
             GLES20.glLinkProgram(it)
         }
     }
-
-    // OpenGL ES 2.0兼容的批量渲染着色器
-    private val batchVertexShaderCodeES2 = """
-    uniform mat4 uMVPMatrix;
-    attribute vec4 vPosition;
-    attribute vec2 vTexCoord;
-    attribute vec4 vInstanceData; // x,y:位置, z:纹理索引, w:缩放
-    varying vec2 texCoord;
-    varying float vTextureIndex;
-    
-    void main() {
-        vec4 worldPos = vec4(vInstanceData.xy, 0.0, 1.0);
-        gl_Position = uMVPMatrix * (worldPos + vPosition * vInstanceData.w);
-        texCoord = vTexCoord;
-        vTextureIndex = vInstanceData.z;
-    }
-""".trimIndent()
-
-    private val batchFragmentShaderCodeES2 = """
-    precision mediump float;
-    uniform sampler2D uTextureAtlas;
-    uniform vec2 uAtlasSize;
-    varying vec2 texCoord;
-    varying float vTextureIndex;
-    
-    void main() {
-        vec2 atlasCoord = texCoord / uAtlasSize;
-        atlasCoord.x += mod(vTextureIndex, uAtlasSize.x) / uAtlasSize.x;
-        atlasCoord.y += floor(vTextureIndex / uAtlasSize.x) / uAtlasSize.y;
-        gl_FragColor = texture2D(uTextureAtlas, atlasCoord);
-    }
-""".trimIndent()
-
-    private val textVertexShaderCodeES2 = """
-    uniform mat4 uMVPMatrix;
-    attribute vec4 vPosition;
-    attribute vec2 vTexCoord;
-    attribute vec4 vInstanceData; // x,y:位置, z:文字索引, w:缩放
-    varying vec2 texCoord;
-    varying float vTextIndex;
-    
-    void main() {
-        vec4 worldPos = vec4(vInstanceData.xy, 0.0, 1.0);
-        gl_Position = uMVPMatrix * (worldPos + vPosition * vInstanceData.w);
-        texCoord = vTexCoord;
-        vTextIndex = vInstanceData.z;
-    }
-""".trimIndent()
-
-    private val textFragmentShaderCodeES2 = """
-    precision mediump float;
-    uniform sampler2D uFontAtlas;
-    uniform vec2 uFontAtlasSize;
-    uniform vec4 uTextColor;
-    varying vec2 texCoord;
-    varying float vTextIndex;
-    
-    void main() {
-        vec2 atlasCoord = texCoord / uFontAtlasSize;
-        atlasCoord.x += mod(vTextIndex, uFontAtlasSize.x) / uFontAtlasSize.x;
-        atlasCoord.y += floor(vTextIndex / uFontAtlasSize.x) / uFontAtlasSize.y;
-        
-        float distance = texture2D(uFontAtlas, atlasCoord).r;
-        float alpha = smoothstep(0.4, 0.6, distance);
-        gl_FragColor = vec4(uTextColor.rgb, alpha * uTextColor.a);
-    }
-""".trimIndent()
 
     private fun loadShader(type: Int, shaderCode: String): Int {
         return GLES20.glCreateShader(type).also { shader ->
@@ -577,15 +488,33 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
             val textureIndex = markerInstanceData[index + 2]
             val scale = markerInstanceData[index + 3]
             
-            // 计算四个顶点
+            // 计算四个顶点 - 位置坐标
             val halfSize = scale * 0.5f
-            val vertices = floatArrayOf(
-                x - halfSize, y - halfSize, 0f, 1f,  // 左下
-                x + halfSize, y - halfSize, 1f, 1f,  // 右下
-                x - halfSize, y + halfSize, 0f, 0f,  // 左上
-                x + halfSize, y + halfSize, 1f, 0f   // 右上
+            val positions = floatArrayOf(
+                x - halfSize, y - halfSize,  // 左下
+                x + halfSize, y - halfSize,  // 右下
+                x - halfSize, y + halfSize,  // 左上
+                x + halfSize, y + halfSize   // 右上
             )
-            markerBatchVertices.addAll(vertices.toList())
+            
+            // 纹理坐标（每个图标在纹理图集中的位置）
+            val iconIndex = textureIndex.toInt()
+            val texCoordX = (iconIndex % 3) / 3f
+            val texCoordY = (iconIndex / 3) / 1f
+            val texCoords = floatArrayOf(
+                texCoordX, 1f - texCoordY,           // 左下
+                texCoordX + 1f/3f, 1f - texCoordY,   // 右下
+                texCoordX, 1f - texCoordY - 1f,      // 左上
+                texCoordX + 1f/3f, 1f - texCoordY - 1f // 右上
+            )
+            
+            // 交替添加位置和纹理坐标
+            for (j in 0 until 4) {
+                markerBatchVertices.add(positions[j * 2])     // x
+                markerBatchVertices.add(positions[j * 2 + 1]) // y
+                markerBatchVertices.add(texCoords[j * 2])     // u
+                markerBatchVertices.add(texCoords[j * 2 + 1]) // v
+            }
         }
         
         // 为每个文字生成顶点数据
@@ -596,15 +525,33 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
             val textIndex = textInstanceData[index + 2]
             val scale = textInstanceData[index + 3]
             
-            // 计算四个顶点
+            // 计算四个顶点 - 位置坐标
             val halfSize = scale * 0.5f
-            val vertices = floatArrayOf(
-                x - halfSize, y - halfSize, 0f, 1f,  // 左下
-                x + halfSize, y - halfSize, 1f, 1f,  // 右下
-                x - halfSize, y + halfSize, 0f, 0f,  // 左上
-                x + halfSize, y + halfSize, 1f, 0f   // 右上
+            val positions = floatArrayOf(
+                x - halfSize, y - halfSize,  // 左下
+                x + halfSize, y - halfSize,  // 右下
+                x - halfSize, y + halfSize,  // 左上
+                x + halfSize, y + halfSize   // 右上
             )
-            textBatchVertices.addAll(vertices.toList())
+            
+            // 纹理坐标（每个文字在字体图集中的位置）
+            val textIndexInt = textIndex.toInt()
+            val texCoordX = (textIndexInt % 6) / 6f
+            val texCoordY = (textIndexInt / 6) / 1f
+            val texCoords = floatArrayOf(
+                texCoordX, 1f - texCoordY,           // 左下
+                texCoordX + 1f/6f, 1f - texCoordY,   // 右下
+                texCoordX, 1f - texCoordY - 1f,      // 左上
+                texCoordX + 1f/6f, 1f - texCoordY - 1f // 右上
+            )
+            
+            // 交替添加位置和纹理坐标
+            for (j in 0 until 4) {
+                textBatchVertices.add(positions[j * 2])     // x
+                textBatchVertices.add(positions[j * 2 + 1]) // y
+                textBatchVertices.add(texCoords[j * 2])     // u
+                textBatchVertices.add(texCoords[j * 2 + 1]) // v
+            }
         }
     }
 
@@ -655,14 +602,10 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         val texCoordHandle = GLES20.glGetAttribLocation(batchProgram, "vTexCoord")
         val mvpMatrixHandle = GLES20.glGetUniformLocation(batchProgram, "uMVPMatrix")
         val textureHandle = GLES20.glGetUniformLocation(batchProgram, "uTextureAtlas")
-        val atlasSizeHandle = GLES20.glGetUniformLocation(batchProgram, "uAtlasSize")
 
         // 设置顶点属性
-        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, markerVBO)
         GLES20.glEnableVertexAttribArray(positionHandle)
         GLES20.glEnableVertexAttribArray(texCoordHandle)
-        GLES20.glVertexAttribPointer(positionHandle, 2, GLES20.GL_FLOAT, false, 16, 0)
-        GLES20.glVertexAttribPointer(texCoordHandle, 2, GLES20.GL_FLOAT, false, 16, 8)
 
         // MVP矩阵
         val mvpMatrix = mvpMatrix.identityM()
@@ -674,13 +617,12 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, markerTextureAtlas)
         GLES20.glUniform1i(textureHandle, 0)
-        GLES20.glUniform2f(atlasSizeHandle, 3f, 1f)
 
         // 混合
         GLES20.glEnable(GLES20.GL_BLEND)
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
 
-        // 批量绘制所有Marker（OpenGL ES 2.0兼容方式）
+        // 批量绘制所有Marker
         val batchBuffer = ByteBuffer.allocateDirect(markerBatchVertices.size * 4)
             .order(ByteOrder.nativeOrder())
             .asFloatBuffer()
@@ -689,27 +631,12 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
                 position(0)
             }
         
-        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, 0) // 使用客户端数组
+        // 设置顶点属性指针 - 每个顶点4个float (x, y, u, v)
         GLES20.glVertexAttribPointer(positionHandle, 2, GLES20.GL_FLOAT, false, 16, batchBuffer)
         GLES20.glVertexAttribPointer(texCoordHandle, 2, GLES20.GL_FLOAT, false, 16, batchBuffer.apply { position(2) })
         
-        // 分批次绘制，每批100个Marker
-        val batchSize = 100
-        val verticesPerMarker = 4
-        val floatsPerVertex = 4
-        val floatsPerMarker = verticesPerMarker * floatsPerVertex
-        
-        for (i in 0 until markerCount step batchSize) {
-            val count = minOf(batchSize, markerCount - i)
-            val startIndex = i * floatsPerMarker
-            val vertexCount = count * verticesPerMarker
-            
-            batchBuffer.position(startIndex)
-            GLES20.glVertexAttribPointer(positionHandle, 2, GLES20.GL_FLOAT, false, 16, batchBuffer)
-            GLES20.glVertexAttribPointer(texCoordHandle, 2, GLES20.GL_FLOAT, false, 16, batchBuffer.apply { position(startIndex + 2) })
-            
-            GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, vertexCount)
-        }
+        // 绘制所有Marker
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, markerCount * 4)
 
         // 清理
         GLES20.glDisable(GLES20.GL_BLEND)
@@ -727,15 +654,11 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         val texCoordHandle = GLES20.glGetAttribLocation(textProgram, "vTexCoord")
         val mvpMatrixHandle = GLES20.glGetUniformLocation(textProgram, "uMVPMatrix")
         val textureHandle = GLES20.glGetUniformLocation(textProgram, "uFontAtlas")
-        val atlasSizeHandle = GLES20.glGetUniformLocation(textProgram, "uFontAtlasSize")
         val textColorHandle = GLES20.glGetUniformLocation(textProgram, "uTextColor")
 
         // 设置顶点属性
-        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, textVBO)
         GLES20.glEnableVertexAttribArray(positionHandle)
         GLES20.glEnableVertexAttribArray(texCoordHandle)
-        GLES20.glVertexAttribPointer(positionHandle, 2, GLES20.GL_FLOAT, false, 16, 0)
-        GLES20.glVertexAttribPointer(texCoordHandle, 2, GLES20.GL_FLOAT, false, 16, 8)
 
         // MVP矩阵
         val mvpMatrix = mvpMatrix.identityM()
@@ -747,14 +670,13 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, fontTextureAtlas)
         GLES20.glUniform1i(textureHandle, 0)
-        GLES20.glUniform2f(atlasSizeHandle, 6f, 1f)
         GLES20.glUniform4f(textColorHandle, 1f, 1f, 1f, 1f)
 
         // 混合
         GLES20.glEnable(GLES20.GL_BLEND)
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
 
-        // 批量绘制所有文字（OpenGL ES 2.0兼容方式）
+        // 批量绘制所有文字
         val batchBuffer = ByteBuffer.allocateDirect(textBatchVertices.size * 4)
             .order(ByteOrder.nativeOrder())
             .asFloatBuffer()
@@ -763,27 +685,12 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
                 position(0)
             }
         
-        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, 0) // 使用客户端数组
+        // 设置顶点属性指针 - 每个顶点4个float (x, y, u, v)
         GLES20.glVertexAttribPointer(positionHandle, 2, GLES20.GL_FLOAT, false, 16, batchBuffer)
         GLES20.glVertexAttribPointer(texCoordHandle, 2, GLES20.GL_FLOAT, false, 16, batchBuffer.apply { position(2) })
         
-        // 分批次绘制，每批100个文字
-        val batchSize = 100
-        val verticesPerText = 4
-        val floatsPerVertex = 4
-        val floatsPerText = verticesPerText * floatsPerVertex
-        
-        for (i in 0 until textCount step batchSize) {
-            val count = minOf(batchSize, textCount - i)
-            val startIndex = i * floatsPerText
-            val vertexCount = count * verticesPerText
-            
-            batchBuffer.position(startIndex)
-            GLES20.glVertexAttribPointer(positionHandle, 2, GLES20.GL_FLOAT, false, 16, batchBuffer)
-            GLES20.glVertexAttribPointer(texCoordHandle, 2, GLES20.GL_FLOAT, false, 16, batchBuffer.apply { position(startIndex + 2) })
-            
-            GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, vertexCount)
-        }
+        // 绘制所有文字
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, textCount * 4)
 
         // 清理
         GLES20.glDisable(GLES20.GL_BLEND)
