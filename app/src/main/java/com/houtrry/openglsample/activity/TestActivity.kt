@@ -105,7 +105,7 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
 
     // 地图纹理和顶点数据
     private var mapTextureId = -1
-    private lateinit var mapVertices: FloatArray
+    private var mapVertices: FloatArray? = null
 
     private lateinit var glSurfaceView: GLSurfaceView
     private val viewMatrix = FloatArray(16).also {
@@ -160,13 +160,28 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
     }
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
+        Log.d(TAG, "onSurfaceCreated called")
         GLES20.glClearColor(0f, 0f, 0f, 1f)
+        
         initShaders()
+        Log.d(TAG, "Shaders initialized: map=$mapProgram, batch=$batchProgram, text=$textProgram")
+        
         initBatchRendering()
+        Log.d(TAG, "Batch rendering initialized")
+        
         loadMapTexture()
+        Log.d(TAG, "Map texture loaded: $mapTextureId")
+        
         createMarkerTextureAtlas()
+        Log.d(TAG, "Marker texture atlas created: $markerTextureAtlas")
+        
         createFontTextureAtlas()
+        Log.d(TAG, "Font texture atlas created: $fontTextureAtlas")
+        
         generateTestMarkers()
+        Log.d(TAG, "Test markers generated: $markerCount markers, $textCount texts")
+        
+        Log.d(TAG, "Surface creation completed successfully")
     }
 
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
@@ -182,50 +197,146 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
     }
 
     override fun onDrawFrame(gl: GL10?) {
+        // 简单的测试：绘制一个彩色背景
+        GLES20.glClearColor(0.2f, 0.3f, 0.8f, 1.0f)
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
+        
+        // 暂时注释掉复杂的绘制逻辑，只显示背景色
+        /*
+        // 检查OpenGL错误
+        val error = GLES20.glGetError()
+        if (error != GLES20.GL_NO_ERROR) {
+            Log.e(TAG, "OpenGL error before drawing: $error")
+        }
 
-        drawMap()
-        drawMarkersBatch()
-        drawTextsBatch()
+        // 绘制地图
+        if (mapProgram != -1 && mapTextureId != -1) {
+            drawMap()
+        } else {
+            Log.e(TAG, "Map program or texture not ready: program=$mapProgram, texture=$mapTextureId")
+        }
+
+        // 绘制标记
+        if (batchProgram != -1 && markerTextureAtlas != -1 && markerCount > 0) {
+            drawMarkersBatch()
+        } else {
+            Log.e(TAG, "Batch program or texture not ready: program=$batchProgram, texture=$markerTextureAtlas, count=$markerCount")
+        }
+
+        // 绘制文字
+        if (textProgram != -1 && fontTextureAtlas != -1 && textCount > 0) {
+            drawTextsBatch()
+        } else {
+            Log.e(TAG, "Text program or texture not ready: program=$textProgram, texture=$fontTextureAtlas, count=$textCount")
+        }
+
+        // 检查OpenGL错误
+        val errorAfter = GLES20.glGetError()
+        if (errorAfter != GLES20.GL_NO_ERROR) {
+            Log.e(TAG, "OpenGL error after drawing: $errorAfter")
+        }
+        */
     }
 
     private fun initShaders() {
         // 地图着色器
         val vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, vertexShaderCode)
         val fragmentShader = loadShader(GLES20.GL_FRAGMENT_SHADER, fragmentShaderCode)
+        
+        if (vertexShader == -1 || fragmentShader == -1) {
+            Log.e(TAG, "Failed to create map shaders")
+            return
+        }
 
         mapProgram = GLES20.glCreateProgram().also {
             GLES20.glAttachShader(it, vertexShader)
             GLES20.glAttachShader(it, fragmentShader)
             GLES20.glLinkProgram(it)
+            
+            // 检查链接状态
+            val linked = IntArray(1)
+            GLES20.glGetProgramiv(it, GLES20.GL_LINK_STATUS, linked, 0)
+            if (linked[0] == 0) {
+                val error = GLES20.glGetProgramInfoLog(it)
+                Log.e(TAG, "Map program linking failed: $error")
+                mapProgram = -1
+            }
+            
+            GLES20.glDeleteShader(vertexShader)
+            GLES20.glDeleteShader(fragmentShader)
         }
 
         // 批量渲染着色器
         val batchVertexShader = loadShader(GLES20.GL_VERTEX_SHADER, batchVertexShaderCode)
         val batchFragmentShader = loadShader(GLES20.GL_FRAGMENT_SHADER, batchFragmentShaderCode)
+        
+        if (batchVertexShader == -1 || batchFragmentShader == -1) {
+            Log.e(TAG, "Failed to create batch shaders")
+            return
+        }
 
         batchProgram = GLES20.glCreateProgram().also {
             GLES20.glAttachShader(it, batchVertexShader)
             GLES20.glAttachShader(it, batchFragmentShader)
             GLES20.glLinkProgram(it)
+            
+            // 检查链接状态
+            val linked = IntArray(1)
+            GLES20.glGetProgramiv(it, GLES20.GL_LINK_STATUS, linked, 0)
+            if (linked[0] == 0) {
+                val error = GLES20.glGetProgramInfoLog(it)
+                Log.e(TAG, "Batch program linking failed: $error")
+                batchProgram = -1
+            }
+            
+            GLES20.glDeleteShader(batchVertexShader)
+            GLES20.glDeleteShader(batchFragmentShader)
         }
 
         // 文字渲染着色器
         val textVertexShader = loadShader(GLES20.GL_VERTEX_SHADER, textVertexShaderCode)
         val textFragmentShader = loadShader(GLES20.GL_FRAGMENT_SHADER, textFragmentShaderCode)
+        
+        if (textVertexShader == -1 || textFragmentShader == -1) {
+            Log.e(TAG, "Failed to create text shaders")
+            return
+        }
 
         textProgram = GLES20.glCreateProgram().also {
             GLES20.glAttachShader(it, textVertexShader)
             GLES20.glAttachShader(it, textFragmentShader)
             GLES20.glLinkProgram(it)
+            
+            // 检查链接状态
+            val linked = IntArray(1)
+            GLES20.glGetProgramiv(it, GLES20.GL_LINK_STATUS, linked, 0)
+            if (linked[0] == 0) {
+                val error = GLES20.glGetProgramInfoLog(it)
+                Log.e(TAG, "Text program linking failed: $error")
+                textProgram = -1
+            }
+            
+            GLES20.glDeleteShader(textVertexShader)
+            GLES20.glDeleteShader(textFragmentShader)
         }
     }
 
     private fun loadShader(type: Int, shaderCode: String): Int {
-        return GLES20.glCreateShader(type).also { shader ->
-            GLES20.glShaderSource(shader, shaderCode)
-            GLES20.glCompileShader(shader)
+        val shader = GLES20.glCreateShader(type)
+        GLES20.glShaderSource(shader, shaderCode)
+        GLES20.glCompileShader(shader)
+        
+        // 检查编译状态
+        val compiled = IntArray(1)
+        GLES20.glGetShaderiv(shader, GLES20.GL_COMPILE_STATUS, compiled, 0)
+        if (compiled[0] == 0) {
+            val error = GLES20.glGetShaderInfoLog(shader)
+            Log.e(TAG, "Shader compilation failed: $error")
+            GLES20.glDeleteShader(shader)
+            return -1
         }
+        
+        return shader
     }
 
     private fun initBatchRendering() {
@@ -271,6 +382,12 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
             GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
 
             val bitmap = BitmapFactory.decodeResource(resources, R.drawable.optemap_217k)
+            if (bitmap == null) {
+                Log.e(TAG, "Failed to decode map texture")
+                return
+            }
+            
+            Log.d(TAG, "Map texture loaded: ${bitmap.width}x${bitmap.height}")
             GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)
             mapSize.x = bitmap.width
             mapSize.y = bitmap.height
@@ -283,6 +400,9 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
             )
             bitmap.recycle()
             mapTextureId = textureHandle[0]
+            Log.d(TAG, "Map texture created with ID: $mapTextureId")
+        } else {
+            Log.e(TAG, "Failed to generate map texture")
         }
     }
 
@@ -299,27 +419,36 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
 
         iconResources.forEachIndexed { index, resId ->
             val bitmap = BitmapFactory.decodeResource(resources, resId)
-            val x = (index % iconsPerRow) * iconSize
-            val y = (index / iconsPerRow) * iconSize
-            
-            // 缩放图标到合适大小
-            val scaledBitmap = Bitmap.createScaledBitmap(bitmap, iconSize, iconSize, true)
-            canvas.drawBitmap(scaledBitmap, x.toFloat(), y.toFloat(), null)
-            
-            bitmap.recycle()
-            scaledBitmap.recycle()
+            if (bitmap != null) {
+                val x = (index % iconsPerRow) * iconSize
+                val y = (index / iconsPerRow) * iconSize
+                
+                // 缩放图标到合适大小
+                val scaledBitmap = Bitmap.createScaledBitmap(bitmap, iconSize, iconSize, true)
+                canvas.drawBitmap(scaledBitmap, x.toFloat(), y.toFloat(), null)
+                
+                bitmap.recycle()
+                scaledBitmap.recycle()
+            } else {
+                Log.e(TAG, "Failed to decode icon resource: $resId")
+            }
         }
 
         val textureHandle = IntArray(1)
         GLES20.glGenTextures(1, textureHandle, 0)
         markerTextureAtlas = textureHandle[0]
 
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, markerTextureAtlas)
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE)
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
-        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, atlasBitmap, 0)
+        if (markerTextureAtlas != 0) {
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, markerTextureAtlas)
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE)
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
+            GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, atlasBitmap, 0)
+            Log.d(TAG, "Marker texture atlas created with ID: $markerTextureAtlas")
+        } else {
+            Log.e(TAG, "Failed to generate marker texture atlas")
+        }
         
         atlasBitmap.recycle()
     }
@@ -349,12 +478,17 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         GLES20.glGenTextures(1, textureHandle, 0)
         fontTextureAtlas = textureHandle[0]
 
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, fontTextureAtlas)
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE)
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
-        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, atlasBitmap, 0)
+        if (fontTextureAtlas != 0) {
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, fontTextureAtlas)
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE)
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
+            GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, atlasBitmap, 0)
+            Log.d(TAG, "Font texture atlas created with ID: $fontTextureAtlas")
+        } else {
+            Log.e(TAG, "Failed to generate font texture atlas")
+        }
         
         atlasBitmap.recycle()
     }
@@ -556,6 +690,16 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
     }
 
     private fun drawMap() {
+        if (mapProgram == -1) {
+            Log.e(TAG, "Map program is invalid")
+            return
+        }
+        
+        if (mapVertices == null) {
+            Log.e(TAG, "Map vertices not initialized")
+            return
+        }
+        
         GLES20.glUseProgram(mapProgram)
 
         val positionHandle = GLES20.glGetAttribLocation(mapProgram, "vPosition")
@@ -563,21 +707,27 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         val mvpMatrixHandle = GLES20.glGetUniformLocation(mapProgram, "uMVPMatrix")
         val textureHandle = GLES20.glGetUniformLocation(mapProgram, "uTexture")
 
+        if (positionHandle == -1 || texCoordHandle == -1 || mvpMatrixHandle == -1 || textureHandle == -1) {
+            Log.e(TAG, "Failed to get map program handles")
+            return
+        }
+
         GLES20.glEnableVertexAttribArray(positionHandle)
         GLES20.glEnableVertexAttribArray(texCoordHandle)
 
-        val vertexBuffer = ByteBuffer.allocateDirect(mapVertices.size * 4)
+        val vertexBuffer = ByteBuffer.allocateDirect(mapVertices?.size?.times(4) ?: 0)
             .order(ByteOrder.nativeOrder())
             .asFloatBuffer()
             .apply {
-                put(mapVertices)
+                put(mapVertices ?: floatArrayOf())
                 position(0)
             }
 
         GLES20.glVertexAttribPointer(positionHandle, 2, GLES20.GL_FLOAT, false, 16, vertexBuffer)
         GLES20.glVertexAttribPointer(texCoordHandle, 2, GLES20.GL_FLOAT, false, 16, vertexBuffer.apply { position(2) })
 
-        val mvpMatrix = mvpMatrix.identityM()
+        // 计算MVP矩阵
+        Matrix.setIdentityM(mvpMatrix, 0)
         Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, modelMatrix, 0)
         Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, mvpMatrix, 0)
         GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0)
@@ -595,6 +745,10 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
 
     private fun drawMarkersBatch() {
         if (markerBatchVertices.isEmpty()) return
+        if (batchProgram == -1) {
+            Log.e(TAG, "Batch program is invalid")
+            return
+        }
         
         GLES20.glUseProgram(batchProgram)
 
@@ -603,12 +757,17 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         val mvpMatrixHandle = GLES20.glGetUniformLocation(batchProgram, "uMVPMatrix")
         val textureHandle = GLES20.glGetUniformLocation(batchProgram, "uTextureAtlas")
 
+        if (positionHandle == -1 || texCoordHandle == -1 || mvpMatrixHandle == -1 || textureHandle == -1) {
+            Log.e(TAG, "Failed to get batch program handles")
+            return
+        }
+
         // 设置顶点属性
         GLES20.glEnableVertexAttribArray(positionHandle)
         GLES20.glEnableVertexAttribArray(texCoordHandle)
 
-        // MVP矩阵
-        val mvpMatrix = mvpMatrix.identityM()
+        // 计算MVP矩阵
+        Matrix.setIdentityM(mvpMatrix, 0)
         Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, modelMatrix, 0)
         Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, mvpMatrix, 0)
         GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0)
@@ -647,6 +806,10 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
 
     private fun drawTextsBatch() {
         if (textBatchVertices.isEmpty()) return
+        if (textProgram == -1) {
+            Log.e(TAG, "Text program is invalid")
+            return
+        }
         
         GLES20.glUseProgram(textProgram)
 
@@ -656,12 +819,18 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         val textureHandle = GLES20.glGetUniformLocation(textProgram, "uFontAtlas")
         val textColorHandle = GLES20.glGetUniformLocation(textProgram, "uTextColor")
 
+        if (positionHandle == -1 || texCoordHandle == -1 || mvpMatrixHandle == -1 || 
+            textureHandle == -1 || textColorHandle == -1) {
+            Log.e(TAG, "Failed to get text program handles")
+            return
+        }
+
         // 设置顶点属性
         GLES20.glEnableVertexAttribArray(positionHandle)
         GLES20.glEnableVertexAttribArray(texCoordHandle)
 
-        // MVP矩阵
-        val mvpMatrix = mvpMatrix.identityM()
+        // 计算MVP矩阵
+        Matrix.setIdentityM(mvpMatrix, 0)
         Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, modelMatrix, 0)
         Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, mvpMatrix, 0)
         GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0)
