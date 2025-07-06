@@ -274,14 +274,14 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
             GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)
             mapSize.x = bitmap.width
             mapSize.y = bitmap.height
-            bitmap.recycle()
+
             mapVertices = floatArrayOf(
                 -bitmap.width * 0.5f, -bitmap.height * 0.5f, 0f, 1f,
                 bitmap.width * 0.5f, -bitmap.height * 0.5f, 1f, 1f,
                 -bitmap.width * 0.5f, bitmap.height * 0.5f, 0f, 0f,
                 bitmap.width * 0.5f, bitmap.height * 0.5f, 1f, 0f
             )
-
+            bitmap.recycle()
             mapTextureId = textureHandle[0]
         }
     }

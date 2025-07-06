@@ -12,6 +12,7 @@ import android.util.Log
 import android.view.MotionEvent
 import com.houtrry.common_map.utils.dp
 import com.houtrry.common_map.utils.sp
+import com.houtrry.lopengles20.utils.identityM
 import com.houtrry.openglsample.R
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
