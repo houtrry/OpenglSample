@@ -30,6 +30,29 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         private const val BATCH_SIZE = 100 // 每批渲染的Marker数量
     }
 
+    // 基础着色器（地图渲染）
+    private val vertexShaderCode = """
+    uniform mat4 uMVPMatrix;
+    attribute vec4 vPosition;
+    attribute vec2 vTexCoord;
+    varying vec2 texCoord;
+    
+    void main() {
+        gl_Position = uMVPMatrix * vPosition;
+        texCoord = vTexCoord;
+    }
+""".trimIndent()
+
+    private val fragmentShaderCode = """
+    precision mediump float;
+    uniform sampler2D uTexture;
+    varying vec2 texCoord;
+    
+    void main() {
+        gl_FragColor = texture2D(uTexture, texCoord);
+    }
+""".trimIndent()
+
     // 批量渲染顶点着色器
     private val batchVertexShaderCode = """
     uniform mat4 uMVPMatrix;
