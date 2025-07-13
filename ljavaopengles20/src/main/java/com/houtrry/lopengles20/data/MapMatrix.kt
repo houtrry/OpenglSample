@@ -122,11 +122,18 @@ class MapMatrix {
         synchronized(modelMatrix) {
             val tempMatrix = FloatArray(16).identityM()
             val invertedMatrix = FloatArray(16).identityM()
-            val ndcX = 2.0f * (screenX / viewWidth) - 1.0f
-            val ndcY = 1.0f - 2.0f * (screenY / viewHeight)
+//            val ndcX = 2.0f * (screenX / viewWidth) - 1.0f
+//            val ndcY = 1.0f - 2.0f * (screenY / viewHeight)
+            val ndcX = screenX / (viewWidth * 0.5f) - 1.0f
+            val ndcY = 1.0f - screenY / (viewHeight * 0.5f)
 
+            Log.d(TAG, "convertScreenToGL, ($ndcX, $ndcY), (${screenX/viewWidth}, ${screenY/viewHeight}), $screenX/$viewWidth, $screenY/$viewHeight")
+            Log.d(TAG, "convertScreenToGL, projectionMatrix: ${projectionMatrix.formatMatrixString()}")
+            Log.d(TAG, "convertScreenToGL, modelMatrix: ${projectionMatrix.formatMatrixString()}")
             Matrix.multiplyMM(tempMatrix, 0, projectionMatrix, 0, modelMatrix, 0)
             Matrix.invertM(invertedMatrix, 0, tempMatrix, 0)
+            Log.d(TAG, "convertScreenToGL, tempMatrix: ${tempMatrix.formatMatrixString()}")
+            Log.d(TAG, "convertScreenToGL, invertedMatrix: ${invertedMatrix.formatMatrixString()}")
 
             val inVec = floatArrayOf(ndcX, ndcY, 0f, 1f)
             Matrix.multiplyMV(outVec, 0, invertedMatrix, 0, inVec, 0)
