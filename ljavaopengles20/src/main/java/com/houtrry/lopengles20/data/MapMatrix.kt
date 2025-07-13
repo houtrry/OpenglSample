@@ -44,11 +44,21 @@ class MapMatrix {
         }
     }
 
+    private var currentScale = 1.0f
+    private val minScale = 0.5f
+    private val maxScale = 4.0f
+
     fun rotateWithZoom(scale: Float, rotate: Float, focusX: Float = 0f, focusY: Float = 0f) {
         synchronized(modelMatrix) {
+            // 计算缩放后的 scale
+            val newScale = (currentScale * scale).coerceIn(minScale, maxScale)
+            currentScale = newScale
+
+            // 重置 modelMatrix
+            Matrix.setIdentityM(modelMatrix, 0)
             Matrix.translateM(modelMatrix, 0, focusX, focusY, 0f)
             Matrix.rotateM(modelMatrix, 0, rotate, 0f, 0f, 1f)
-            Matrix.scaleM(modelMatrix, 0, scale, scale, 1f)
+            Matrix.scaleM(modelMatrix, 0, currentScale, currentScale, 1f)
             Matrix.translateM(modelMatrix, 0, -focusX, -focusY, 0f)
         }
     }
