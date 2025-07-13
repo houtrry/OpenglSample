@@ -71,7 +71,7 @@ class BubbleTextShape {
         Matrix.setIdentityM(transformMatrix, 0)
         Matrix.translateM(transformMatrix, 0, vector3.x.toFloat(), vector3.y.toFloat(), vector3.z.toFloat())
 //        mapMatrix.getTransformMatrixWithoutScale(scaleFactor, transformMatrix)
-        Matrix.multiplyMM(transformMatrix, 0, mapMatrix.getTransformMatrix(), 0, transformMatrix, 0)
+        Matrix.multiplyMM(transformMatrix, 0, mapMatrix.getModelMatrix(), 0, transformMatrix, 0)
         transformMatrix[0] = 1f
         transformMatrix[1] = 0f
         transformMatrix[4] = 0f
@@ -79,8 +79,8 @@ class BubbleTextShape {
         Matrix.scaleM(transformMatrix, 0, textBitmap.width.toFloat() / size.height, textBitmap.height.toFloat() / size.height, 1f)
 //        Matrix.translateM(transformMatrix, 0, 0f, 0f, 0f)
         Log.d(TAG, "text $vector3 scale: ${textBitmap.height.toFloat() / size.height}")
-        Log.d(TAG, "transformMatrix: ${mapMatrix.getTransformMatrix().formatMatrixString()}")
-        Log.d(TAG, "translateX: ${mapMatrix.getTransformMatrix()[3]}, translateY: ${mapMatrix.getTransformMatrix()[7]}, matrix: ${mapMatrix.getTransformMatrix().contentToString()}")
+        Log.d(TAG, "transformMatrix: ${mapMatrix.getModelMatrix().formatMatrixString()}")
+        Log.d(TAG, "translateX: ${mapMatrix.getModelMatrix()[3]}, translateY: ${mapMatrix.getModelMatrix()[7]}, matrix: ${mapMatrix.getModelMatrix().contentToString()}")
         Matrix.setIdentityM(mMVPMatrix, 0)
         Matrix.multiplyMM(mMVPMatrix, 0, mapMatrix.getViewMatrix(), 0, transformMatrix, 0)
         Matrix.multiplyMM(mMVPMatrix, 0, mapMatrix.getProjectionMatrix(), 0, mMVPMatrix, 0)

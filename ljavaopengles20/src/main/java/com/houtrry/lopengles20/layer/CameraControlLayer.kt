@@ -19,8 +19,6 @@ class CameraControlLayer(val mapRender: MapRender) : BaseLayer() {
     }
 
     private var translateGesture: GestureDetectorCompat? = null
-    private var zoomGesture: ScaleGestureDetector? = null
-    private var rotateGestureDetector: RotateGestureDetector? = null
     private var zoomRotateGestureDetector: ZoomRotateGestureDetector? = null
     private val mainHandler: Handler by lazy { Handler(Looper.getMainLooper()) }
 
@@ -41,45 +39,19 @@ class CameraControlLayer(val mapRender: MapRender) : BaseLayer() {
                     distanceX: Float, distanceY: Float
                 ): Boolean {
                     mapRender.getMapMatrix()
-                        .translate(-distanceX / (viewHeight * 0.5f), distanceY / (viewHeight * 0.5f))
+                        .translate(-distanceX, -distanceY, viewWidth, viewHeight)
                     mapRender.requestRender()
                     return true
                 }
             })
-            zoomGesture = ScaleGestureDetector(context,
-                object : SimpleOnScaleGestureListener() {
-                    override fun onScale(detector: ScaleGestureDetector): Boolean {
-                        if (!detector.isInProgress) {
-                            return false
-                        }
-                        val focusX = detector.focusX
-                        val focusY = detector.focusY
-                        val factor = detector.scaleFactor
-                        mapRender.getMapMatrix().zoom(
-                            factor,
-                            focusX / (viewHeight * 0.5f) - 1f,
-                            1f - focusY / (viewHeight * 0.5f)
-                        )
-                        mapRender.requestRender()
-                        return true
-                    }
-                })
-            rotateGestureDetector = RotateGestureDetector{ focusX, focusY, rotate ->
-                mapRender.getMapMatrix().rotate(
-                    rotate,
-                    focusX / (viewHeight * 0.5f) - 1f,
-                    1f - focusY / (viewHeight * 0.5f),
-                )
-                mapRender.requestRender()
-                true
-            }
             zoomRotateGestureDetector = ZoomRotateGestureDetector { focusX, focusY, scale, rotate ->
-                val poivt = mapRender.getMapMatrix().screenToWorld(
-                    focusX / (viewWidth * 0.5f) - 1f,
-                    1f - focusY / (viewHeight * 0.5f),
+                val poivt = mapRender.getMapMatrix().convertScreenToGL(
+                    focusX,
+                    focusY,
                     viewWidth,
                     viewHeight
                 )
+                Log.d(TAG, "rotateWithZoom -> (${poivt.x}, ${poivt.y}), (${focusX/viewWidth}, ${focusY/viewHeight}), $focusX/$viewWidth, $focusY/$viewHeight")
                 mapRender.getMapMatrix().rotateWithZoom(
                     scale,
                     rotate,

@@ -53,8 +53,8 @@ class PointLayer: BaseLayer() {
 //            0f
 //        )
         mapMatrix.getTransformMatrixWithoutScale(300f.toFloat() / viewHeight, transformMatrix)
-        Log.d(TAG, "transformMatrix: ${mapMatrix.getTransformMatrix().formatMatrixString()}")
-        Log.d(TAG, "translateX: ${mapMatrix.getTransformMatrix()[3]}, translateY: ${mapMatrix.getTransformMatrix()[7]}, matrix: ${mapMatrix.getTransformMatrix().contentToString()}")
+        Log.d(TAG, "transformMatrix: ${mapMatrix.getModelMatrix().formatMatrixString()}")
+        Log.d(TAG, "translateX: ${mapMatrix.getModelMatrix()[3]}, translateY: ${mapMatrix.getModelMatrix()[7]}, matrix: ${mapMatrix.getModelMatrix().contentToString()}")
         Matrix.setIdentityM(mMVPMatrix, 0)
         Matrix.multiplyMM(mMVPMatrix, 0, mapMatrix.getViewMatrix(), 0, transformMatrix, 0);
         Matrix.multiplyMM(mMVPMatrix, 0, mapMatrix.getProjectionMatrix(), 0, mMVPMatrix, 0);

@@ -8,6 +8,7 @@ import android.util.Log
 import com.houtrry.common_map.data.BitmapSize
 import com.houtrry.common_map.utils.*
 import com.houtrry.lopengles20.utils.OpenglUtils
+import com.houtrry.lopengles20.utils.identityM
 import java.nio.FloatBuffer
 import java.nio.ShortBuffer
 
@@ -28,10 +29,10 @@ class MapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
 
     //顶点坐标
     private var squareCoords = floatArrayOf(
-        -1.0f, 1.0f, 0.0f,//top left
-        -1.0f, -1.0f, 0.0f,//bottom left
-        1.0f, -1.0f, 0.0f,//bottom right
-        1.0f, 1.0f, 0.0f,//top right
+        -.5f, .5f, 0.0f,//top left
+        -.5f, -.5f, 0.0f,//bottom left
+        .5f, -.5f, 0.0f,//bottom right
+        .5f, .5f, 0.0f,//top right
     )
 
     //顶点对应的纹理坐标
@@ -62,6 +63,8 @@ class MapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
 
     private val mMVPMatrix = FloatArray(16) // MVP 矩阵
 
+    private val textureSizeMatrix = FloatArray(16).identityM()
+
     init {
         Log.d(TAG, "init start, ${mapBitmap.width}, ${mapBitmap.height}")
     }
@@ -74,6 +77,7 @@ class MapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
             GLES20.GL_CLAMP_TO_EDGE, GLES20.GL_CLAMP_TO_EDGE
         )
         Log.d(TAG, "glTextureId: $glMapTextureId")
+        Matrix.scaleM(textureSizeMatrix, 0, mapBitmap.width.toFloat(), mapBitmap.height.toFloat(), 1f)
     }
 
     private fun String.colorToFloatArray(): FloatArray {
@@ -149,17 +153,12 @@ class MapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
 //        mapMatrix.testAutoRotate()
 
         // Apply a ModelView Projection transformation
-        Matrix.setIdentityM(mMVPMatrix, 0)
+        mMVPMatrix.identityM()
         // 计算缩放因子
-        aspectRatio = mapBitmapSize.width * 1f / mapBitmapSize.height
-        val scaleX = mapBitmapSize.width * 1f / viewHeight // 根据宽高比计算缩放
-        val scaleY = mapBitmapSize.height * 1f / viewHeight
-
-        val mvpMatrix = mapMatrix.getTransformMatrix().copyOf()
-        Matrix.scaleM(mvpMatrix, 0, scaleX, scaleY, 1f)
-
-        Matrix.multiplyMM(mMVPMatrix, 0, mapMatrix.getViewMatrix(), 0, mvpMatrix, 0);
-        Matrix.multiplyMM(mMVPMatrix, 0, mapMatrix.getProjectionMatrix(), 0, mMVPMatrix, 0);
+        //mvpMatrix = projectionMatrix * viewMatrix * textureSizeMatrix * modelMatrix
+        Matrix.multiplyMM(mMVPMatrix, 0, mapMatrix.getProjectionViewMatrix(), 0, mapMatrix.getModelMatrix(), 0);
+        Log.d(TAG, "modelMatrix: ${mapMatrix.getModelMatrix().formatMatrixString()}")
+        Matrix.multiplyMM(mMVPMatrix, 0, mMVPMatrix, 0, textureSizeMatrix, 0);
         GLES20.glUniformMatrix4fv(transformMatrixLocation, 1, false, mMVPMatrix, 0);
 //        GLES20.glUniformMatrix4fv(transformMatrixLocation, 1, false, mapMatrix.getTransformMatrix(), 0);
 

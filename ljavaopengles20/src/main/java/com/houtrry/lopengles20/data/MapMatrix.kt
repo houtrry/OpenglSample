@@ -4,6 +4,7 @@ import android.graphics.PointF
 import android.opengl.Matrix
 import android.util.Log
 import com.houtrry.common_map.utils.formatMatrixString
+import com.houtrry.lopengles20.layer.MapLayer
 import com.houtrry.lopengles20.utils.identityM
 import kotlin.math.sqrt
 
@@ -21,9 +22,8 @@ class MapMatrix {
 
     private val modelMatrix = FloatArray(16).identityM()
     private val projectionMatrix = FloatArray(16).identityM() // 用于变换的矩阵
+    private val projectionViewMatrix = FloatArray(16).identityM() // 用于变换的矩阵
     private val viewMatrix = FloatArray(16).identityM() //用户手势操作的变换
-    private val worldMatrix = FloatArray(16).identityM() // 地图本身的变换
-    private val resolutionMatrix = FloatArray(16).identityM()
 
     init {
         Matrix.setLookAtM(
@@ -34,52 +34,26 @@ class MapMatrix {
         )
     }
 
-    @Synchronized
-    fun translate(translateX: Float, translateY: Float) {
-        val vMatrix = floatArrayOf(translateX, translateY, 0f, 0f)
-        val translateInverse = FloatArray(16)
-        val translateMatrix = FloatArray(4)
-        Matrix.invertM(translateInverse, 0, modelMatrix, 0)
-        Matrix.multiplyMV(translateMatrix, 0, translateInverse, 0, vMatrix, 0)
-
-        Matrix.translateM(modelMatrix, 0, translateMatrix[0], translateMatrix[1], 0f)
-        Log.d(TAG, "translate, transformMatrix: ${modelMatrix.contentToString()}")
+    fun translate(translateX: Float, translateY: Float, viewWidth: Int, viewHeight: Int) {
+        synchronized(modelMatrix) {
+            Log.d(TAG, "translate start, ($translateX, $translateY), modelMatrix: ${modelMatrix.formatMatrixString()}")
+            val p0 = convertScreenToGL(0f, 0f, viewWidth, viewHeight)
+            val pxy = convertScreenToGL(translateX, translateY, viewWidth, viewHeight)
+            Matrix.translateM(modelMatrix, 0, pxy.x - p0.x, pxy.y - p0.y, 0f)
+            Log.d(TAG, "translate end, modelMatrix: ${modelMatrix.formatMatrixString()}")
+        }
     }
 
-    @Synchronized
-    fun zoom(zoom: Float, focusX: Float = 0f, focusY: Float = 0f) {
-        Matrix.translateM(modelMatrix, 0, focusX, focusY, 0f)
-        Matrix.scaleM(modelMatrix, 0, zoom, zoom, 1f)
-        Matrix.translateM(modelMatrix, 0, -focusX, -focusY, 0f)
-    }
-
-    @Synchronized
-    fun scale(scaleX: Float, scaleY: Float, focusX: Float = 0f, focusY: Float = 0f) {
-        if (scaleX == 0f && scaleY == 0f) {
-            Matrix.scaleM(modelMatrix, 0, scaleX, scaleY, 1f)
-        } else {
+    fun rotateWithZoom(scale: Float, rotate: Float, focusX: Float = 0f, focusY: Float = 0f) {
+        synchronized(modelMatrix) {
             Matrix.translateM(modelMatrix, 0, focusX, focusY, 0f)
-            Matrix.scaleM(modelMatrix, 0, scaleX, scaleY, 1f)
+            Matrix.rotateM(modelMatrix, 0, rotate, 0f, 0f, 1f)
+            Matrix.scaleM(modelMatrix, 0, scale, scale, 1f)
             Matrix.translateM(modelMatrix, 0, -focusX, -focusY, 0f)
         }
     }
 
-    @Synchronized
-    fun rotate(rotate: Float, focusX: Float = 0f, focusY: Float = 0f) {
-        Matrix.translateM(modelMatrix, 0, focusX, focusY, 0f)
-        Matrix.rotateM(modelMatrix, 0, rotate, 0f, 0f, 1f)
-        Matrix.translateM(modelMatrix, 0, -focusX, -focusY, 0f)
-    }
-
-    @Synchronized
-    fun rotateWithZoom(scale: Float, rotate: Float, focusX: Float = 0f, focusY: Float = 0f) {
-        Matrix.translateM(modelMatrix, 0, focusX, focusY, 0f)
-        Matrix.rotateM(modelMatrix, 0, rotate, 0f, 0f, 1f)
-        Matrix.scaleM(modelMatrix, 0, scale, scale, 1f)
-        Matrix.translateM(modelMatrix, 0, -focusX, -focusY, 0f)
-    }
-
-    fun getTransformMatrix() = modelMatrix
+    fun getModelMatrix() = modelMatrix
 
     fun getTranslateX() = modelMatrix[12]
     fun getTranslateY() = modelMatrix[13]
@@ -90,18 +64,21 @@ class MapMatrix {
     }
 
     fun orthoM(width: Int, height: Int) {
-        val aspectRatio = width * 1f / height
         Matrix.orthoM(
             projectionMatrix, 0,
-            -aspectRatio, aspectRatio,
-            -1f, 1f,
+            -width * 0.5f, width * 0.5f,
+            -height * 0.5f, height * 0.5f,
             1f, 100.0f
         )
+        projectionViewMatrix.identityM()
+        Matrix.multiplyMM(projectionViewMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
     }
 
     fun getViewMatrix() = viewMatrix
 
     fun getProjectionMatrix() = projectionMatrix
+
+    fun getProjectionViewMatrix() = projectionViewMatrix
 
     fun getTransformMatrixWithoutScale(scale: Float, matrix: FloatArray) {
         Log.d(
@@ -126,26 +103,45 @@ class MapMatrix {
         return sqrt(args.sumOf { it.toDouble() * it }).toFloat()
     }
 
-    // 屏幕坐标转世界坐标
-    fun screenToWorld(screenX: Float, screenY: Float, viewWidth: Int, viewHeight: Int): PointF {
-        // 归一化设备坐标
-        val ndcX = 2 * screenX / viewWidth - 1
-        val ndcY = 1 - 2 * screenY / viewHeight
+    /**
+     * 屏幕坐标转成GL坐标
+     */
+    fun convertScreenToGL(screenX: Float, screenY: Float, viewWidth: Int, viewHeight: Int): PointF {
+        val tempMatrix = FloatArray(16).identityM()
+        val invertedMatrix = FloatArray(16).identityM()
+        val ndcX = screenX / (viewWidth * 0.5f) - 1.0f
+        val ndcY = 1.0f - screenY / (viewHeight * 0.5f)
 
-        // 创建逆MVP矩阵
-        val mvp = FloatArray(16)
-        Matrix.setIdentityM(mvp, 0)
-        Matrix.multiplyMM(mvp, 0, worldMatrix, 0, mvp, 0)
-        Matrix.multiplyMM(mvp, 0, viewMatrix, 0, mvp, 0)
-        Matrix.multiplyMM(mvp, 0, projectionMatrix, 0, mvp, 0)
+        Matrix.multiplyMM(tempMatrix, 0, projectionMatrix, 0, modelMatrix, 0)
+        Matrix.invertM(invertedMatrix, 0, tempMatrix, 0)
 
-        val invMvp = FloatArray(16)
-        Matrix.invertM(invMvp, 0, mvp, 0)
+        val inVec = floatArrayOf(ndcX, ndcY, 0f, 1f)
+        val outVec = FloatArray(4)
+        Matrix.multiplyMV(outVec, 0, invertedMatrix, 0, inVec, 0)
 
-        // 转换坐标
-        val point = floatArrayOf(ndcX, ndcY, 0f, 1f)
-        Matrix.multiplyMV(point, 0, invMvp, 0, point, 0)
+        if (outVec[3] != 0f) {
+            outVec[0] /= outVec[3]
+            outVec[1] /= outVec[3]
+        }
+        return PointF(outVec[0], outVec[1])
+    }
 
-        return PointF(point[0], point[1])
+    /**
+     * GL坐标转成屏幕坐标
+     */
+    fun convertGlToScreen(glX: Float, glY: Float, viewWidth: Int, viewHeight: Int): PointF {
+        val tempMatrix = floatArrayOf(glX, glY, 0f, 0f)
+        Matrix.multiplyMM(tempMatrix, 0, modelMatrix, 0, tempMatrix, 0)
+        return PointF(viewWidth * 0.5f + tempMatrix[0], viewHeight * 0.5f - tempMatrix[1])
+    }
+
+    /**
+     * 定位坐标转成GL坐标
+     */
+    fun worldToGl(bitmapInfo: BitmapInfo, x: Float, y: Float): PointF {
+        return PointF(
+            (x - bitmapInfo.resolution * bitmapInfo.width * 0.5f - bitmapInfo.originX) / bitmapInfo.resolution,
+            (y - bitmapInfo.resolution * bitmapInfo.height * 0.5f - bitmapInfo.originY) / bitmapInfo.resolution,
+        )
     }
 }

@@ -9,6 +9,7 @@ import com.houtrry.lopengles20.utils.OpenglUtils
 import com.houtrry.common_map.utils.formatMatrixString
 import com.houtrry.common_map.utils.glGetUniformLocation
 import com.houtrry.common_map.utils.toBuffer
+import com.houtrry.lopengles20.utils.identityM
 import java.nio.ShortBuffer
 
 class RobotLayer(
@@ -48,7 +49,7 @@ class RobotLayer(
 
         Log.d(TAG, "glArrowTextureId: $glArrowTextureId, ${arrowBitmapSize.width} * ${arrowBitmapSize.height}")
     }
-    private val mMVPMatrix = FloatArray(16) // MVP 矩阵
+    private val mMVPMatrix = FloatArray(16).identityM() // MVP 矩阵
 
     override fun onDraw() {
 //        val transformMatrix = OpenglUtils.getTargetMatrix(
@@ -59,9 +60,9 @@ class RobotLayer(
 //            0f
 //        )
         mapMatrix.getTransformMatrixWithoutScale(300f.toFloat() / viewHeight, transformMatrix)
-        Log.d(TAG, "transformMatrix: ${mapMatrix.getTransformMatrix().formatMatrixString()}")
-        Log.d(TAG, "translateX: ${mapMatrix.getTransformMatrix()[3]}, translateY: ${mapMatrix.getTransformMatrix()[7]}, matrix: ${mapMatrix.getTransformMatrix().contentToString()}")
-        Matrix.setIdentityM(mMVPMatrix, 0)
+        Log.d(TAG, "transformMatrix: ${mapMatrix.getModelMatrix().formatMatrixString()}")
+        Log.d(TAG, "translateX: ${mapMatrix.getModelMatrix()[3]}, translateY: ${mapMatrix.getModelMatrix()[7]}, matrix: ${mapMatrix.getModelMatrix().contentToString()}")
+        mMVPMatrix.identityM()
         Matrix.multiplyMM(mMVPMatrix, 0, mapMatrix.getViewMatrix(), 0, transformMatrix, 0);
         Matrix.multiplyMM(mMVPMatrix, 0, mapMatrix.getProjectionMatrix(), 0, mMVPMatrix, 0);
         val transformMatrixLocation = program.glGetUniformLocation("u_TransformMatrix")
