@@ -122,8 +122,8 @@ class MapMatrix {
         synchronized(modelMatrix) {
             val tempMatrix = FloatArray(16).identityM()
             val invertedMatrix = FloatArray(16).identityM()
-            val ndcX = screenX / (viewWidth * 0.5f) - 1.0f
-            val ndcY = 1.0f - screenY / (viewHeight * 0.5f)
+            val ndcX = 2.0f * (screenX / viewWidth) - 1.0f
+            val ndcY = 1.0f - 2.0f * (screenY / viewHeight)
 
             Matrix.multiplyMM(tempMatrix, 0, projectionMatrix, 0, modelMatrix, 0)
             Matrix.invertM(invertedMatrix, 0, tempMatrix, 0)
