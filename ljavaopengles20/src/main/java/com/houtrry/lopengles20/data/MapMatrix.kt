@@ -19,13 +19,11 @@ class MapMatrix {
     companion object {
         private const val TAG = "MapMatrix"
         private const val MIN_SCALE = 0.5f
-        private const val MAX_SCALE = 4.0
+        private const val MAX_SCALE = 4.0f
     }
 
+    @Volatile
     private var currentScale = 1.0f
-    private val minScale = 0.5f
-    private val maxScale = 4.0f
-
     private val modelMatrix = FloatArray(16).identityM()
     private val projectionMatrix = FloatArray(16).identityM() // 用于变换的矩阵
     private val projectionViewMatrix = FloatArray(16).identityM() // 用于变换的矩阵
@@ -54,15 +52,15 @@ class MapMatrix {
     fun rotateWithZoom(scale: Float, rotate: Float, focusX: Float = 0f, focusY: Float = 0f) {
         synchronized(modelMatrix) {
             // 计算缩放后的 scale
-            val newScale = (currentScale * scale).coerceIn(minScale, maxScale)
-            currentScale = newScale
-
+            val newScale = (currentScale * scale).coerceIn(MIN_SCALE, MAX_SCALE)
+            Log.d(TAG, "rotateWithZoom newScale->$newScale, scale: $scale, rotate: $rotate, focusX: $focusX, focusY: $focusY")
             // 重置 modelMatrix
             Matrix.setIdentityM(modelMatrix, 0)
             Matrix.translateM(modelMatrix, 0, focusX, focusY, 0f)
             Matrix.rotateM(modelMatrix, 0, rotate, 0f, 0f, 1f)
-            Matrix.scaleM(modelMatrix, 0, currentScale, currentScale, 1f)
+            Matrix.scaleM(modelMatrix, 0, newScale, newScale, 1f)
             Matrix.translateM(modelMatrix, 0, -focusX, -focusY, 0f)
+            currentScale = newScale
         }
     }
 
@@ -120,21 +118,23 @@ class MapMatrix {
      * 屏幕坐标转成GL坐标
      */
     fun convertScreenToGL(screenX: Float, screenY: Float, viewWidth: Int, viewHeight: Int): PointF {
-        val tempMatrix = FloatArray(16).identityM()
-        val invertedMatrix = FloatArray(16).identityM()
-        val ndcX = screenX / (viewWidth * 0.5f) - 1.0f
-        val ndcY = 1.0f - screenY / (viewHeight * 0.5f)
-
-        Matrix.multiplyMM(tempMatrix, 0, projectionMatrix, 0, modelMatrix, 0)
-        Matrix.invertM(invertedMatrix, 0, tempMatrix, 0)
-
-        val inVec = floatArrayOf(ndcX, ndcY, 0f, 1f)
         val outVec = FloatArray(4)
-        Matrix.multiplyMV(outVec, 0, invertedMatrix, 0, inVec, 0)
+        synchronized(modelMatrix) {
+            val tempMatrix = FloatArray(16).identityM()
+            val invertedMatrix = FloatArray(16).identityM()
+            val ndcX = screenX / (viewWidth * 0.5f) - 1.0f
+            val ndcY = 1.0f - screenY / (viewHeight * 0.5f)
 
-        if (outVec[3] != 0f) {
-            outVec[0] /= outVec[3]
-            outVec[1] /= outVec[3]
+            Matrix.multiplyMM(tempMatrix, 0, projectionMatrix, 0, modelMatrix, 0)
+            Matrix.invertM(invertedMatrix, 0, tempMatrix, 0)
+
+            val inVec = floatArrayOf(ndcX, ndcY, 0f, 1f)
+            Matrix.multiplyMV(outVec, 0, invertedMatrix, 0, inVec, 0)
+
+            if (outVec[3] != 0f) {
+                outVec[0] /= outVec[3]
+                outVec[1] /= outVec[3]
+            }
         }
         return PointF(outVec[0], outVec[1])
     }
@@ -149,12 +149,22 @@ class MapMatrix {
     }
 
     /**
-     * 定位坐标转成GL坐标
+     * 定位世界坐标转成GL坐标
      */
     fun worldToGl(bitmapInfo: BitmapInfo, x: Float, y: Float): PointF {
         return PointF(
             (x - bitmapInfo.resolution * bitmapInfo.width * 0.5f - bitmapInfo.originX) / bitmapInfo.resolution,
             (y - bitmapInfo.resolution * bitmapInfo.height * 0.5f - bitmapInfo.originY) / bitmapInfo.resolution,
+        )
+    }
+
+    /**
+     * GL坐标转成定位世界坐标
+     */
+    fun glToWorld(bitmapInfo: BitmapInfo, x: Float, y: Float): PointF {
+        return PointF(
+            bitmapInfo.resolution * x + bitmapInfo.originX + bitmapInfo.resolution * bitmapInfo.width * 0.5f,
+            bitmapInfo.resolution * y + bitmapInfo.originY + bitmapInfo.resolution * bitmapInfo.height * 0.5f,
         )
     }
 }

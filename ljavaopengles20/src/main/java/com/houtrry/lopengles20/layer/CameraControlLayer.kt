@@ -45,19 +45,21 @@ class CameraControlLayer(val mapRender: MapRender) : BaseLayer() {
                 }
             })
             zoomRotateGestureDetector = ZoomRotateGestureDetector { focusX, focusY, scale, rotate ->
-                val poivt = mapRender.getMapMatrix().convertScreenToGL(
-                    focusX,
-                    focusY,
-                    viewWidth,
-                    viewHeight
-                )
-                Log.d(TAG, "rotateWithZoom -> (${poivt.x}, ${poivt.y}), (${focusX/viewWidth}, ${focusY/viewHeight}), $focusX/$viewWidth, $focusY/$viewHeight")
-                mapRender.getMapMatrix().rotateWithZoom(
-                    scale,
-                    rotate,
-                    poivt.x,
-                    poivt.y,
-                )
+                synchronized(mapMatrix.getModelMatrix()) {
+                    val poivt = mapRender.getMapMatrix().convertScreenToGL(
+                        focusX,
+                        focusY,
+                        viewWidth,
+                        viewHeight
+                    )
+                    Log.d(TAG, "rotateWithZoom-> (${poivt.x}, ${poivt.y}), (${focusX/viewWidth}, ${focusY/viewHeight}), $focusX/$viewWidth, $focusY/$viewHeight")
+                    mapRender.getMapMatrix().rotateWithZoom(
+                        scale,
+                        rotate,
+                        poivt.x,
+                        poivt.y,
+                    )
+                }
                 mapRender.requestRender()
                 true
             }
