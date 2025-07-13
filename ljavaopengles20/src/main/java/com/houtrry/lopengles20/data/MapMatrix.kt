@@ -18,7 +18,13 @@ import kotlin.math.sqrt
 class MapMatrix {
     companion object {
         private const val TAG = "MapMatrix"
+        private const val MIN_SCALE = 0.5f
+        private const val MAX_SCALE = 4.0
     }
+
+    private var currentScale = 1.0f
+    private val minScale = 0.5f
+    private val maxScale = 4.0f
 
     private val modelMatrix = FloatArray(16).identityM()
     private val projectionMatrix = FloatArray(16).identityM() // 用于变换的矩阵
@@ -32,6 +38,7 @@ class MapMatrix {
             0f, 0f, 0f,
             0f, 1f, 0f
         )
+        currentScale = 1.0f
     }
 
     fun translate(translateX: Float, translateY: Float, viewWidth: Int, viewHeight: Int) {
@@ -43,10 +50,6 @@ class MapMatrix {
             Log.d(TAG, "translate end, modelMatrix: ${modelMatrix.formatMatrixString()}")
         }
     }
-
-    private var currentScale = 1.0f
-    private val minScale = 0.5f
-    private val maxScale = 4.0f
 
     fun rotateWithZoom(scale: Float, rotate: Float, focusX: Float = 0f, focusY: Float = 0f) {
         synchronized(modelMatrix) {
