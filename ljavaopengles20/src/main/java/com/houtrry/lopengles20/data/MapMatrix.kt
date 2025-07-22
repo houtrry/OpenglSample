@@ -129,7 +129,7 @@ class MapMatrix {
 
             Log.d(TAG, "convertScreenToGL, ($ndcX, $ndcY), (${screenX/viewWidth}, ${screenY/viewHeight}), $screenX/$viewWidth, $screenY/$viewHeight")
             Log.d(TAG, "convertScreenToGL, projectionMatrix: ${projectionMatrix.formatMatrixString()}")
-            Log.d(TAG, "convertScreenToGL, modelMatrix: ${projectionMatrix.formatMatrixString()}")
+            Log.d(TAG, "convertScreenToGL, modelMatrix: ${modelMatrix.formatMatrixString()}")
             Matrix.multiplyMM(tempMatrix, 0, projectionMatrix, 0, modelMatrix, 0)
             Matrix.invertM(invertedMatrix, 0, tempMatrix, 0)
             Log.d(TAG, "convertScreenToGL, tempMatrix: ${tempMatrix.formatMatrixString()}")
