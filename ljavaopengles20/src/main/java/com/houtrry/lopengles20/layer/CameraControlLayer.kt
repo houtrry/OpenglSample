@@ -38,9 +38,9 @@ class CameraControlLayer(val mapRender: MapRender) : BaseLayer() {
                     event1: MotionEvent, event2: MotionEvent,
                     distanceX: Float, distanceY: Float
                 ): Boolean {
-//                    mapRender.getMapMatrix()
-//                        .translate(-distanceX, -distanceY, viewWidth, viewHeight)
-//                    mapRender.requestRender()
+                   mapRender.getMapMatrix()
+                       .translate(-distanceX, -distanceY, viewWidth, viewHeight)
+                   mapRender.requestRender()
                     return true
                 }
             })
