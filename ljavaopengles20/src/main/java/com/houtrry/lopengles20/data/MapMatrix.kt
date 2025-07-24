@@ -52,13 +52,19 @@ class MapMatrix {
     fun rotateWithZoom(scale: Float, rotate: Float, focusX: Float = 0f, focusY: Float = 0f) {
         synchronized(modelMatrix) {
             // 计算缩放后的 scale
-            val newScale = (currentScale * scale).coerceIn(MIN_SCALE, MAX_SCALE)
-            Log.d(TAG, "rotateWithZoom newScale->$newScale, scale: $scale, rotate: $rotate, focusX: $focusX, focusY: $focusY")
+            val sc = currentScale * scale
+            val newScale = sc.coerceIn(MIN_SCALE, MAX_SCALE)
+            val finalScale = if (sc == newScale) {
+                scale
+            } else {
+                1f
+            }
+            Log.d(TAG, "rotateWithZoom finalScale: $finalScale, sc: $sc, newScale->$newScale, scale: $scale, rotate: $rotate, focusX: $focusX, focusY: $focusY")
             // 重置 modelMatrix
-            Matrix.setIdentityM(modelMatrix, 0)
+//            Matrix.setIdentityM(modelMatrix, 0)
             Matrix.translateM(modelMatrix, 0, focusX, focusY, 0f)
             Matrix.rotateM(modelMatrix, 0, rotate, 0f, 0f, 1f)
-            Matrix.scaleM(modelMatrix, 0, newScale, newScale, 1f)
+            Matrix.scaleM(modelMatrix, 0, finalScale, finalScale, 1f)
             Matrix.translateM(modelMatrix, 0, -focusX, -focusY, 0f)
             currentScale = newScale
         }
