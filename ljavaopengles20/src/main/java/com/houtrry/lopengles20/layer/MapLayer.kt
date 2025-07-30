@@ -7,6 +7,7 @@ import android.opengl.Matrix
 import android.util.Log
 import com.houtrry.common_map.data.BitmapSize
 import com.houtrry.common_map.utils.*
+import com.houtrry.lopengles20.data.BitmapInfo
 import com.houtrry.lopengles20.utils.OpenglUtils
 import com.houtrry.lopengles20.utils.identityM
 import java.nio.FloatBuffer
@@ -30,17 +31,17 @@ class MapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
     //顶点坐标
     private var squareCoords = floatArrayOf(
         -.5f, .5f, 0.0f,//top left
-        -.5f, -.5f, 0.0f,//bottom left
-        .5f, -.5f, 0.0f,//bottom right
         .5f, .5f, 0.0f,//top right
+        .5f, -.5f, 0.0f,//bottom right
+        -.5f, -.5f, 0.0f,//bottom left
     )
 
     //顶点对应的纹理坐标
     private var texVertex = floatArrayOf(
         0f, 0f,
-        0f, 1f,
+        1f, 0f,
         1f, 1f,
-        1f, 0f
+        0f, 1f
     )
 
     //四个顶点的绘制顺序数组
@@ -71,6 +72,7 @@ class MapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
 
     override fun onCreate() {
         mapBitmapSize = BitmapSize(mapBitmap.width, mapBitmap.height)
+        mapMatrix.updateBitmapInfo(BitmapInfo(0f, 0f, 0.05f, mapBitmap.width, mapBitmap.height))
         glMapTextureId = OpenglUtils.createTexture(
             mapBitmap,
             GLES20.GL_NEAREST, GLES20.GL_NEAREST,
@@ -158,8 +160,8 @@ class MapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
         //mvpMatrix = projectionMatrix * viewMatrix * textureSizeMatrix * modelMatrix
         Matrix.multiplyMM(mMVPMatrix, 0, mapMatrix.getProjectionViewMatrix(), 0, mapMatrix.getModelMatrix(), 0);
         Log.d(TAG, "modelMatrix: ${mapMatrix.getModelMatrix().formatMatrixString()}")
-        Matrix.multiplyMM(mMVPMatrix, 0, mMVPMatrix, 0, textureSizeMatrix, 0);
-        GLES20.glUniformMatrix4fv(transformMatrixLocation, 1, false, mMVPMatrix, 0);
+        Matrix.multiplyMM(mMVPMatrix, 0, mMVPMatrix, 0, textureSizeMatrix, 0)
+        GLES20.glUniformMatrix4fv(transformMatrixLocation, 1, false, mMVPMatrix, 0)
 //        GLES20.glUniformMatrix4fv(transformMatrixLocation, 1, false, mapMatrix.getTransformMatrix(), 0);
 
         GLES20.glActiveTexture(glMapTextureId)

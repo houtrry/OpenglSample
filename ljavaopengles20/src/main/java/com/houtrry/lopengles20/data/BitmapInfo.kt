@@ -1,9 +1,9 @@
 package com.houtrry.lopengles20.data
 
 data class BitmapInfo(
-    val originX: Float,
-    val originY: Float,
-    val resolution: Float,
-    val width: Int,
-    val height: Int
+    var originX: Float,
+    var originY: Float,
+    var resolution: Float,
+    var width: Int,
+    var height: Int
 )

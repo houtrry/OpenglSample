@@ -11,7 +11,9 @@ import com.houtrry.common_map.utils.formatMatrixString
 import com.houtrry.common_map.utils.glGetUniformLocation
 import com.houtrry.common_map.utils.toBuffer
 import com.houtrry.lopengles20.data.*
+import com.houtrry.lopengles20.utils.MatrixUtils
 import com.houtrry.lopengles20.utils.OpenglUtils
+import com.houtrry.lopengles20.utils.identityM
 import java.nio.ShortBuffer
 
 class BubbleTextShape {
@@ -29,6 +31,7 @@ class BubbleTextShape {
     )
     private val mMVPMatrix = FloatArray(16) // MVP 矩阵
     private val transformMatrix: FloatArray = FloatArray(16)
+    private val scaleMatrix: FloatArray = FloatArray(16)
     //四个顶点的绘制顺序数组的缓冲数组
     private val drawListBuffer: ShortBuffer = drawOrder.toBuffer()
     private lateinit var arrowBitmapSize: BitmapSize
@@ -62,29 +65,48 @@ class BubbleTextShape {
     }
 
     private fun drawTextShape(program: Int, mapMatrix: MapMatrix,
-                              vector3: Vector3, textBitmap: Bitmap) {
+                              position: Vector3, textBitmap: Bitmap) {
         val glArrowTextureId = OpenglUtils.createTexture(
             textBitmap,
             GLES20.GL_NEAREST, GLES20.GL_LINEAR,
             GLES20.GL_CLAMP_TO_EDGE, GLES20.GL_CLAMP_TO_EDGE
         )
-        Matrix.setIdentityM(transformMatrix, 0)
-        Matrix.translateM(transformMatrix, 0, vector3.x.toFloat(), vector3.y.toFloat(), vector3.z.toFloat())
-//        mapMatrix.getTransformMatrixWithoutScale(scaleFactor, transformMatrix)
-        Matrix.multiplyMM(transformMatrix, 0, mapMatrix.getModelMatrix(), 0, transformMatrix, 0)
-        transformMatrix[0] = 1f
-        transformMatrix[1] = 0f
-        transformMatrix[4] = 0f
-        transformMatrix[5] = 1f
-        Matrix.scaleM(transformMatrix, 0, textBitmap.width.toFloat() / size.height, textBitmap.height.toFloat() / size.height, 1f)
-//        Matrix.translateM(transformMatrix, 0, 0f, 0f, 0f)
-        Log.d(TAG, "text $vector3 scale: ${textBitmap.height.toFloat() / size.height}")
-        Log.d(TAG, "transformMatrix: ${mapMatrix.getModelMatrix().formatMatrixString()}")
-        Log.d(TAG, "translateX: ${mapMatrix.getModelMatrix()[3]}, translateY: ${mapMatrix.getModelMatrix()[7]}, matrix: ${mapMatrix.getModelMatrix().contentToString()}")
-        Matrix.setIdentityM(mMVPMatrix, 0)
-        Matrix.multiplyMM(mMVPMatrix, 0, mapMatrix.getViewMatrix(), 0, transformMatrix, 0)
-        Matrix.multiplyMM(mMVPMatrix, 0, mapMatrix.getProjectionMatrix(), 0, mMVPMatrix, 0)
+        val vector3 = mapMatrix.worldToGl(position.x.toFloat(), position.y.toFloat())
+        Log.d(TAG, "drawTextShape, $textBitmap, vector3: $vector3 -> $position")
+        transformMatrix.identityM()
+        Matrix.translateM(transformMatrix, 0, vector3.x.toFloat(), vector3.y.toFloat(), 0f)
+        scaleMatrix.identityM()
+        Matrix.scaleM(scaleMatrix, 0, textBitmap.width.toFloat(), textBitmap.height.toFloat(), 1f)
+////        mapMatrix.getTransformMatrixWithoutScale(scaleFactor, transformMatrix)
+//        Matrix.multiplyMM(transformMatrix, 0, mapMatrix.getModelMatrix(), 0, transformMatrix, 0)
+//        transformMatrix[0] = 1f
+//        transformMatrix[1] = 0f
+//        transformMatrix[4] = 0f
+//        transformMatrix[5] = 1f
+//        Matrix.scaleM(transformMatrix, 0, textBitmap.width.toFloat() / size.height, textBitmap.height.toFloat() / size.height, 1f)
+////        Matrix.translateM(transformMatrix, 0, 0f, 0f, 0f)
+//        Log.d(TAG, "text $vector3 scale: ${textBitmap.height.toFloat() / size.height}")
+//        Log.d(TAG, "transformMatrix: ${mapMatrix.getModelMatrix().formatMatrixString()}")
+//        Log.d(TAG, "translateX: ${mapMatrix.getModelMatrix()[3]}, translateY: ${mapMatrix.getModelMatrix()[7]}, matrix: ${mapMatrix.getModelMatrix().contentToString()}")
+//        Matrix.setIdentityM(mMVPMatrix, 0)
+//        Matrix.multiplyMM(mMVPMatrix, 0, mapMatrix.getViewMatrix(), 0, transformMatrix, 0)
+//        Matrix.multiplyMM(mMVPMatrix, 0, mapMatrix.getProjectionMatrix(), 0, mMVPMatrix, 0)
+
+        mMVPMatrix.identityM()
+////        Matrix.multiplyMM(mMVPMatrix, 0, mapMatrix.getProjectionViewMatrix(), 0, mapMatrix.getComponentOfMatrix(mMVPMatrix, true, false), 0)
+//        Matrix.multiplyMM(mMVPMatrix, 0, mapMatrix.getProjectionViewMatrix(), 0, transformMatrix, 0)
+//        Matrix.multiplyMM(mMVPMatrix, 0, mMVPMatrix, 0, mapMatrix.getTransformMatrixOnlyTranslate(mMVPMatrix), 0)
+//        Matrix.multiplyMM(mMVPMatrix, 0, mMVPMatrix, 0, scaleMatrix, 0)
+
+        MatrixUtils.multiplyMatrices(mMVPMatrix,
+            mapMatrix.getProjectionViewMatrix(),
+            mapMatrix.getTransformMatrixOnlyTranslate(),
+            transformMatrix,
+            scaleMatrix,
+        )
+
         val transformMatrixLocation = program.glGetUniformLocation("u_TransformMatrix")
+
         GLES20.glActiveTexture(glArrowTextureId)
         GLES20.glUniformMatrix4fv(transformMatrixLocation, 1, false, mMVPMatrix, 0)
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, glArrowTextureId)

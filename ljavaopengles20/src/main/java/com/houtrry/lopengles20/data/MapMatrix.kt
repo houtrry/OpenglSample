@@ -5,6 +5,7 @@ import android.opengl.Matrix
 import android.util.Log
 import com.houtrry.common_map.utils.formatMatrixString
 import com.houtrry.lopengles20.layer.MapLayer
+import com.houtrry.lopengles20.utils.MatrixUtils
 import com.houtrry.lopengles20.utils.identityM
 import kotlin.math.sqrt
 
@@ -28,6 +29,7 @@ class MapMatrix {
     private val projectionMatrix = FloatArray(16).identityM() // 用于变换的矩阵
     private val projectionViewMatrix = FloatArray(16).identityM() // 用于变换的矩阵
     private val viewMatrix = FloatArray(16).identityM() //用户手势操作的变换
+    private val bitmapInfo = BitmapInfo(0f, 0f, 0.05f, 0, 0)
 
     init {
         Matrix.setLookAtM(
@@ -37,6 +39,16 @@ class MapMatrix {
             0f, 1f, 0f
         )
         currentScale = 1.0f
+    }
+
+    fun updateBitmapInfo(bitmapInfo: BitmapInfo) {
+        synchronized(this.bitmapInfo) {
+            this.bitmapInfo.originX = bitmapInfo.originX
+            this.bitmapInfo.originY = bitmapInfo.originY
+            this.bitmapInfo.resolution = bitmapInfo.resolution
+            this.bitmapInfo.width = bitmapInfo.width
+            this.bitmapInfo.height = bitmapInfo.height
+        }
     }
 
     fun translate(translateX: Float, translateY: Float, viewWidth: Int, viewHeight: Int) {
@@ -115,6 +127,43 @@ class MapMatrix {
 
     }
 
+    fun getTransformMatrixWithoutScale(matrix: FloatArray): FloatArray {
+        Log.d(
+            TAG,
+            "transformMatrix: ${modelMatrix.formatMatrixString()}"
+        )
+
+//        Matrix.setIdentityM(matrix, 0)
+        modelMatrix.copyInto(matrix)
+        val sx = calcFloatArraySqrt(matrix[0], matrix[4])
+        val sy = calcFloatArraySqrt(matrix[1], matrix[5])
+        matrix[0] *= 1 / sx
+        matrix[4] *= 1 / sx
+        matrix[1] *= 1 / sy
+        matrix[5] *= 1 / sy
+        Log.d(TAG, "sx:$sx, sy: $sy, transformMatrix: ${matrix.formatMatrixString()}")
+        return matrix
+    }
+
+    fun getTransformMatrixOnlyTranslate(matrix: FloatArray = FloatArray(16)): FloatArray {
+        Log.d(
+            TAG,
+            "transformMatrix: ${modelMatrix.formatMatrixString()}"
+        )
+
+//        Matrix.setIdentityM(matrix, 0)
+        matrix.identityM()
+        matrix[12] = modelMatrix[12]
+        matrix[13] = modelMatrix[13]
+        matrix[14] = modelMatrix[14]
+        Log.d(TAG, "transformMatrix: ${matrix.formatMatrixString()}")
+        return matrix
+    }
+
+    fun getComponentOfMatrix(matrix: FloatArray, useTranslate: Boolean = true, useRotate: Boolean = false, useScale: Boolean = false): FloatArray {
+        return MatrixUtils.getComponentOfMatrix(modelMatrix, matrix, useTranslate, useRotate, useScale)
+    }
+
     //变长数组的每项平方求和后，取其开根值
     private fun calcFloatArraySqrt(vararg args: Float): Float {
         return sqrt(args.sumOf { it.toDouble() * it }).toFloat()
@@ -175,6 +224,26 @@ class MapMatrix {
      * GL坐标转成定位世界坐标
      */
     fun glToWorld(bitmapInfo: BitmapInfo, x: Float, y: Float): PointF {
+        return PointF(
+            bitmapInfo.resolution * x + bitmapInfo.originX + bitmapInfo.resolution * bitmapInfo.width * 0.5f,
+            bitmapInfo.resolution * y + bitmapInfo.originY + bitmapInfo.resolution * bitmapInfo.height * 0.5f,
+        )
+    }
+
+    /**
+     * 定位世界坐标转成GL坐标
+     */
+    fun worldToGl(x: Float, y: Float): PointF {
+        return PointF(
+            (x - bitmapInfo.resolution * bitmapInfo.width * 0.5f - bitmapInfo.originX) / bitmapInfo.resolution,
+            (y - bitmapInfo.resolution * bitmapInfo.height * 0.5f - bitmapInfo.originY) / bitmapInfo.resolution,
+        )
+    }
+
+    /**
+     * GL坐标转成定位世界坐标
+     */
+    fun glToWorld(x: Float, y: Float): PointF {
         return PointF(
             bitmapInfo.resolution * x + bitmapInfo.originX + bitmapInfo.resolution * bitmapInfo.width * 0.5f,
             bitmapInfo.resolution * y + bitmapInfo.originY + bitmapInfo.resolution * bitmapInfo.height * 0.5f,
