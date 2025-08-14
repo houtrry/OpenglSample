@@ -9,8 +9,10 @@ import com.houtrry.common_map.utils.safeRecycle
 
 object OpenglUtils {
 
+    private const val TAG = "OpenglUtils"
+
     fun loadShaper(type: Int, shaderCode: String): Int? {
-        Log.d("loadShaper", "type: $type, shaderCode: \n$shaderCode")
+        Log.d(TAG, "loadShaper type: $type, shaderCode: \n$shaderCode")
         //创建顶点着色器、片源着色器
         //并返回着色器id
         val shaper = GLES20.glCreateShader(type)
@@ -24,13 +26,13 @@ object OpenglUtils {
         GLES20.glGetShaderiv(shaper, GLES20.GL_COMPILE_STATUS, statusArray, 0)
 
         Log.d(
-            "loadShaper",
-            "load shaper result is ${statusArray[0]}, and message is ${GLES20.glGetShaderInfoLog(shaper)}"
+            TAG,
+            "loadShaper load shaper result is ${statusArray[0]}, and message is ${GLES20.glGetShaderInfoLog(shaper)}"
         )
         if (statusArray[0] == 0) {
             //如果编译失败
             GLES20.glDeleteShader(shaper)
-            Log.e("loadShaper", "compile shaper failure")
+            Log.e(TAG, "loadShaper compile shaper failure")
             return null
         }
 
@@ -41,7 +43,7 @@ object OpenglUtils {
         //创建着色器程序
         val program = GLES20.glCreateProgram()
         if (program == 0) {
-            Log.e("linkProgram", "could`t create program")
+            Log.e(TAG, "linkProgram could`t create program")
             return null
         }
         //为着色器程序添加顶点着色器
@@ -55,13 +57,13 @@ object OpenglUtils {
         val linkStatus = intArrayOf(0)
         GLES20.glGetProgramiv(program, GLES20.GL_LINK_STATUS, linkStatus, 0)
         Log.d(
-            "linkProgram",
-            "link program result is ${linkStatus[0]}, and message is ${GLES20.glGetProgramInfoLog(program)}"
+            TAG,
+            "linkProgram link program result is ${linkStatus[0]}, and message is ${GLES20.glGetProgramInfoLog(program)}"
         )
         if (linkStatus[0] == 0) {
             //链接失败就删除program
             GLES20.glDeleteProgram(program)
-            Log.e("linkProgram", "link program failure")
+            Log.e(TAG, "linkProgram link program failure")
             return null
         }
         return program
@@ -71,7 +73,7 @@ object OpenglUtils {
         GLES20.glValidateProgram(program)
         val validateStatus = intArrayOf(0)
         GLES20.glGetProgramiv(program, GLES20.GL_VALIDATE_STATUS, validateStatus, 0)
-        Log.d("isValidateProgram", "result of validate program status is ${validateStatus[0]}, and message is ${GLES20.glGetProgramInfoLog(program)}")
+        Log.d(TAG, "isValidateProgram result of validate program status is ${validateStatus[0]}, and message is ${GLES20.glGetProgramInfoLog(program)}")
         return validateStatus[0] != 0
     }
 

@@ -179,6 +179,7 @@ class MapMatrix {
             val invertedMatrix = FloatArray(16).identityM()
 //            val ndcX = 2.0f * (screenX / viewWidth) - 1.0f
 //            val ndcY = 1.0f - 2.0f * (screenY / viewHeight)
+
             val ndcX = screenX / (viewWidth * 0.5f) - 1.0f
             val ndcY = 1.0f - screenY / (viewHeight * 0.5f)
 

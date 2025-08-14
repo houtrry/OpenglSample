@@ -64,10 +64,12 @@ class MapRender(val context: Context?, private val renderCallback: () -> Unit) :
         context.let { ctx ->
             layers.forEach { it.onCreate(ctx, mPrograms, mapMatrix) }
         }
+        Log.d(TAG, "onSurfaceCreated end")
     }
 
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
         GLES20.glViewport(0, 0, width, height)
+        Log.d(TAG, "onSurfaceChanged, width: $width, height: $height")
         layers.forEach { it.onSizeChange(width, height) }
     }
 
