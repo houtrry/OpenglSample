@@ -32,7 +32,11 @@ class BubbleTextShape {
     private val mMVPMatrix = FloatArray(16) // MVP 矩阵
     private val transformMatrix: FloatArray = FloatArray(16)
     private val scaleMatrix: FloatArray = FloatArray(16)
-    private val offsetMatrix: FloatArray = FloatArray(16).identityM()
+    private val offsetMatrix: FloatArray = FloatArray(16).identityM().apply {
+        // 添加向上偏移，让气泡底部对准目标位置
+        // 在标准化纹理坐标空间中，向上偏移0.5个单位（即半个高度）
+        Matrix.translateM(this, 0, 0f, 0.5f, 0f)
+    }
     //四个顶点的绘制顺序数组的缓冲数组
     private val drawListBuffer: ShortBuffer = drawOrder.toBuffer()
     private lateinit var arrowBitmapSize: BitmapSize
@@ -81,9 +85,6 @@ class BubbleTextShape {
 
         mMVPMatrix.identityM()
 
-//        offsetMatrix.identityM()
-//        Matrix.translateM(offsetMatrix, 0, 0f, textBitmap.height * 0.5f, 0f)
-
         //注意，获取分量这个操作，应该是modelMatrix与transformMatrix计算后的结果获取分量
         //而不是先获取modelMatrix的分量，再与transformMatrix计算
         //不然结果就是错的
@@ -92,7 +93,7 @@ class BubbleTextShape {
             mapMatrix.getProjectionViewMatrix(),
             MatrixUtils.getComponentOfMatrix(transformMatrix, FloatArray(16).identityM(), true, false, false),
             scaleMatrix,
-//            offsetMatrix
+            offsetMatrix
         )
 
         val transformMatrixLocation = program.glGetUniformLocation("u_TransformMatrix")
