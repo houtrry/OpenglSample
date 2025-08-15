@@ -103,7 +103,7 @@ class MapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
         "#c3d8ea".colorToFloatArray()
     }
     private val outerColor: FloatArray by lazy {
-        "#ffffff".colorToFloatArray()
+        "#d6dadf".colorToFloatArray()
     }
     private val wallColor by lazy {
         "#0072ff".colorToFloatArray()

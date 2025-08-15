@@ -1,12 +1,14 @@
 package com.houtrry.lopengles20.weight
 
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.opengl.GLSurfaceView
 import android.util.AttributeSet
 import android.view.MotionEvent
 import com.houtrry.lopengles20.render.MapRender
 import com.houtrry.common_map.utils.getAssertBitmap
 import com.houtrry.common_map.utils.notNull
+import com.houtrry.lopengles20.R
 import com.houtrry.lopengles20.layer.*
 
 class MapView(context: Context?, attrs: AttributeSet? = null) : GLSurfaceView(context, attrs) {
@@ -29,7 +31,7 @@ class MapView(context: Context?, attrs: AttributeSet? = null) : GLSurfaceView(co
             )
             addLayer(
                 RobotLayer(
-                    ctx.getAssertBitmap("robot.png")
+                    BitmapFactory.decodeResource(ctx.resources, com.houtrry.common_map.R.mipmap.robot)
                 )
             )
             addLayer(TextLayer())
