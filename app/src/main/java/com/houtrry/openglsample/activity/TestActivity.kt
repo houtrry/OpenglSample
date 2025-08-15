@@ -495,18 +495,21 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         Matrix.multiplyMM(worldPosition, 0, mapModelMatrix, 0, localTranslation, 0)
 
         // 5. 创建标记点缩放矩阵（转换为像素大小）
-        val markerScaleMatrix = FloatArray(16).identityM()
-        Matrix.scaleM(markerScaleMatrix, 0, 1f, 1f, 1f)
+//        val markerScaleMatrix = FloatArray(16).identityM()
+//        Matrix.scaleM(markerScaleMatrix, 0, 1f, 1f, 1f)
 
         // 6. 组合最终矩阵
-        val resultMatrix = FloatArray(16)
-        Matrix.multiplyMM(resultMatrix, 0, worldPosition, 0, markerScaleMatrix, 0)
+        val resultMatrix = worldPosition.copyOf()
+        //resultMatrix = mapModelMatrix * localTranslation * markerScaleMatrix
+//        Matrix.multiplyMM(resultMatrix, 0, worldPosition, 0, markerScaleMatrix, 0)
         Log.d(TAG, "reCalcModelMatrixOfMarker start ---------------------------------------------------")
         Log.d(TAG, "reCalcModelMatrixOfMarker worldPosition: ${worldPosition.formatMatrixString()}")
         Log.d(TAG, "reCalcModelMatrixOfMarker resultMatrix: ${resultMatrix.formatMatrixString()}")
 
         val result = if (followRotate) {
-            resultMatrix.getTransformMatrixWithoutScale(width, height, modelMatrix)
+            resultMatrix.getTransformMatrixWithoutScale(1f, 1f, modelMatrix).apply {
+                Matrix.scaleM(this, 0, width, height, 0f)
+            }
         } else {
             modelMatrix.apply {
                 this.identityM()
