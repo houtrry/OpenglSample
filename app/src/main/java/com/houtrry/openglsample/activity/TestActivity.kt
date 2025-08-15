@@ -26,11 +26,9 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
 
     companion object {
         private const val TAG = "TestActivity"
-        private const val MAX_MARKERS = 3000 // 支持的最大Marker数量
-        private const val BATCH_SIZE = 100 // 每批渲染的Marker数量
     }
 
-    // 基础着色器（地图渲染）
+    // 顶点着色器代码
     private val vertexShaderCode = """
     uniform mat4 uMVPMatrix;
     attribute vec4 vPosition;
@@ -43,6 +41,7 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
     }
 """.trimIndent()
 
+    // 片段着色器代码
     private val fragmentShaderCode = """
     precision mediump float;
     uniform sampler2D uTexture;
@@ -53,75 +52,28 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
     }
 """.trimIndent()
 
-    // 批量渲染顶点着色器
-    private val batchVertexShaderCode = """
-    uniform mat4 uMVPMatrix;
-    attribute vec4 vPosition;
-    attribute vec2 vTexCoord;
-    attribute vec4 vInstanceData; // x,y:位置, z:纹理索引, w:缩放
-    varying vec2 texCoord;
-    varying float vTextureIndex;
-    
-    void main() {
-        vec4 worldPos = vec4(vInstanceData.xy, 0.0, 1.0);
-        gl_Position = uMVPMatrix * (worldPos + vPosition * vInstanceData.w);
-        texCoord = vTexCoord;
-        vTextureIndex = vInstanceData.z;
-    }
-""".trimIndent()
-
-    // 批量渲染片段着色器
-    private val batchFragmentShaderCode = """
-    precision mediump float;
-    uniform sampler2D uTextureAtlas;
-    uniform vec2 uAtlasSize;
-    varying vec2 texCoord;
-    varying float vTextureIndex;
-    
-    void main() {
-        // 计算在纹理图集中的实际坐标
-        vec2 atlasCoord = texCoord / uAtlasSize;
-        atlasCoord.x += mod(vTextureIndex, uAtlasSize.x) / uAtlasSize.x;
-        atlasCoord.y += floor(vTextureIndex / uAtlasSize.x) / uAtlasSize.y;
-        
-        gl_FragColor = texture2D(uTextureAtlas, atlasCoord);
-    }
-""".trimIndent()
-
-    // 文字渲染着色器（使用SDF技术）
+    // 文字着色器
     private val textVertexShaderCode = """
     uniform mat4 uMVPMatrix;
     attribute vec4 vPosition;
     attribute vec2 vTexCoord;
-    attribute vec4 vInstanceData; // x,y:位置, z:文字索引, w:缩放
     varying vec2 texCoord;
-    varying float vTextIndex;
     
     void main() {
-        vec4 worldPos = vec4(vInstanceData.xy, 0.0, 1.0);
-        gl_Position = uMVPMatrix * (worldPos + vPosition * vInstanceData.w);
+        gl_Position = uMVPMatrix * vPosition;
         texCoord = vTexCoord;
-        vTextIndex = vInstanceData.z;
     }
 """.trimIndent()
 
     private val textFragmentShaderCode = """
     precision mediump float;
-    uniform sampler2D uFontAtlas;
-    uniform vec2 uFontAtlasSize;
+    uniform sampler2D uTexture;
     uniform vec4 uTextColor;
     varying vec2 texCoord;
-    varying float vTextIndex;
     
     void main() {
-        // 计算在字体图集中的实际坐标
-        vec2 atlasCoord = texCoord / uFontAtlasSize;
-        atlasCoord.x += mod(vTextIndex, uFontAtlasSize.x) / uFontAtlasSize.x;
-        atlasCoord.y += floor(vTextIndex / uFontAtlasSize.x) / uFontAtlasSize.y;
-        
-        float distance = texture2D(uFontAtlas, atlasCoord).r;
-        float alpha = smoothstep(0.4, 0.6, distance);
-        gl_FragColor = vec4(uTextColor.rgb, alpha * uTextColor.a);
+        vec4 texColor = texture2D(uTexture, texCoord);
+        gl_FragColor = vec4(uTextColor.rgb, texColor.a * uTextColor.a);
     }
 """.trimIndent()
 
@@ -149,31 +101,13 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
     private var previousPointF = PointF()
     private var scaleFactor = 1f
     private var mapProgram = -1
-    private var batchProgram = -1
     private var textProgram = -1
     private var viewWidth = 0
     private var viewHeight = 0
-
-    // 批量渲染相关
-    private var markerVBO = -1
-    private var textVBO = -1
-    private var markerTextureAtlas = -1
-    private var fontTextureAtlas = -1
-    private val markerInstanceData = FloatArray(MAX_MARKERS * 4) // x,y,textureIndex,scale
-    private val textInstanceData = FloatArray(MAX_MARKERS * 4) // x,y,textIndex,scale
-    private var markerCount = 0
-    private var textCount = 0
-
-    private val mapSize = Point(0, 0)
-
-    // 批量顶点数据（OpenGL ES 2.0兼容）
-    private val markerBatchVertices = mutableListOf<Float>()
-    private val textBatchVertices = mutableListOf<Float>()
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         glSurfaceView = GLSurfaceView(this).apply {
-            setEGLContextClientVersion(2) // 使用OpenGL ES 2.0
+            setEGLContextClientVersion(2)
             setRenderer(this@TestActivity)
             renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
         }
@@ -184,11 +118,8 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         GLES20.glClearColor(0f, 0f, 0f, 1f)
         initShaders()
-        initBatchRendering()
         loadMapTexture()
-        createMarkerTextureAtlas()
-        createFontTextureAtlas()
-        generateTestMarkers()
+        loadMarkerTextures()
     }
 
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
@@ -207,12 +138,11 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
 
         drawMap()
-        drawMarkersBatch()
-        drawTextsBatch()
+
+        drawMarkers()
     }
 
     private fun initShaders() {
-        // 地图着色器
         val vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, vertexShaderCode)
         val fragmentShader = loadShader(GLES20.GL_FRAGMENT_SHADER, fragmentShaderCode)
 
@@ -222,93 +152,15 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
             GLES20.glLinkProgram(it)
         }
 
-        // 批量渲染着色器（OpenGL ES 2.0兼容版本）
-        val batchVertexShader = loadShader(GLES20.GL_VERTEX_SHADER, batchVertexShaderCodeES2)
-        val batchFragmentShader = loadShader(GLES20.GL_FRAGMENT_SHADER, batchFragmentShaderCodeES2)
-
-        batchProgram = GLES20.glCreateProgram().also {
-            GLES20.glAttachShader(it, batchVertexShader)
-            GLES20.glAttachShader(it, batchFragmentShader)
-            GLES20.glLinkProgram(it)
-        }
-
-        // 文字渲染着色器（OpenGL ES 2.0兼容版本）
-        val textVertexShader = loadShader(GLES20.GL_VERTEX_SHADER, textVertexShaderCodeES2)
-        val textFragmentShader = loadShader(GLES20.GL_FRAGMENT_SHADER, textFragmentShaderCodeES2)
+        val textVertexShaper = loadShader(GLES20.GL_VERTEX_SHADER, textVertexShaderCode)
+        val textFragmentShaper = loadShader(GLES20.GL_FRAGMENT_SHADER, textFragmentShaderCode)
 
         textProgram = GLES20.glCreateProgram().also {
-            GLES20.glAttachShader(it, textVertexShader)
-            GLES20.glAttachShader(it, textFragmentShader)
+            GLES20.glAttachShader(it, textVertexShaper)
+            GLES20.glAttachShader(it, textFragmentShaper)
             GLES20.glLinkProgram(it)
         }
     }
-
-    // OpenGL ES 2.0兼容的批量渲染着色器
-    private val batchVertexShaderCodeES2 = """
-    uniform mat4 uMVPMatrix;
-    attribute vec4 vPosition;
-    attribute vec2 vTexCoord;
-    attribute vec4 vInstanceData; // x,y:位置, z:纹理索引, w:缩放
-    varying vec2 texCoord;
-    varying float vTextureIndex;
-    
-    void main() {
-        vec4 worldPos = vec4(vInstanceData.xy, 0.0, 1.0);
-        gl_Position = uMVPMatrix * (worldPos + vPosition * vInstanceData.w);
-        texCoord = vTexCoord;
-        vTextureIndex = vInstanceData.z;
-    }
-""".trimIndent()
-
-    private val batchFragmentShaderCodeES2 = """
-    precision mediump float;
-    uniform sampler2D uTextureAtlas;
-    uniform vec2 uAtlasSize;
-    varying vec2 texCoord;
-    varying float vTextureIndex;
-    
-    void main() {
-        vec2 atlasCoord = texCoord / uAtlasSize;
-        atlasCoord.x += mod(vTextureIndex, uAtlasSize.x) / uAtlasSize.x;
-        atlasCoord.y += floor(vTextureIndex / uAtlasSize.x) / uAtlasSize.y;
-        gl_FragColor = texture2D(uTextureAtlas, atlasCoord);
-    }
-""".trimIndent()
-
-    private val textVertexShaderCodeES2 = """
-    uniform mat4 uMVPMatrix;
-    attribute vec4 vPosition;
-    attribute vec2 vTexCoord;
-    attribute vec4 vInstanceData; // x,y:位置, z:文字索引, w:缩放
-    varying vec2 texCoord;
-    varying float vTextIndex;
-    
-    void main() {
-        vec4 worldPos = vec4(vInstanceData.xy, 0.0, 1.0);
-        gl_Position = uMVPMatrix * (worldPos + vPosition * vInstanceData.w);
-        texCoord = vTexCoord;
-        vTextIndex = vInstanceData.z;
-    }
-""".trimIndent()
-
-    private val textFragmentShaderCodeES2 = """
-    precision mediump float;
-    uniform sampler2D uFontAtlas;
-    uniform vec2 uFontAtlasSize;
-    uniform vec4 uTextColor;
-    varying vec2 texCoord;
-    varying float vTextIndex;
-    
-    void main() {
-        vec2 atlasCoord = texCoord / uFontAtlasSize;
-        atlasCoord.x += mod(vTextIndex, uFontAtlasSize.x) / uFontAtlasSize.x;
-        atlasCoord.y += floor(vTextIndex / uFontAtlasSize.x) / uFontAtlasSize.y;
-        
-        float distance = texture2D(uFontAtlas, atlasCoord).r;
-        float alpha = smoothstep(0.4, 0.6, distance);
-        gl_FragColor = vec4(uTextColor.rgb, alpha * uTextColor.a);
-    }
-""".trimIndent()
 
     private fun loadShader(type: Int, shaderCode: String): Int {
         return GLES20.glCreateShader(type).also { shader ->
@@ -317,308 +169,75 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         }
     }
 
-    private fun initBatchRendering() {
-        // 创建Marker顶点缓冲区
-        val markerVertices = floatArrayOf(
-            // 顶点坐标     // 纹理坐标
-            -0.5f, -0.5f, 0f, 1f,  // 左下
-            0.5f, -0.5f, 1f, 1f,  // 右下
-            -0.5f, 0.5f, 0f, 0f,  // 左上
-            0.5f, 0.5f, 1f, 0f   // 右上
-        )
-
-        val vboIds = IntArray(2)
-        GLES20.glGenBuffers(2, vboIds, 0)
-        markerVBO = vboIds[0]
-        textVBO = vboIds[1]
-
-        // 设置Marker顶点数据
-        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, markerVBO)
-        val markerBuffer = ByteBuffer.allocateDirect(markerVertices.size * 4)
-            .order(ByteOrder.nativeOrder())
-            .asFloatBuffer()
-            .apply {
-                put(markerVertices)
-                position(0)
-            }
-        GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, markerVertices.size * 4, markerBuffer, GLES20.GL_STATIC_DRAW)
-
-        // 设置文字顶点数据（与Marker相同）
-        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, textVBO)
-        GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, markerVertices.size * 4, markerBuffer, GLES20.GL_STATIC_DRAW)
-    }
+    private val mapSize = Point(0, 0)
 
     private fun loadMapTexture() {
         val textureHandle = IntArray(1)
         GLES20.glGenTextures(1, textureHandle, 0)
 
         if (textureHandle[0] != 0) {
+            // 绑定纹理
             GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureHandle[0])
-            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
-            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
-            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE)
-            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
 
+            // 设置纹理过滤
+            GLES20.glTexParameteri(
+                GLES20.GL_TEXTURE_2D,
+                GLES20.GL_TEXTURE_MIN_FILTER,
+                GLES20.GL_LINEAR
+            )
+            GLES20.glTexParameteri(
+                GLES20.GL_TEXTURE_2D,
+                GLES20.GL_TEXTURE_MAG_FILTER,
+                GLES20.GL_LINEAR
+            )
+            // 设置纹理包装模式以支持透明度
+            GLES20.glTexParameteri(
+                GLES20.GL_TEXTURE_2D,
+                GLES20.GL_TEXTURE_WRAP_S,
+                GLES20.GL_CLAMP_TO_EDGE
+            )
+            GLES20.glTexParameteri(
+                GLES20.GL_TEXTURE_2D,
+                GLES20.GL_TEXTURE_WRAP_T,
+                GLES20.GL_CLAMP_TO_EDGE
+            )
+
+            // 加载位图到纹理
             val bitmap = BitmapFactory.decodeResource(resources, R.drawable.optemap_217k)
+//            val bitmap = BitmapFactory.decodeResource(resources, R.mipmap.t1)
             GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)
-            mapSize.x = bitmap.width
-            mapSize.y = bitmap.height
+            val bitmapWidth = bitmap.width
+            val bitmapHeight = bitmap.height
+            mapSize.x = bitmapWidth
+            mapSize.y = bitmapHeight
             bitmap.recycle()
             mapVertices = floatArrayOf(
-                -bitmap.width * 0.5f, -bitmap.height * 0.5f, 0f, 1f,
-                bitmap.width * 0.5f, -bitmap.height * 0.5f, 1f, 1f,
-                -bitmap.width * 0.5f, bitmap.height * 0.5f, 0f, 0f,
-                bitmap.width * 0.5f, bitmap.height * 0.5f, 1f, 0f
+                // 位置坐标     // 纹理坐标
+                -bitmapWidth * 0.5f, -bitmapHeight * 0.5f, 0f, 1f,
+                bitmapWidth * 0.5f, -bitmapHeight * 0.5f, 1f, 1f,
+                -bitmapWidth * 0.5f, bitmapHeight * 0.5f, 0f, 0f,
+                bitmapWidth * 0.5f, bitmapHeight * 0.5f, 1f, 0f
             )
 
             mapTextureId = textureHandle[0]
         }
     }
 
-    private fun createMarkerTextureAtlas() {
-        // 创建纹理图集，包含所有Marker图标
-        val atlasSize = 1024
-        val atlasBitmap = Bitmap.createBitmap(atlasSize, atlasSize, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(atlasBitmap)
-        canvas.drawColor(Color.TRANSPARENT)
-
-        val iconResources = listOf(R.mipmap.robot, R.mipmap.icon_start_point, R.mipmap.icon_target)
-        val iconsPerRow = 3
-        val iconSize = atlasSize / iconsPerRow
-
-        iconResources.forEachIndexed { index, resId ->
-            val bitmap = BitmapFactory.decodeResource(resources, resId)
-            val x = (index % iconsPerRow) * iconSize
-            val y = (index / iconsPerRow) * iconSize
-
-            // 缩放图标到合适大小
-            val scaledBitmap = Bitmap.createScaledBitmap(bitmap, iconSize, iconSize, true)
-            canvas.drawBitmap(scaledBitmap, x.toFloat(), y.toFloat(), null)
-
-            bitmap.recycle()
-            scaledBitmap.recycle()
-        }
-
-        val textureHandle = IntArray(1)
-        GLES20.glGenTextures(1, textureHandle, 0)
-        markerTextureAtlas = textureHandle[0]
-
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, markerTextureAtlas)
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE)
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
-        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, atlasBitmap, 0)
-
-        atlasBitmap.recycle()
-    }
-
-    private fun createFontTextureAtlas() {
-        // 创建字体纹理图集，使用SDF技术
-        val atlasSize = 512
-        val atlasBitmap = Bitmap.createBitmap(atlasSize, atlasSize, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(atlasBitmap)
-        canvas.drawColor(Color.TRANSPARENT)
-
-        val texts = listOf("初始点0", "初始点1", "重生之我在初始点2", "位置3", "位置4", "位置5")
-        val charsPerRow = 6
-        val charSize = atlasSize / charsPerRow
-
-        texts.forEachIndexed { index, text ->
-            val x = (index % charsPerRow) * charSize
-            val y = (index / charsPerRow) * charSize
-
-            // 创建SDF文字
-            val textBitmap = createSDFText(text, charSize, charSize)
-            canvas.drawBitmap(textBitmap, x.toFloat(), y.toFloat(), null)
-            textBitmap.recycle()
-        }
-
-        val textureHandle = IntArray(1)
-        GLES20.glGenTextures(1, textureHandle, 0)
-        fontTextureAtlas = textureHandle[0]
-
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, fontTextureAtlas)
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE)
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
-        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, atlasBitmap, 0)
-
-        atlasBitmap.recycle()
-    }
-
-    private fun createSDFText(text: String, width: Int, height: Int): Bitmap {
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        canvas.drawColor(Color.TRANSPARENT)
-
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE
-            textSize = height * 0.6f
-            textAlign = Paint.Align.CENTER
-        }
-
-        // 绘制文字到中心
-        canvas.drawText(text, width / 2f, height * 0.7f, paint)
-
-        // 简单的SDF生成（实际项目中应使用专业的SDF生成库）
-        return generateSimpleSDF(bitmap)
-    }
-
-    private fun generateSimpleSDF(bitmap: Bitmap): Bitmap {
-        // 简化的SDF生成，实际项目中应使用msdfgen等专业库
-        val width = bitmap.width
-        val height = bitmap.height
-        val sdfBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-
-        val pixels = IntArray(width * height)
-        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
-
-        for (y in 0 until height) {
-            for (x in 0 until width) {
-                val index = y * width + x
-                val pixel = pixels[index]
-                val alpha = Color.alpha(pixel)
-
-                // 简单的距离场计算
-                val distance = if (alpha > 128) {
-                    // 内部点，计算到边界的距离
-                    calculateDistanceToEdge(pixels, x, y, width, height, false)
-                } else {
-                    // 外部点，计算到边界的距离
-                    -calculateDistanceToEdge(pixels, x, y, width, height, true)
-                }
-
-                // 将距离转换为0-255范围
-                val sdfValue = ((distance + 10) / 20 * 255).toInt().coerceIn(0, 255)
-                sdfBitmap.setPixel(x, y, Color.argb(sdfValue, sdfValue, sdfValue, sdfValue))
-            }
-        }
-
-        return sdfBitmap
-    }
-
-    private fun calculateDistanceToEdge(pixels: IntArray, x: Int, y: Int, width: Int, height: Int, isOutside: Boolean): Float {
-        val searchRadius = 10
-        var minDistance = Float.MAX_VALUE
-
-        for (dy in -searchRadius..searchRadius) {
-            for (dx in -searchRadius..searchRadius) {
-                val nx = x + dx
-                val ny = y + dy
-
-                if (nx in 0 until width && ny in 0 until height) {
-                    val index = ny * width + nx
-                    val pixel = pixels[index]
-                    val alpha = Color.alpha(pixel)
-
-                    val isEdge = if (isOutside) alpha > 128 else alpha <= 128
-
-                    if (isEdge) {
-                        val distance = sqrt((dx * dx + dy * dy).toFloat())
-                        if (distance < minDistance) {
-                            minDistance = distance
-                        }
-                    }
-                }
-            }
-        }
-
-        return if (minDistance == Float.MAX_VALUE) 0f else minDistance
-    }
-
-    private fun generateTestMarkers() {
-        markerCount = 0
-        textCount = 0
-
-        // 清空批量顶点数据
-        markerBatchVertices.clear()
-        textBatchVertices.clear()
-
-        // 生成2500个测试Marker
-        for (i in 0 until 2500) {
-            val x = (Math.random() * 2000 - 1000).toFloat()
-            val y = (Math.random() * 2000 - 1000).toFloat()
-            val iconIndex = (i % 3).toFloat()
-            val textIndex = (i % 6).toFloat()
-
-            // 添加Marker实例数据
-            val markerIndex = markerCount * 4
-            markerInstanceData[markerIndex] = x
-            markerInstanceData[markerIndex + 1] = y
-            markerInstanceData[markerIndex + 2] = iconIndex
-            markerInstanceData[markerIndex + 3] = 50f
-
-            // 添加文字实例数据
-            val textIndex2 = textCount * 4
-            textInstanceData[textIndex2] = x
-            textInstanceData[textIndex2 + 1] = y - 80f
-            textInstanceData[textIndex2 + 2] = textIndex
-            textInstanceData[textIndex2 + 3] = 30f
-
-            markerCount++
-            textCount++
-        }
-
-        // 生成批量顶点数据
-        generateBatchVertices()
-    }
-
-    private fun generateBatchVertices() {
-        markerBatchVertices.clear()
-        textBatchVertices.clear()
-
-        // 为每个Marker生成顶点数据
-        for (i in 0 until markerCount) {
-            val index = i * 4
-            val x = markerInstanceData[index]
-            val y = markerInstanceData[index + 1]
-            val textureIndex = markerInstanceData[index + 2]
-            val scale = markerInstanceData[index + 3]
-
-            // 计算四个顶点
-            val halfSize = scale * 0.5f
-            val vertices = floatArrayOf(
-                x - halfSize, y - halfSize, 0f, 1f,  // 左下
-                x + halfSize, y - halfSize, 1f, 1f,  // 右下
-                x - halfSize, y + halfSize, 0f, 0f,  // 左上
-                x + halfSize, y + halfSize, 1f, 0f   // 右上
-            )
-            markerBatchVertices.addAll(vertices.toList())
-        }
-
-        // 为每个文字生成顶点数据
-        for (i in 0 until textCount) {
-            val index = i * 4
-            val x = textInstanceData[index]
-            val y = textInstanceData[index + 1]
-            val textIndex = textInstanceData[index + 2]
-            val scale = textInstanceData[index + 3]
-
-            // 计算四个顶点
-            val halfSize = scale * 0.5f
-            val vertices = floatArrayOf(
-                x - halfSize, y - halfSize, 0f, 1f,  // 左下
-                x + halfSize, y - halfSize, 1f, 1f,  // 右下
-                x - halfSize, y + halfSize, 0f, 0f,  // 左上
-                x + halfSize, y + halfSize, 1f, 0f   // 右上
-            )
-            textBatchVertices.addAll(vertices.toList())
-        }
-    }
-
     private fun drawMap() {
+        // 使用地图着色器程序
         GLES20.glUseProgram(mapProgram)
 
+        // 获取着色器变量位置
         val positionHandle = GLES20.glGetAttribLocation(mapProgram, "vPosition")
         val texCoordHandle = GLES20.glGetAttribLocation(mapProgram, "vTexCoord")
         val mvpMatrixHandle = GLES20.glGetUniformLocation(mapProgram, "uMVPMatrix")
         val textureHandle = GLES20.glGetUniformLocation(mapProgram, "uTexture")
 
+        // 启用顶点属性数组
         GLES20.glEnableVertexAttribArray(positionHandle)
         GLES20.glEnableVertexAttribArray(texCoordHandle)
 
+        // 准备顶点数据
         val vertexBuffer = ByteBuffer.allocateDirect(mapVertices.size * 4)
             .order(ByteOrder.nativeOrder())
             .asFloatBuffer()
@@ -627,166 +246,32 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
                 position(0)
             }
 
+        // 设置顶点属性指针
         GLES20.glVertexAttribPointer(positionHandle, 2, GLES20.GL_FLOAT, false, 16, vertexBuffer)
-        GLES20.glVertexAttribPointer(texCoordHandle, 2, GLES20.GL_FLOAT, false, 16, vertexBuffer.apply { position(2) })
+        GLES20.glVertexAttribPointer(
+            texCoordHandle,
+            2,
+            GLES20.GL_FLOAT,
+            false,
+            16,
+            vertexBuffer.apply { position(2) })
 
+        // 计算MVP矩阵
         val mvpMatrix = mvpMatrix.identityM()
         Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, modelMatrix, 0)
         Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, mvpMatrix, 0)
+        // 传递MVP矩阵
         GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0)
 
+        // 绑定纹理
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mapTextureId)
         GLES20.glUniform1i(textureHandle, 0)
 
+        // 绘制地图
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
 
-        GLES20.glDisableVertexAttribArray(positionHandle)
-        GLES20.glDisableVertexAttribArray(texCoordHandle)
-        GLES20.glUseProgram(0)
-    }
-
-    private fun drawMarkersBatch() {
-        if (markerBatchVertices.isEmpty()) return
-
-        GLES20.glUseProgram(batchProgram)
-
-        val positionHandle = GLES20.glGetAttribLocation(batchProgram, "vPosition")
-        val texCoordHandle = GLES20.glGetAttribLocation(batchProgram, "vTexCoord")
-        val mvpMatrixHandle = GLES20.glGetUniformLocation(batchProgram, "uMVPMatrix")
-        val textureHandle = GLES20.glGetUniformLocation(batchProgram, "uTextureAtlas")
-        val atlasSizeHandle = GLES20.glGetUniformLocation(batchProgram, "uAtlasSize")
-
-        // 设置顶点属性
-        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, markerVBO)
-        GLES20.glEnableVertexAttribArray(positionHandle)
-        GLES20.glEnableVertexAttribArray(texCoordHandle)
-        GLES20.glVertexAttribPointer(positionHandle, 2, GLES20.GL_FLOAT, false, 16, 0)
-        GLES20.glVertexAttribPointer(texCoordHandle, 2, GLES20.GL_FLOAT, false, 16, 8)
-
-        // MVP矩阵
-        val mvpMatrix = mvpMatrix.identityM()
-        Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, modelMatrix, 0)
-        Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, mvpMatrix, 0)
-        GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0)
-
-        // 纹理图集
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, markerTextureAtlas)
-        GLES20.glUniform1i(textureHandle, 0)
-        GLES20.glUniform2f(atlasSizeHandle, 3f, 1f)
-
-        // 混合
-        GLES20.glEnable(GLES20.GL_BLEND)
-        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
-
-        // 批量绘制所有Marker（OpenGL ES 2.0兼容方式）
-        val batchBuffer = ByteBuffer.allocateDirect(markerBatchVertices.size * 4)
-            .order(ByteOrder.nativeOrder())
-            .asFloatBuffer()
-            .apply {
-                put(markerBatchVertices.toFloatArray())
-                position(0)
-            }
-
-        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, 0) // 使用客户端数组
-        GLES20.glVertexAttribPointer(positionHandle, 2, GLES20.GL_FLOAT, false, 16, batchBuffer)
-        GLES20.glVertexAttribPointer(texCoordHandle, 2, GLES20.GL_FLOAT, false, 16, batchBuffer.apply { position(2) })
-
-        // 分批次绘制，每批100个Marker
-        val batchSize = 100
-        val verticesPerMarker = 4
-        val floatsPerVertex = 4
-        val floatsPerMarker = verticesPerMarker * floatsPerVertex
-
-        for (i in 0 until markerCount step batchSize) {
-            val count = minOf(batchSize, markerCount - i)
-            val startIndex = i * floatsPerMarker
-            val vertexCount = count * verticesPerMarker
-
-            batchBuffer.position(startIndex)
-            GLES20.glVertexAttribPointer(positionHandle, 2, GLES20.GL_FLOAT, false, 16, batchBuffer)
-            GLES20.glVertexAttribPointer(texCoordHandle, 2, GLES20.GL_FLOAT, false, 16, batchBuffer.apply { position(startIndex + 2) })
-
-            GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, vertexCount)
-        }
-
-        // 清理
-        GLES20.glDisable(GLES20.GL_BLEND)
-        GLES20.glDisableVertexAttribArray(positionHandle)
-        GLES20.glDisableVertexAttribArray(texCoordHandle)
-        GLES20.glUseProgram(0)
-    }
-
-    private fun drawTextsBatch() {
-        if (textBatchVertices.isEmpty()) return
-
-        GLES20.glUseProgram(textProgram)
-
-        val positionHandle = GLES20.glGetAttribLocation(textProgram, "vPosition")
-        val texCoordHandle = GLES20.glGetAttribLocation(textProgram, "vTexCoord")
-        val mvpMatrixHandle = GLES20.glGetUniformLocation(textProgram, "uMVPMatrix")
-        val textureHandle = GLES20.glGetUniformLocation(textProgram, "uFontAtlas")
-        val atlasSizeHandle = GLES20.glGetUniformLocation(textProgram, "uFontAtlasSize")
-        val textColorHandle = GLES20.glGetUniformLocation(textProgram, "uTextColor")
-
-        // 设置顶点属性
-        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, textVBO)
-        GLES20.glEnableVertexAttribArray(positionHandle)
-        GLES20.glEnableVertexAttribArray(texCoordHandle)
-        GLES20.glVertexAttribPointer(positionHandle, 2, GLES20.GL_FLOAT, false, 16, 0)
-        GLES20.glVertexAttribPointer(texCoordHandle, 2, GLES20.GL_FLOAT, false, 16, 8)
-
-        // MVP矩阵
-        val mvpMatrix = mvpMatrix.identityM()
-        Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, modelMatrix, 0)
-        Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, mvpMatrix, 0)
-        GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0)
-
-        // 字体纹理图集
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, fontTextureAtlas)
-        GLES20.glUniform1i(textureHandle, 0)
-        GLES20.glUniform2f(atlasSizeHandle, 6f, 1f)
-        GLES20.glUniform4f(textColorHandle, 1f, 1f, 1f, 1f)
-
-        // 混合
-        GLES20.glEnable(GLES20.GL_BLEND)
-        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
-
-        // 批量绘制所有文字（OpenGL ES 2.0兼容方式）
-        val batchBuffer = ByteBuffer.allocateDirect(textBatchVertices.size * 4)
-            .order(ByteOrder.nativeOrder())
-            .asFloatBuffer()
-            .apply {
-                put(textBatchVertices.toFloatArray())
-                position(0)
-            }
-
-        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, 0) // 使用客户端数组
-        GLES20.glVertexAttribPointer(positionHandle, 2, GLES20.GL_FLOAT, false, 16, batchBuffer)
-        GLES20.glVertexAttribPointer(texCoordHandle, 2, GLES20.GL_FLOAT, false, 16, batchBuffer.apply { position(2) })
-
-        // 分批次绘制，每批100个文字
-        val batchSize = 100
-        val verticesPerText = 4
-        val floatsPerVertex = 4
-        val floatsPerText = verticesPerText * floatsPerVertex
-
-        for (i in 0 until textCount step batchSize) {
-            val count = minOf(batchSize, textCount - i)
-            val startIndex = i * floatsPerText
-            val vertexCount = count * verticesPerText
-
-            batchBuffer.position(startIndex)
-            GLES20.glVertexAttribPointer(positionHandle, 2, GLES20.GL_FLOAT, false, 16, batchBuffer)
-            GLES20.glVertexAttribPointer(texCoordHandle, 2, GLES20.GL_FLOAT, false, 16, batchBuffer.apply { position(startIndex + 2) })
-
-            GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, vertexCount)
-        }
-
-        // 清理
-        GLES20.glDisable(GLES20.GL_BLEND)
+        // 禁用顶点属性数组
         GLES20.glDisableVertexAttribArray(positionHandle)
         GLES20.glDisableVertexAttribArray(texCoordHandle)
         GLES20.glUseProgram(0)
@@ -794,6 +279,8 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
 
     // 成员变量
     private var previousAngle = 0f
+
+    // 成员变量
     private var initialDistance = 0f
 
     @SuppressLint("ClickableViewAccessibility")
@@ -801,45 +288,67 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         glSurfaceView.setOnTouchListener { _, event ->
             return@setOnTouchListener when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
-                    Log.d(TAG, "ACTION_DOWN ${event.pointerCount} point, (${event.getX(0)}, ${event.getY(0)}) -> (${event.x}, ${event.y})")
+                    // 单指按下，记录初始位置
+                    Log.d(
+                        TAG,
+                        "ACTION_DOWN ${event.pointerCount} point, (${event.getX(0)}, ${event.getY(0)}) -> (${event.x}, ${event.y})"
+                    )
                     previousPointF = PointF(event.x, event.y)
                     true
                 }
                 MotionEvent.ACTION_POINTER_DOWN -> {
-                    Log.d(TAG, "ACTION_POINTER_DOWN ${event.pointerCount} point, (${event.getX(0)}, ${event.getY(0)}) -> (${event.x}, ${event.y})")
+                    Log.d(
+                        TAG,
+                        "ACTION_POINTER_DOWN ${event.pointerCount} point, (${event.getX(0)}, ${
+                            event.getY(0)
+                        }) -> (${event.x}, ${event.y})"
+                    )
                     if (event.pointerCount == 2) {
+                        // 双指按下，初始化旋转/缩放参数
                         val dx = event.getX(1) - event.getX(0)
                         val dy = event.getY(1) - event.getY(0)
                         initialDistance = sqrt(dx * dx + dy * dy)
                         previousAngle = atan2(-dy.toDouble(), dx.toDouble()).toFloat()
+
+                        // ✅ 计算并存储当前中心点（转换为OpenGL坐标）
+//                        convertScreenToGL((event.getX(0) + event.getX(1)) / 2, (event.getY(0) + event.getY(1)) / 2)  // 转换到OpenGL坐标系
                     }
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
                     if (event.pointerCount == 1) {
                         Log.d(TAG, "ACTION_MOVE only one point")
+                        // 单指拖动
                         val point = PointF(event.x, event.y)
-                        translateMap(point.x - previousPointF.x, point.y - previousPointF.y)
+                        translateMap(
+                            point.x - previousPointF.x,
+                            point.y - previousPointF.y
+                        )  // Y轴需反向
                         previousPointF = point
                         glSurfaceView.requestRender()
                     } else if (event.pointerCount == 2) {
+                        // 双指操作
                         val x1 = event.getX(0)
                         val y1 = event.getY(0)
                         val x2 = event.getX(1)
                         val y2 = event.getY(1)
 
+                        // ✅ 实时更新中心点（并转换坐标系）
                         val pivot = convertScreenToGL((x1 + x2) / 2, (y1 + y2) / 2)
 
+                        // 计算旋转
                         val dx = x2 - x1
                         val dy = y2 - y1
                         val currentAngle = atan2(-dy.toDouble(), dx.toDouble()).toFloat()
                         val rotationAngle = if (previousAngle != 0f) {
-                            Math.toDegrees((currentAngle - previousAngle).toDouble()).toFloat()
+                            Math.toDegrees((currentAngle - previousAngle).toDouble())
+                                .toFloat()
                         } else {
                             0f
                         }
                         previousAngle = currentAngle
 
+                        // 计算缩放
                         val currentDistance = sqrt(dx * dx + dy * dy)
                         val scaleFactor = (currentDistance / initialDistance)
                         initialDistance = currentDistance
@@ -849,13 +358,22 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
                     true
                 }
                 MotionEvent.ACTION_UP -> {
-                    Log.d(TAG, "ACTION_UP ${event.pointerCount} point, (${event.getX(0)}, ${event.getY(0)}) -> (${event.x}, ${event.y})")
+                    // 重置状态
+                    Log.d(
+                        TAG,
+                        "ACTION_UP ${event.pointerCount} point, (${event.getX(0)}, ${event.getY(0)}) -> (${event.x}, ${event.y})"
+                    )
                     previousAngle = 0f
                     initialDistance = 0f
                     true
                 }
                 MotionEvent.ACTION_POINTER_UP -> {
-                    Log.d(TAG, "ACTION_POINTER_UP ${event.pointerCount} point, (${event.getX(0)}, ${event.getY(0)}) -> (${event.x}, ${event.y})")
+                    Log.d(
+                        TAG,
+                        "ACTION_POINTER_UP ${event.pointerCount} point, (${event.getX(0)}, ${
+                            event.getY(0)
+                        }) -> (${event.x}, ${event.y})"
+                    )
                     if (event.pointerCount == 2) {
                         val remainIndex = if (event.actionIndex == 0) 1 else 0
                         previousPointF = PointF(event.getX(remainIndex), event.getY(remainIndex))
@@ -867,6 +385,7 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
                 else -> false
             }
         }
+
     }
 
     private fun translateMap(dx: Float, dy: Float) {
@@ -881,15 +400,20 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         val tempMatrix = FloatArray(16).identityM()
         val invertedMatrix = FloatArray(16).identityM()
         val ndcX = screenX / (viewWidth * 0.5f) - 1.0f
-        val ndcY = 1.0f - screenY / (viewHeight * 0.5f)
+        val ndcY = 1.0f - screenY / (viewHeight * 0.5f) // Y轴翻转
 
+        // 2. 创建MVP矩阵
         Matrix.multiplyMM(tempMatrix, 0, projectionMatrix, 0, modelMatrix, 0)
+
+        // 3. 求逆矩阵
         Matrix.invertM(invertedMatrix, 0, tempMatrix, 0)
 
+        // 4. 变换坐标
         val inVec = floatArrayOf(ndcX, ndcY, 0f, 1f)
         val outVec = FloatArray(4)
         Matrix.multiplyMV(outVec, 0, invertedMatrix, 0, inVec, 0)
 
+        // 5. 透视除法
         if (outVec[3] != 0f) {
             outVec[0] /= outVec[3]
             outVec[1] /= outVec[3]
@@ -899,17 +423,586 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
     }
 
     private fun updateViewMatrix(pivot: PointF, rotate: Float, scale: Float) {
+//        Log.d(TAG, "updateViewMatrix start, pivot: $pivot, rotate: $rotate, scale: $scale")
         synchronized(modelMatrix) {
+            // 2. 移动到当前操作中心点
             Matrix.translateM(modelMatrix, 0, pivot.x, pivot.y, 0f)
+
+            // 3. 应用旋转和缩放
             Matrix.rotateM(modelMatrix, 0, rotate, 0f, 0f, 1f)
             Matrix.scaleM(modelMatrix, 0, scale, scale, 1f)
+            // 4. 移回原点
             Matrix.translateM(modelMatrix, 0, -pivot.x, -pivot.y, 0f)
         }
     }
 
-    private val bitmapInfo = BitmapInfo(0f, 0f, 0.05f)
+    // 标记点数据类
+    data class MapMarker(
+        val x: Float,
+        val y: Float,
+        val iconResId: Int,
+        val text: String,
+        val textColor: Int = Color.BLACK,
+        val iconSize: Int = 400,
+        val iconFontGapSize: Float = 3.dp,
+        val followRotate: Boolean = false,
+        val modelMatrix: FloatArray = FloatArray(16),
+        val glCenter: PointF = PointF()
+    ) {
 
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as MapMarker
+
+            if (x != other.x) return false
+            if (y != other.y) return false
+            if (iconResId != other.iconResId) return false
+            if (text != other.text) return false
+            if (textColor != other.textColor) return false
+            if (iconSize != other.iconSize) return false
+            if (followRotate != other.followRotate) return false
+            if (!modelMatrix.contentEquals(other.modelMatrix)) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = x.hashCode()
+            result = 31 * result + y.hashCode()
+            result = 31 * result + iconResId
+            result = 31 * result + text.hashCode()
+            result = 31 * result + textColor
+            result = 31 * result + iconSize
+            result = 31 * result + followRotate.hashCode()
+            result = 31 * result + modelMatrix.contentHashCode()
+            return result
+        }
+    }
+
+    private fun MapMarker.reCalcModelMatrixOfMarker(
+        mapModelMatrix: FloatArray,
+        width: Float,
+        height: Float
+    ): FloatArray {
+//        // 2. 创建标记点的局部平移矩阵（相对于地图中心）
+        val localTranslation = FloatArray(16).identityM()
+        Matrix.translateM(localTranslation, 0, glCenter.x, glCenter.y, 0f)
+//
+//        // 3. 将标记点位置转换到世界空间
+        val worldPosition = FloatArray(16).identityM()
+        Matrix.multiplyMM(worldPosition, 0, mapModelMatrix, 0, localTranslation, 0)
+
+        // 5. 创建标记点缩放矩阵（转换为像素大小）
+        val markerScaleMatrix = FloatArray(16).identityM()
+        Matrix.scaleM(markerScaleMatrix, 0, 1f, 1f, 1f)
+
+        // 6. 组合最终矩阵
+        val resultMatrix = FloatArray(16)
+        Matrix.multiplyMM(resultMatrix, 0, worldPosition, 0, markerScaleMatrix, 0)
+        Log.d(TAG, "reCalcModelMatrixOfMarker start ---------------------------------------------------")
+        Log.d(TAG, "reCalcModelMatrixOfMarker worldPosition: ${worldPosition.formatMatrixString()}")
+        Log.d(TAG, "reCalcModelMatrixOfMarker resultMatrix: ${resultMatrix.formatMatrixString()}")
+
+        val result = if (followRotate) {
+            resultMatrix.getTransformMatrixWithoutScale(width, height, modelMatrix)
+        } else {
+            modelMatrix.apply {
+                this.identityM()
+                Matrix.translateM(this, 0, resultMatrix.getTranslation()[0],
+                    resultMatrix.getTranslation()[1], resultMatrix.getTranslation()[2])
+                Matrix.scaleM(this, 0, width, height, 0f)
+            }
+        }
+        Log.d(TAG, "reCalcModelMatrixOfMarker followRotate: $followRotate, result: ${result.formatMatrixString()}")
+        Log.d(TAG, "reCalcModelMatrixOfMarker end   ---------------------------------------------------")
+        return result
+    }
+
+    // 标记点列表
+    private val markers = listOf(
+        MapMarker(0f, 0f, R.mipmap.robot, "", iconSize = 400, followRotate = true),
+        MapMarker(20.0f, 14.005f, R.mipmap.icon_start_point, "初始点0", iconSize = 100),
+        MapMarker(35.015f, 27.555f, R.mipmap.icon_start_point, "初始点1", iconSize = 100),
+        MapMarker(22.212f, 64.9450f, R.mipmap.icon_target, "重生之我在初始点2", iconSize = 100),
+//        MapMarker(300f, 400f, R.drawable.ic_launcher_background, "位置2"),
+        // 添加更多标记点...
+    )
+
+    // 标记点纹理
+    private val markerTextures = mutableMapOf<Int, Int>()
+    private val markerFontTextures = mutableMapOf<String, FontTextureInfo>()
+
+    private fun loadMarkerTextures() {
+        markers.forEach { marker ->
+            if (!markerTextures.containsKey(marker.iconResId)) {
+                val textureHandle = IntArray(1)
+                GLES20.glGenTextures(1, textureHandle, 0)
+
+                if (textureHandle[0] != 0) {
+                    GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureHandle[0])
+                    GLES20.glTexParameteri(
+                        GLES20.GL_TEXTURE_2D,
+                        GLES20.GL_TEXTURE_MIN_FILTER,
+                        GLES20.GL_LINEAR
+                    )
+                    GLES20.glTexParameteri(
+                        GLES20.GL_TEXTURE_2D,
+                        GLES20.GL_TEXTURE_MAG_FILTER,
+                        GLES20.GL_LINEAR
+                    )
+                    // 设置纹理包装模式以支持透明度
+                    GLES20.glTexParameteri(
+                        GLES20.GL_TEXTURE_2D,
+                        GLES20.GL_TEXTURE_WRAP_S,
+                        GLES20.GL_CLAMP_TO_EDGE
+                    )
+                    GLES20.glTexParameteri(
+                        GLES20.GL_TEXTURE_2D,
+                        GLES20.GL_TEXTURE_WRAP_T,
+                        GLES20.GL_CLAMP_TO_EDGE
+                    )
+
+                    val bitmap = BitmapFactory.decodeResource(
+                        resources,
+                        marker.iconResId,
+                    )
+                    Log.e(TAG, "bitmap: $bitmap, ${marker.text}")
+                    GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)
+                    bitmap?.recycle()
+
+                    markerTextures[marker.iconResId] = textureHandle[0]
+                }
+            }
+            if (marker.text.isNotEmpty() && !markerFontTextures.containsKey(marker.text)) {
+                val textureHandle = IntArray(1)
+                GLES20.glGenTextures(1, textureHandle, 0)
+
+                if (textureHandle[0] != 0) {
+                    GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureHandle[0])
+                    GLES20.glTexParameteri(
+                        GLES20.GL_TEXTURE_2D,
+                        GLES20.GL_TEXTURE_MIN_FILTER,
+                        GLES20.GL_LINEAR
+                    )
+                    GLES20.glTexParameteri(
+                        GLES20.GL_TEXTURE_2D,
+                        GLES20.GL_TEXTURE_MAG_FILTER,
+                        GLES20.GL_LINEAR
+                    )
+                    // 设置纹理包装模式以支持透明度
+                    GLES20.glTexParameteri(
+                        GLES20.GL_TEXTURE_2D,
+                        GLES20.GL_TEXTURE_WRAP_S,
+                        GLES20.GL_CLAMP_TO_EDGE
+                    )
+                    GLES20.glTexParameteri(
+                        GLES20.GL_TEXTURE_2D,
+                        GLES20.GL_TEXTURE_WRAP_T,
+                        GLES20.GL_CLAMP_TO_EDGE
+                    )
+
+                    val bitmap = marker.text.generateBitmap(
+                        20.sp,
+                        marker.textColor,
+                    )
+                    Log.e(TAG, "bitmap: $bitmap, ${marker.text}")
+                    GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)
+                    markerFontTextures[marker.text] = FontTextureInfo(textureHandle[0], marker.text, bitmap.width, bitmap.height)
+                    bitmap.recycle()
+
+                }
+            }
+        }
+        Log.d(TAG, "markerTextures: $markerTextures, markers: $markers")
+    }
+
+//    private fun loadVectorDrawableAsBitmap(
+//        context: Context,
+//        @DrawableRes resId: Int,
+//        width: Int,
+//        height: Int
+//    ): Bitmap? {
+//        val vectorDrawable = ContextCompat.getDrawable(context, resId) as? VectorDrawable
+//            ?: return null
+//
+//        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+//        val canvas = Canvas(bitmap)
+//        vectorDrawable.setBounds(0, 0, canvas.width, canvas.height)
+//        vectorDrawable.draw(canvas)
+//
+//        return bitmap
+//    }
+
+    private fun drawMarkers() {
+        // 使用地图着色器程序
+        GLES20.glUseProgram(mapProgram)
+        markers.forEach { marker ->
+            drawMarkerIcon(marker)
+            drawMarkerText(marker)
+        }
+        // 使用地图着色器程序
+        GLES20.glUseProgram(0)
+    }
+
+    private fun drawMarkerIcon(marker: MapMarker) {
+        val textureId = markerTextures[marker.iconResId]
+        Log.d(TAG, "drawMarkerIcon $textureId start for $marker")
+        if (textureId == null) {
+            Log.d(TAG, "no found textureId for $marker")
+            return
+        }
+        // 图标大小
+        val iconSize = marker.iconSize
+
+        val markerCenter = worldToGl(marker.x, marker.y)
+        marker.glCenter.x = markerCenter.x
+        marker.glCenter.y = markerCenter.y
+        // 计算图标顶点
+//        val left = markerCenter.x - iconSize / 2
+//        val right = markerCenter.x + iconSize / 2
+//        val top = markerCenter.y - iconSize / 2
+//        val bottom = markerCenter.y + iconSize / 2
+
+        Log.d(TAG, "drawMarkerIcon ${marker.text} -> $markerCenter -> $iconSize -> ($viewWidth, $viewHeight)")
+        val vertices = floatArrayOf(
+            // 顶点坐标     // 纹理坐标（修正）
+            -0.5f, -0.5f, 0f, 1f,  // 左上 → 左下
+            0.5f, -0.5f, 1f, 1f,  // 右上 → 右下
+            -0.5f, 0.5f, 0f, 0f,  // 左下 → 左上
+            0.5f, 0.5f, 1f, 0f   // 右下 → 右上
+        )
+
+        Log.d(TAG, "${marker.text} -> vertices: ${vertices.formatMatrixString()}")
+
+
+        // 获取着色器变量位置
+        val positionHandle = GLES20.glGetAttribLocation(mapProgram, "vPosition")
+        val texCoordHandle = GLES20.glGetAttribLocation(mapProgram, "vTexCoord")
+        val mvpMatrixHandle = GLES20.glGetUniformLocation(mapProgram, "uMVPMatrix")
+        val textureHandle = GLES20.glGetUniformLocation(mapProgram, "uTexture")
+
+        // 启用顶点属性数组
+        GLES20.glEnableVertexAttribArray(positionHandle)
+        GLES20.glEnableVertexAttribArray(texCoordHandle)
+
+        // 准备顶点数据
+        val vertexBuffer = ByteBuffer.allocateDirect(vertices.size * 4)
+            .order(ByteOrder.nativeOrder())
+            .asFloatBuffer()
+            .apply {
+                put(vertices)
+                position(0)
+            }
+
+        // 设置顶点属性指针
+        GLES20.glVertexAttribPointer(positionHandle, 2, GLES20.GL_FLOAT, false, 16, vertexBuffer)
+        GLES20.glVertexAttribPointer(
+            texCoordHandle,
+            2,
+            GLES20.GL_FLOAT,
+            false,
+            16,
+            vertexBuffer.apply { position(2) })
+
+        // 计算MVP矩阵
+        val modelMatrix1 = marker.reCalcModelMatrixOfMarker(mapModelMatrix = modelMatrix, marker.iconSize.toFloat(), marker.iconSize.toFloat()).copyOf()
+
+        val modelMatrix = marker.modelMatrix.identityM()
+        Log.d(TAG, "${marker.text} -> modelMatrix: ${modelMatrix.formatMatrixString()}, modelMatrix1: ${modelMatrix1.formatMatrixString()}, modelMatrix: ${modelMatrix.formatMatrixString()}")
+        val mvpMatrix = FloatArray(16)
+        Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
+        Matrix.multiplyMM(mvpMatrix, 0, mvpMatrix, 0, modelMatrix1, 0)
+
+        // 传递MVP矩阵
+        GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0)
+
+        // 绑定纹理
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId)
+        GLES20.glUniform1i(textureHandle, 0)
+
+        // 启用混合模式以支持透明度
+        GLES20.glEnable(GLES20.GL_BLEND)
+        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
+
+        // 绘制图标
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
+
+        // 禁用混合模式
+        GLES20.glDisable(GLES20.GL_BLEND)
+
+        // 禁用顶点属性数组
+        GLES20.glDisableVertexAttribArray(positionHandle)
+        GLES20.glDisableVertexAttribArray(texCoordHandle)
+    }
+
+    private fun drawMarkerText(marker: MapMarker) {
+        val fontTextureInfo = markerFontTextures[marker.text]
+        Log.d(TAG, "drawMarkerIcon $fontTextureInfo start for $marker")
+        if (fontTextureInfo == null) {
+            Log.d(TAG, "no found textureId for $marker")
+            return
+        }
+        // 图标大小
+        val iconSize = marker.iconSize
+
+        val markerCenter = worldToGl(marker.x, marker.y)
+        marker.glCenter.x = markerCenter.x
+        marker.glCenter.y = markerCenter.y
+        // 计算图标顶点
+//        val left = markerCenter.x - iconSize / 2
+//        val right = markerCenter.x + iconSize / 2
+//        val top = markerCenter.y - iconSize / 2
+//        val bottom = markerCenter.y + iconSize / 2
+
+        Log.d(TAG, "drawMarkerIcon ${marker.text} -> $markerCenter -> $iconSize -> ($viewWidth, $viewHeight)")
+        val vertices = floatArrayOf(
+            // 顶点坐标     // 纹理坐标（修正）
+            -0.5f, -0.5f, 0f, 1f,  // 左上 → 左下
+            0.5f, -0.5f, 1f, 1f,  // 右上 → 右下
+            -0.5f, 0.5f, 0f, 0f,  // 左下 → 左上
+            0.5f, 0.5f, 1f, 0f   // 右下 → 右上
+        )
+
+        Log.d(TAG, "${marker.text} -> vertices: ${vertices.formatMatrixString()}")
+        // 使用地图着色器程序
+
+        // 获取着色器变量位置
+        val positionHandle = GLES20.glGetAttribLocation(mapProgram, "vPosition")
+        val texCoordHandle = GLES20.glGetAttribLocation(mapProgram, "vTexCoord")
+        val mvpMatrixHandle = GLES20.glGetUniformLocation(mapProgram, "uMVPMatrix")
+        val textureHandle = GLES20.glGetUniformLocation(mapProgram, "uTexture")
+
+        // 启用顶点属性数组
+        GLES20.glEnableVertexAttribArray(positionHandle)
+        GLES20.glEnableVertexAttribArray(texCoordHandle)
+
+        // 准备顶点数据
+        val vertexBuffer = ByteBuffer.allocateDirect(vertices.size * 4)
+            .order(ByteOrder.nativeOrder())
+            .asFloatBuffer()
+            .apply {
+                put(vertices)
+                position(0)
+            }
+
+        // 设置顶点属性指针
+        GLES20.glVertexAttribPointer(positionHandle, 2, GLES20.GL_FLOAT, false, 16, vertexBuffer)
+        GLES20.glVertexAttribPointer(
+            texCoordHandle,
+            2,
+            GLES20.GL_FLOAT,
+            false,
+            16,
+            vertexBuffer.apply { position(2) })
+
+        // 计算MVP矩阵
+        val modelMatrix1 = marker.reCalcModelMatrixOfMarker(mapModelMatrix = modelMatrix, fontTextureInfo.width.toFloat(), fontTextureInfo.height.toFloat()).copyOf()
+
+        val offsetMatrix = FloatArray(16).identityM()
+        Matrix.translateM(offsetMatrix, 0, 0f, -marker.iconFontGapSize - (marker.iconSize + fontTextureInfo.height) * 0.5f, 0f)
+
+        val modelMatrix = marker.modelMatrix.identityM()
+        Log.d(TAG, "${marker.text} -> modelMatrix: ${modelMatrix.formatMatrixString()}, modelMatrix1: ${modelMatrix1.formatMatrixString()}, modelMatrix: ${modelMatrix.formatMatrixString()}")
+        val mvpMatrix = FloatArray(16)
+        Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
+        Matrix.multiplyMM(mvpMatrix, 0, mvpMatrix, 0, offsetMatrix, 0)
+        Matrix.multiplyMM(mvpMatrix, 0, mvpMatrix, 0, modelMatrix1, 0)
+
+        // 传递MVP矩阵
+        GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0)
+
+        // 绑定纹理
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, fontTextureInfo.textureId)
+        GLES20.glUniform1i(textureHandle, 0)
+
+        // 启用混合模式以支持透明度
+        GLES20.glEnable(GLES20.GL_BLEND)
+        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
+
+        // 绘制图标
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
+
+        // 禁用混合模式
+        GLES20.glDisable(GLES20.GL_BLEND)
+
+        // 禁用顶点属性数组
+        GLES20.glDisableVertexAttribArray(positionHandle)
+        GLES20.glDisableVertexAttribArray(texCoordHandle)
+    }
+
+//    private fun drawMarkerText(marker: MapMarker) {
+//        if (marker.text.isNotEmpty()) {
+//            return
+//        }
+////        // 1. 准备文字绘制参数
+////        val textSize = 24f * scaleFactor // 根据缩放调整文字大小
+////        val textPadding = 5f * scaleFactor // 文字与图标的间距
+////
+////        // 2. 计算文字位置（在图标上方）
+////        val textX = marker.x
+////        val textY = marker.y - (32f * scaleFactor / 2) - textPadding // 32f是图标高度
+////
+////        // 3. 创建Paint对象设置文字样式
+////        val paint = Paint().also {
+////            it.color = marker.textColor
+////            it.textSize = textSize
+////            it.isAntiAlias = true
+////            it.textAlign = Paint.Align.CENTER
+////            it.typeface = Typeface.DEFAULT_BOLD
+////            it.strokeWidth = 10f
+////        }
+////
+////        // 4. 测量文字尺寸
+////        val textWidth = paint.measureText(marker.text)
+////        val textHeight = paint.descent() - paint.ascent()
+////
+////        // 5. 创建文字位图（带透明背景）
+////        val bitmap = Bitmap.createBitmap(
+////            textWidth.toInt() + 2, // 加2避免边缘裁剪
+////            textHeight.toInt() + 2,
+////            Bitmap.Config.ARGB_8888
+////        )
+////
+////        // 6. 绘制文字到位图
+////        Canvas(bitmap).apply {
+////            drawText(
+////                marker.text,
+////                width / 2f,
+////                height / 2f - (paint.ascent() + paint.descent()) / 2,
+////                paint
+////            )
+////        }
+////
+////        // 7. 生成OpenGL纹理
+////        val textureIds = IntArray(1)
+////        GLES20.glGenTextures(1, textureIds, 0)
+//
+//        val textureId = markerFontTextures[marker.text]
+//        if (textureId == null) {
+//            return
+//        }
+//        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId)
+//        GLES20.glTexParameteri(
+//            GLES20.GL_TEXTURE_2D,
+//            GLES20.GL_TEXTURE_MIN_FILTER,
+//            GLES20.GL_LINEAR
+//        )
+//        GLES20.glTexParameteri(
+//            GLES20.GL_TEXTURE_2D,
+//            GLES20.GL_TEXTURE_MAG_FILTER,
+//            GLES20.GL_LINEAR
+//        )
+//        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)
+//
+//        // 8. 计算文字渲染的顶点坐标
+//        val left = textX - textWidth / 2
+//        val right = textX + textWidth / 2
+//        val top = textY - textHeight / 2
+//        val bottom = textY + textHeight / 2
+//
+//        val vertices = floatArrayOf(
+//            // 顶点坐标       // 纹理坐标
+//            left, bottom, 0f, 0f,  // 左下
+//            right, bottom, 1f, 0f,  // 右下
+//            left, top, 0f, 1f,  // 左上
+//            right, top, 1f, 1f   // 右上
+//        )
+//
+//        // 9. 准备顶点缓冲区
+//        val vertexBuffer = ByteBuffer.allocateDirect(vertices.size * 4)
+//            .order(ByteOrder.nativeOrder())
+//            .asFloatBuffer()
+//            .apply {
+//                put(vertices)
+//                position(0)
+//            }
+//
+//        // 10. 使用文字着色器程序
+//        GLES20.glUseProgram(textProgram)
+//
+//        // 11. 获取着色器变量位置
+//        val positionHandle = GLES20.glGetAttribLocation(textProgram, "vPosition")
+//        val texCoordHandle = GLES20.glGetAttribLocation(textProgram, "vTexCoord")
+//        val mvpMatrixHandle = GLES20.glGetUniformLocation(textProgram, "uMVPMatrix")
+//        val textureHandle = GLES20.glGetUniformLocation(textProgram, "uTexture")
+//        val textColorHandle = GLES20.glGetUniformLocation(textProgram, "uTextColor")
+//
+//        // 12. 启用顶点属性
+//        GLES20.glEnableVertexAttribArray(positionHandle)
+//        GLES20.glEnableVertexAttribArray(texCoordHandle)
+//
+//        // 13. 设置顶点数据
+//        vertexBuffer.position(0)
+//        GLES20.glVertexAttribPointer(
+//            positionHandle, 2,
+//            GLES20.GL_FLOAT, false,
+//            16, vertexBuffer
+//        )
+//
+//        vertexBuffer.position(2)
+//        GLES20.glVertexAttribPointer(
+//            texCoordHandle, 2,
+//            GLES20.GL_FLOAT, false,
+//            16, vertexBuffer
+//        )
+//
+//        // 14. 计算MVP矩阵
+//        val modelMatrix = marker.reCalcModelMatrixOfMarker(mapModelMatrix = modelMatrix, mapSize.x, mapSize.y)
+//
+//        val mvpMatrix = FloatArray(16)
+//        Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
+//        Matrix.multiplyMM(mvpMatrix, 0, mvpMatrix, 0, modelMatrix, 0)
+//
+//        // 15. 传递统一变量
+//        GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0)
+//
+//        GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+//        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureIds[0])
+//        GLES20.glUniform1i(textureHandle, 0)
+//
+//        // 设置文字颜色（使用原始颜色，不修改透明度）
+//        GLES20.glUniform4f(
+//            textColorHandle,
+//            1f, 1f, 1f, 1f // 保持原始颜色，因为位图已经包含颜色信息
+//        )
+//
+//        // 16. 启用混合实现透明效果
+//        GLES20.glEnable(GLES20.GL_BLEND)
+//        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
+//
+//        // 17. 绘制文字
+//        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
+//
+//        // 18. 清理状态
+//        GLES20.glDisableVertexAttribArray(positionHandle)
+//        GLES20.glDisableVertexAttribArray(texCoordHandle)
+//        GLES20.glDisable(GLES20.GL_BLEND)
+//
+//        // 19. 删除临时纹理
+//        GLES20.glDeleteTextures(1, textureIds, 0)
+//        GLES20.glUseProgram(0)
+//    }
+
+    //    private val bitmapInfo = BitmapInfo(
+//        -13.55f,
+//        -3.5f,
+//        0.05f
+//    )
+    private val bitmapInfo = BitmapInfo(
+        -0f,
+        -0f,
+        0.05f
+    )
     private fun worldToGl(x: Float, y: Float): PointF {
+//        return convertScreenToGL(
+//            (x - bitmapInfo.resolution * mapSize.x * 0.5f - bitmapInfo.originX) / bitmapInfo.resolution,
+//            (y - bitmapInfo.resolution * mapSize.y * 0.5f - bitmapInfo.originY) / bitmapInfo.resolution,
+//        )
+
         return PointF(
             (x - bitmapInfo.resolution * mapSize.x * 0.5f - bitmapInfo.originX) / bitmapInfo.resolution,
             (y - bitmapInfo.resolution * mapSize.y * 0.5f - bitmapInfo.originY) / bitmapInfo.resolution,
@@ -922,10 +1015,49 @@ class TestActivity : AppCompatActivity(), GLSurfaceView.Renderer {
         val resolution: Float,
     )
 
-    override fun onDestroy() {
-        super.onDestroy()
-        // 清理OpenGL资源
-        GLES20.glDeleteBuffers(2, intArrayOf(markerVBO, textVBO), 0)
-        GLES20.glDeleteTextures(3, intArrayOf(mapTextureId, markerTextureAtlas, fontTextureAtlas), 0)
+    private data class FontTextureInfo(
+        val textureId: Int,
+        val text: String,
+        val width: Int,
+        val height: Int,
+    )
+}
+
+private fun String.generateBitmap(textSize: Float,
+                                  textColor: Int,
+                                  textPaddingStart: Float = 2.dp,
+                                  textPaddingTop: Float = 2.dp): Bitmap {
+    // 1. 准备文字绘制参数
+
+    // 2. 计算文字位置（在图标上方）
+
+    // 3. 创建Paint对象设置文字样式
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG).also {
+        it.color = textColor
+        it.textSize = textSize
+        it.strokeWidth = 10f
     }
+
+    // 4. 测量文字尺寸
+    val rect = Rect()
+    paint.getTextBounds(this, 0, this.length, rect)
+    val textWidth = textPaddingStart * 2 + rect.width()
+    val textHeight = textPaddingTop * 2 + rect.height()
+
+    // 5. 创建文字位图（带透明背景）
+    val bitmap = Bitmap.createBitmap(
+        textWidth.toInt(),
+        textHeight.toInt(),
+        Bitmap.Config.ARGB_8888
+    )
+
+    // 6. 清除位图，确保背景完全透明
+    bitmap.eraseColor(Color.TRANSPARENT)
+
+    val canvas = Canvas(bitmap)
+    canvas.drawText(this,
+        0, length,
+        textPaddingStart, textHeight - textPaddingTop,
+        paint)
+    return bitmap
 }
