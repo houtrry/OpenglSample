@@ -32,25 +32,25 @@ class TextLayer : BaseLayer() {
         textList = mutableListOf<BubbleText>(
         BubbleText(
             "点位1",
-            Vector3(0.0, 0.5, 0.0),
+            Vector3(10.0, 5.5, 0.0),
             BubbleTextLayoutParam(borderStokeWidth = 1.dp),
             context.getVectorDrawable(R.drawable.ic_1)?.let { BubbleTextDrawable(it) }
         ),
         BubbleText(
             "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-            Vector3(0.0, -0.5, 0.0),
+            Vector3(15.0, -5.5, 0.0),
             BubbleTextLayoutParam(borderStokeWidth = 1f),
             context.getVectorDrawable(R.drawable.ic_2)?.let { BubbleTextDrawable(it, gravity = Gravity.START) }
         ),
         BubbleText(
             "点位2",
-            Vector3(0.5, 0.0, 0.0),
+            Vector3(25.5, 25.0, 0.0),
             BubbleTextLayoutParam(),
             context.getVectorDrawable(R.drawable.ic_1)?.let { BubbleTextDrawable(it, gravity = Gravity.TOP) }
         ),
         BubbleText(
             "点位22",
-            Vector3(-0.5, 0.0, 0.0),
+            Vector3(-5.5, 20.0, 0.0),
             BubbleTextLayoutParam(),
             context.getVectorDrawable(R.drawable.ic_2)?.let { BubbleTextDrawable(it, gravity = Gravity.END) }
         ),

@@ -6,6 +6,8 @@ import kotlin.math.pow
 import kotlin.math.sqrt
 
 object MatrixUtils {
+
+    private const val TAG = "MatrixUtils"
     private const val EPSILON = 1e-6f
     private const val INDEX_OUT_OF_BOUNDS_MSG = "Input matrix must have exactly 16 elements"
     private val IDENTITY_MATRIX = floatArrayOf(

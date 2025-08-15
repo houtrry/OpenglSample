@@ -32,6 +32,7 @@ class BubbleTextShape {
     private val mMVPMatrix = FloatArray(16) // MVP 矩阵
     private val transformMatrix: FloatArray = FloatArray(16)
     private val scaleMatrix: FloatArray = FloatArray(16)
+    private val offsetMatrix: FloatArray = FloatArray(16).identityM()
     //四个顶点的绘制顺序数组的缓冲数组
     private val drawListBuffer: ShortBuffer = drawOrder.toBuffer()
     private lateinit var arrowBitmapSize: BitmapSize
@@ -74,35 +75,24 @@ class BubbleTextShape {
         val vector3 = mapMatrix.worldToGl(position.x.toFloat(), position.y.toFloat())
         Log.d(TAG, "drawTextShape, $textBitmap, vector3: $vector3 -> $position")
         transformMatrix.identityM()
-        Matrix.translateM(transformMatrix, 0, vector3.x.toFloat(), vector3.y.toFloat(), 0f)
+        Matrix.translateM(transformMatrix, 0, vector3.x, vector3.y, 0f)
         scaleMatrix.identityM()
         Matrix.scaleM(scaleMatrix, 0, textBitmap.width.toFloat(), textBitmap.height.toFloat(), 1f)
-////        mapMatrix.getTransformMatrixWithoutScale(scaleFactor, transformMatrix)
-//        Matrix.multiplyMM(transformMatrix, 0, mapMatrix.getModelMatrix(), 0, transformMatrix, 0)
-//        transformMatrix[0] = 1f
-//        transformMatrix[1] = 0f
-//        transformMatrix[4] = 0f
-//        transformMatrix[5] = 1f
-//        Matrix.scaleM(transformMatrix, 0, textBitmap.width.toFloat() / size.height, textBitmap.height.toFloat() / size.height, 1f)
-////        Matrix.translateM(transformMatrix, 0, 0f, 0f, 0f)
-//        Log.d(TAG, "text $vector3 scale: ${textBitmap.height.toFloat() / size.height}")
-//        Log.d(TAG, "transformMatrix: ${mapMatrix.getModelMatrix().formatMatrixString()}")
-//        Log.d(TAG, "translateX: ${mapMatrix.getModelMatrix()[3]}, translateY: ${mapMatrix.getModelMatrix()[7]}, matrix: ${mapMatrix.getModelMatrix().contentToString()}")
-//        Matrix.setIdentityM(mMVPMatrix, 0)
-//        Matrix.multiplyMM(mMVPMatrix, 0, mapMatrix.getViewMatrix(), 0, transformMatrix, 0)
-//        Matrix.multiplyMM(mMVPMatrix, 0, mapMatrix.getProjectionMatrix(), 0, mMVPMatrix, 0)
 
         mMVPMatrix.identityM()
-////        Matrix.multiplyMM(mMVPMatrix, 0, mapMatrix.getProjectionViewMatrix(), 0, mapMatrix.getComponentOfMatrix(mMVPMatrix, true, false), 0)
-//        Matrix.multiplyMM(mMVPMatrix, 0, mapMatrix.getProjectionViewMatrix(), 0, transformMatrix, 0)
-//        Matrix.multiplyMM(mMVPMatrix, 0, mMVPMatrix, 0, mapMatrix.getTransformMatrixOnlyTranslate(mMVPMatrix), 0)
-//        Matrix.multiplyMM(mMVPMatrix, 0, mMVPMatrix, 0, scaleMatrix, 0)
 
+//        offsetMatrix.identityM()
+//        Matrix.translateM(offsetMatrix, 0, 0f, textBitmap.height * 0.5f, 0f)
+
+        //注意，获取分量这个操作，应该是modelMatrix与transformMatrix计算后的结果获取分量
+        //而不是先获取modelMatrix的分量，再与transformMatrix计算
+        //不然结果就是错的
+        Matrix.multiplyMM(transformMatrix, 0, mapMatrix.getModelMatrix(), 0, transformMatrix, 0)
         MatrixUtils.multiplyMatrices(mMVPMatrix,
             mapMatrix.getProjectionViewMatrix(),
-            mapMatrix.getTransformMatrixOnlyTranslate(),
-            transformMatrix,
+            MatrixUtils.getComponentOfMatrix(transformMatrix, FloatArray(16).identityM(), true, false, false),
             scaleMatrix,
+//            offsetMatrix
         )
 
         val transformMatrixLocation = program.glGetUniformLocation("u_TransformMatrix")

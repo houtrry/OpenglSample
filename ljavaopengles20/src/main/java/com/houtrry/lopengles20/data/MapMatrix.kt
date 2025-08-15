@@ -235,10 +235,7 @@ class MapMatrix {
      * 定位世界坐标转成GL坐标
      */
     fun worldToGl(x: Float, y: Float): PointF {
-        return PointF(
-            (x - bitmapInfo.resolution * bitmapInfo.width * 0.5f - bitmapInfo.originX) / bitmapInfo.resolution,
-            (y - bitmapInfo.resolution * bitmapInfo.height * 0.5f - bitmapInfo.originY) / bitmapInfo.resolution,
-        )
+        return worldToGl(bitmapInfo, x, y)
     }
 
     /**
