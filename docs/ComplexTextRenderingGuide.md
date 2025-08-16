@@ -469,6 +469,37 @@ class RealTimePerformanceMonitor {
 }
 ```
 
+## 🧩 资源与策略补充（与代码保持一致）
+
+### 图标图集（多图集）
+- 自动查询 `GL_MAX_TEXTURE_SIZE`，若查询失败兜底 2048。
+- 采用等格单元拆分为多个图集，渲染时按 `textureId + UV` 分批，减少纹理绑定次数。
+
+### 降级策略（可配置）
+- 开关：`HybridConfig.allowDegrade`（默认 true）。
+- 顺序：`HybridConfig.degradeOrder`（默认 `[ICON_ONLY, ICON_WITH_SHORT_TEXT, FULL_BUBBLE]`）。
+- 短文本阈值：`HybridConfig.shortTextMaxWidthPx` 按像素裁切并自动追加省略号（默认 80px）。
+- 禁止降级（`allowDegrade=false`）：屏内复杂对象超限时仍绘制完整气泡，保证一致性，可能牺牲帧率。
+
+### SDF 字体回退策略
+- `SDFTextRenderer.supportsText(text)` 对复杂脚本/Emoji/合字保守返回 false，自动回退 Canvas/Complex 路径，确保中英阿等 30+ 语言的正确形态与换行；Latin/CJK 等常见字符走 SDF 保障性能。
+
+### 配置示例
+```kotlin
+// 智能混合渲染器 + 设备自适应 + 降级策略
+val renderer = TextRenderingFactory.createRecommendedRenderer(context)
+val config = HybridConfig(
+    allowDegrade = true,
+    degradeOrder = listOf(
+        HybridTextRenderer.DegradeStep.ICON_ONLY,
+        HybridTextRenderer.DegradeStep.ICON_WITH_SHORT_TEXT,
+        HybridTextRenderer.DegradeStep.FULL_BUBBLE
+    ),
+    shortTextMaxWidthPx = 80f
+)
+renderer.initialize(RenderingScenario.NewMapScenario, config)
+```
+
 ## 📊 性能对比
 
 | 显示类型 | 内存占用 | 渲染时间 | 适用场景 | 推荐数量 |
@@ -611,3 +642,32 @@ val textInfos = TextRenderingUtils.createGridTextInfos(
 这个升级版的混合文字渲染系统能够智能地处理各种复杂的文字显示需求，通过合理使用不同的显示类型和渲染策略，可以在保证性能的同时提供丰富的视觉效果。
 
 **记住**：选择合适的显示类型是关键 - 重要信息用复杂显示，普通信息用简单显示！🎯 
+
+---
+
+## 附录：HybridConfig 参数表（速查）
+
+| 参数 | 类型/默认值 | 作用 |
+|---|---|---|
+| `sdfThreshold` | Int = 50 | 简单文字数量达到该阈值后倾向使用 SDF |
+| `migrationDelay` | Long = 3000L | Canvas→SDF 迁移延迟（毫秒） |
+| `batchSize` | Int = 10 | 迁移批次大小 |
+| `complexTextThreshold` | Int = 20 | 复杂文字阈值（触发智能混合） |
+| `allowDegrade` | Boolean = true | 是否允许复杂超限时降级 |
+| `degradeOrder` | List = [ICON_ONLY, ICON_WITH_SHORT_TEXT, FULL_BUBBLE] | 降级顺序 |
+| `shortTextMaxWidthPx` | Float = 80f | 短文本像素宽度阈值（截断+省略号） |
+| `limitComplexPerScreen` | Int? = null | 屏内复杂对象上限（null=按设备档位） |
+| `iconTextGapDp` | Float = 4f | 图标-文字间距（dp） |
+| `paddingLeftDp` | Float = 8f | 气泡左内边距（dp） |
+| `paddingTopDp` | Float = 6f | 气泡上内边距（dp） |
+| `paddingRightDp` | Float = 8f | 气泡右内边距（dp） |
+| `paddingBottomDp` | Float = 6f | 气泡下内边距（dp） |
+| `arrowWidthDp` | Float = 12f | 箭头宽（dp） |
+| `arrowHeightDp` | Float = 6f | 箭头高（dp） |
+| `arrowAutoFlip` | Boolean = true | 贴边自动翻转箭头 |
+| `gridSizeDp` | Float = 64f | 屏幕网格大小（dp） |
+| `maxPerGrid` | Int = 1 | 每网格最大标注数 |
+| `collisionWidthDp` | Float = 96f | 碰撞框宽（dp） |
+| `collisionHeightDp` | Float = 32f | 碰撞框高（dp） |
+
+注：图标多图集按 `GL_MAX_TEXTURE_SIZE` 自动拆分，失败兜底 2048；渲染按 `textureId+UV` 分批。

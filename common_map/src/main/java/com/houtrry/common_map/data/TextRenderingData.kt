@@ -144,7 +144,12 @@ data class IconInfo(
 data class BubbleInfo(
     val style: BubbleStyle = BubbleStyle(),
     val padding: BubblePadding = BubblePadding(),
-    val cornerRadius: Float = 8f
+    val cornerRadius: Float = 8f,
+    /**
+     * 单个标注级的箭头自动翻转开关：
+     * null 表示使用全局配置；true 表示该标注启用自动翻转；false 表示固定方向
+     */
+    val arrowAutoFlip: Boolean? = null
 )
 
 /**

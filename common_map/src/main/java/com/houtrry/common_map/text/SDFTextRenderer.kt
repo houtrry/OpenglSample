@@ -394,7 +394,17 @@ class SDFTextRenderer(context: Context) : BaseTextRenderer(context) {
     /**
      * 检查文字是否完全支持（所有字符都在图集中）
      */
-    fun supportsText(text: String): Boolean = text.all { hasCharacter(it) }
+    fun supportsText(text: String): Boolean {
+        // 对复杂脚本/Emoji/合字做保守回退：遇到非BMP或组合标记等则返回false
+        text.forEach { ch ->
+            val type = Character.getType(ch)
+            if (Character.isSurrogate(ch) || type == Character.NON_SPACING_MARK.toInt() || type == Character.OTHER_SYMBOL.toInt()) {
+                return false
+            }
+            if (!hasCharacter(ch)) return false
+        }
+        return true
+    }
     
     override fun onTextAdded(textInfo: TextInfo) {
         Log.d(TAG, "添加SDF文字: ${textInfo.content}")
