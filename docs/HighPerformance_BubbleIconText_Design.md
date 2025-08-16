@@ -125,6 +125,20 @@ renderer.addTexts(items)
 | `arrowWidthDp` | Float = 12f | 箭头宽（dp） |
 | `arrowHeightDp` | Float = 6f | 箭头高（dp） |
 | `arrowAutoFlip` | Boolean = true | 是否根据贴边自动翻转箭头方向 |
+
+---
+
+## 按机型推荐参数表（可直接用于 `TextRenderingFactory.getRecommendedConfig`）
+
+| 设备档位 | 迁移/批处理 | 降级策略 | 屏内复杂上限 | 网格与碰撞 |
+|---|---|---|---|---|
+| 高端 | `sdfThreshold=80`, `migrationDelay=2000`, `batchSize=15`, `complexTextThreshold=30` | `allowDegrade=true`, `degradeOrder=[ICON_ONLY, ICON_WITH_SHORT_TEXT, FULL_BUBBLE]`, `shortTextMaxWidthPx=96` | `limitComplexPerScreen=400` | `gridSizeDp=56`, `maxPerGrid=1`, `collisionWidthDp=88`, `collisionHeightDp=28`, `arrowAutoFlip=true` |
+| 中端 | `sdfThreshold=50`, `migrationDelay=3000`, `batchSize=10`, `complexTextThreshold=20` | 同上，`shortTextMaxWidthPx=80` | `limitComplexPerScreen=200` | `gridSizeDp=64`, `maxPerGrid=1`, `collisionWidthDp=96`, `collisionHeightDp=32`, `arrowAutoFlip=true` |
+| 低端 | `sdfThreshold=30`, `migrationDelay=4000`, `batchSize=5`, `complexTextThreshold=10` | 同上，`shortTextMaxWidthPx=72` | `limitComplexPerScreen=100` | `gridSizeDp=72`, `maxPerGrid=1`, `collisionWidthDp=112`, `collisionHeightDp=40`, `arrowAutoFlip=true` |
+
+说明：
+- “屏内复杂上限”建议根据实时 FPS 再做自适应微调；阈值越小，帧率越稳。
+- 若需更强一致性（不降级），可将 `allowDegrade=false`，但在 2000+ 爆量同屏时帧率会下降。
 | `gridSizeDp` | Float = 64f | 屏幕网格大小（dp），用于限流分桶 |
 | `maxPerGrid` | Int = 1 | 每网格允许的最大标注数 |
 | `collisionWidthDp` | Float = 96f | 碰撞框宽（dp） |

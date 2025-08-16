@@ -53,6 +53,9 @@ class MainActivity : AppCompatActivity() {
         binding.testOpengl.setOnClickListener {
             startActivity(Intent(this, TestActivity::class.java))
         }
+        binding.textBenchmark.setOnClickListener {
+            startActivity(Intent(this, TextBenchmarkActivity::class.java))
+        }
         binding.generateGrayImageFile.setOnClickListener {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 if (Environment.isExternalStorageManager()) {

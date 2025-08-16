@@ -483,22 +483,85 @@ object TextRenderingUtils {
     fun getRecommendedConfig(context: Context): HybridConfig {
         return when (getDevicePerformanceLevel(context)) {
             DevicePerformanceLevel.HIGH -> HybridConfig(
-                sdfThreshold = 80,           // 高端设备延后切换
-                migrationDelay = 2000L,      // 更快迁移
-                batchSize = 15,              // 更大批次
-                complexTextThreshold = 30    // 更多复杂文字
+                // 迁移/批处理
+                sdfThreshold = 80,
+                migrationDelay = 2000L,
+                batchSize = 15,
+                complexTextThreshold = 30,
+                // 降级策略
+                allowDegrade = true,
+                degradeOrder = listOf(
+                    HybridTextRenderer.DegradeStep.ICON_ONLY,
+                    HybridTextRenderer.DegradeStep.ICON_WITH_SHORT_TEXT,
+                    HybridTextRenderer.DegradeStep.FULL_BUBBLE
+                ),
+                shortTextMaxWidthPx = 96f,
+                // 屏内复杂对象上限 & 布局/碰撞
+                limitComplexPerScreen = 400,
+                iconTextGapDp = 4f,
+                paddingLeftDp = 8f,
+                paddingTopDp = 6f,
+                paddingRightDp = 8f,
+                paddingBottomDp = 6f,
+                arrowWidthDp = 12f,
+                arrowHeightDp = 6f,
+                arrowAutoFlip = true,
+                gridSizeDp = 56f,
+                maxPerGrid = 1,
+                collisionWidthDp = 88f,
+                collisionHeightDp = 28f
             )
             DevicePerformanceLevel.MEDIUM -> HybridConfig(
-                sdfThreshold = 50,           // 默认切换点
-                migrationDelay = 3000L,      // 默认延迟
-                batchSize = 10,              // 默认批次
-                complexTextThreshold = 20    // 默认复杂文字阈值
+                sdfThreshold = 50,
+                migrationDelay = 3000L,
+                batchSize = 10,
+                complexTextThreshold = 20,
+                allowDegrade = true,
+                degradeOrder = listOf(
+                    HybridTextRenderer.DegradeStep.ICON_ONLY,
+                    HybridTextRenderer.DegradeStep.ICON_WITH_SHORT_TEXT,
+                    HybridTextRenderer.DegradeStep.FULL_BUBBLE
+                ),
+                shortTextMaxWidthPx = 80f,
+                limitComplexPerScreen = 200,
+                iconTextGapDp = 4f,
+                paddingLeftDp = 8f,
+                paddingTopDp = 6f,
+                paddingRightDp = 8f,
+                paddingBottomDp = 6f,
+                arrowWidthDp = 12f,
+                arrowHeightDp = 6f,
+                arrowAutoFlip = true,
+                gridSizeDp = 64f,
+                maxPerGrid = 1,
+                collisionWidthDp = 96f,
+                collisionHeightDp = 32f
             )
             DevicePerformanceLevel.LOW -> HybridConfig(
-                sdfThreshold = 30,           // 低端设备提前切换
-                migrationDelay = 4000L,      // 更长延迟避免卡顿
-                batchSize = 5,               // 更小批次
-                complexTextThreshold = 10    // 更少复杂文字
+                sdfThreshold = 30,
+                migrationDelay = 4000L,
+                batchSize = 5,
+                complexTextThreshold = 10,
+                allowDegrade = true,
+                degradeOrder = listOf(
+                    HybridTextRenderer.DegradeStep.ICON_ONLY,
+                    HybridTextRenderer.DegradeStep.ICON_WITH_SHORT_TEXT,
+                    HybridTextRenderer.DegradeStep.FULL_BUBBLE
+                ),
+                shortTextMaxWidthPx = 72f,
+                limitComplexPerScreen = 100,
+                iconTextGapDp = 4f,
+                paddingLeftDp = 8f,
+                paddingTopDp = 6f,
+                paddingRightDp = 8f,
+                paddingBottomDp = 6f,
+                arrowWidthDp = 12f,
+                arrowHeightDp = 6f,
+                arrowAutoFlip = true,
+                gridSizeDp = 72f,
+                maxPerGrid = 1,
+                collisionWidthDp = 112f,
+                collisionHeightDp = 40f
             )
         }
     }
