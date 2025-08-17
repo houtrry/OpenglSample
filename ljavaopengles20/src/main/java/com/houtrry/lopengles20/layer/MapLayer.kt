@@ -81,10 +81,6 @@ class MapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
         autoOverviewListener = listener
     }
 
-    fun setAutoOverviewThresholdMeters(thresholdMeters: Float) {
-        autoOverviewThresholdMeters = thresholdMeters
-    }
-
     fun notifyZoomBegin(currentRobotPoseXMeters: Float, currentRobotPoseYMeters: Float) {
         notifyZoomGestureBegin(currentRobotPoseXMeters, currentRobotPoseYMeters)
     }

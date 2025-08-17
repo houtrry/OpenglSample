@@ -11,7 +11,7 @@ import java.util.Map
  */
 class LruCache<K, V>(private val maxSize: Int) {
     private val map: LinkedHashMap<K, V> = object : LinkedHashMap<K, V>(16, 0.75f, true) {
-        override fun removeEldestEntry(eldest: Map.Entry<K, V>): Boolean {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<K, V>?): Boolean {
             return size > maxSize
         }
     }
