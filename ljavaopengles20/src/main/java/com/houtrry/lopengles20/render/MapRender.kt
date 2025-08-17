@@ -8,6 +8,7 @@ import android.view.MotionEvent
 import com.houtrry.lopengles20.R
 import com.houtrry.lopengles20.data.MapMatrix
 import com.houtrry.lopengles20.layer.ILayer
+import com.houtrry.lopengles20.utils.PerfMetrics
 import com.houtrry.lopengles20.utils.OpenglUtils
 import com.houtrry.common_map.utils.readRawText
 import java.util.concurrent.CopyOnWriteArrayList
@@ -30,6 +31,7 @@ class MapRender(val context: Context?, private val renderCallback: () -> Unit) :
         if (context == null) {
             return
         }
+        PerfMetrics.init(context)
         val vertexShaderCode = context.readRawText(R.raw.map_vertex)
         val fragmentShaderCode = context.readRawText(R.raw.map_fragment)
         //编译顶点着色器
@@ -74,15 +76,28 @@ class MapRender(val context: Context?, private val renderCallback: () -> Unit) :
     }
 
     override fun onDrawFrame(gl: GL10?) {
+        if (PerfMetrics.enabled) {
+            PerfMetrics.onFrameStart()
+        }
+        val frameStartNs = System.nanoTime()
+        val cpuStartNs = android.os.Debug.threadCpuTimeNanos()
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
         GLES20.glEnable(GLES20.GL_BLEND)
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
         synchronized(mapMatrix) {
             layers.forEach { it.doBeforeDraw() }
-            layers.forEach { it.onDraw() }
+            layers.forEach {
+                it.onDraw()
+                if (PerfMetrics.enabled) {
+                    PerfMetrics.incrementDrawCalls()
+                }
+            }
             layers.forEach { it.doAfterDraw() }
         }
         GLES20.glDisable(GLES20.GL_BLEND)
+        if (PerfMetrics.enabled) {
+            PerfMetrics.onFrameEnd(frameStartNs, cpuStartNs)
+        }
     }
 
     fun addLayer(layer : ILayer) {

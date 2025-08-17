@@ -1,6 +1,7 @@
 package com.houtrry.lopengles20.tile
 
 import android.opengl.GLES20
+import com.houtrry.lopengles20.utils.PerfMetrics
 import com.houtrry.lopengles20.data.MapMatrix
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -121,6 +122,9 @@ class TileManager(
                 }
             }
         }
+        if (PerfMetrics.enabled) {
+            PerfMetrics.setVisibleTiles(result.size)
+        }
         return result
     }
 
@@ -170,6 +174,15 @@ class TileManager(
                 region.pixelBuffer
             )
             GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0)
+            if (PerfMetrics.enabled) {
+                val bpp = when (region.glFormat) {
+                    GLES20.GL_LUMINANCE, GLES20.GL_ALPHA, 0x8229 /*GL_RED*/ -> 1
+                    else -> 4
+                }
+                val bytes = region.width.toLong() * region.height.toLong() * bpp
+                PerfMetrics.addUploadBytes(bytes)
+                PerfMetrics.addUpdatedTiles(1)
+            }
 
             val ready = Tile(
                 coord = coord,
