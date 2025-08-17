@@ -473,13 +473,11 @@ class HybridTextRenderer(context: Context) : BaseTextRenderer(context) {
     )
 
     private fun planVisibleTexts(mvpMatrix: FloatArray): VisiblePlan {
-        // 最小改动：暂用全部（可替换为视锥/网格/碰撞实现）。阈值参数可根据设备等级调整。
-        val device = TextRenderingFactory.getDevicePerformanceLevel(context)
-        val (maxComplexDefault, doShadow, doBorder) = when (device) {
-            DevicePerformanceLevel.HIGH -> Triple(400, true, true)
-            DevicePerformanceLevel.MEDIUM -> Triple(200, true, true)
-            DevicePerformanceLevel.LOW -> Triple(100, false, true)
-        }
+        // 最小改动：暂用全部（可替换为视锥/网格/碰撞实现）。
+        // 简单默认：避免跨文件互相引用导致的编译顺序问题
+        val maxComplexDefault = 200
+        val doShadow = true
+        val doBorder = true
         val maxComplex = limitComplexPerScreenOverride ?: maxComplexDefault
         val arrowAuto = layoutParams.arrow.autoFlip
         val items = textInfos.values.toList()
