@@ -14,9 +14,9 @@ class AlgorithmGrayscaleRegionProvider(
     private val mapHeightPx: Int,
     private val rowStrideBytes: Int = mapWidthPx,
     private val bufferSupplier: () -> ByteBuffer
-) : TileManager.RegionProvider {
+) : RegionProvider {
 
-    override fun obtainRegion(x: Int, y: Int, width: Int, height: Int): TileManager.RegionBuffer? {
+    override fun obtainRegion(x: Int, y: Int, width: Int, height: Int): RegionBuffer? {
         if (x < 0 || y < 0 || width <= 0 || height <= 0) return null
         if (x + width > mapWidthPx || y + height > mapHeightPx) return null
         val src = try { bufferSupplier.invoke() } catch (_: Throwable) { return null }
@@ -36,7 +36,7 @@ class AlgorithmGrayscaleRegionProvider(
             row++
         }
         dst.position(0)
-        return TileManager.RegionBuffer(
+        return RegionBuffer(
             width = width,
             height = height,
             glFormat = GLES20.GL_LUMINANCE,

@@ -1,9 +1,7 @@
 package com.houtrry.lopengles20.tile
 
-import android.graphics.PointF
 import android.opengl.GLES20
 import com.houtrry.lopengles20.data.MapMatrix
-import java.nio.ByteBuffer
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.max
@@ -18,33 +16,6 @@ class TileManager(
     lruCapacity: Int = 256,
     texturePoolCapacity: Int = 256
 ) {
-    data class RegionBuffer(
-        val width: Int,
-        val height: Int,
-        val glFormat: Int, // GLES20.GL_LUMINANCE or GLES20.GL_RGBA
-        val pixelBuffer: ByteBuffer
-    )
-
-    interface RegionProvider {
-        fun obtainRegion(x: Int, y: Int, width: Int, height: Int): RegionBuffer?
-    }
-    /**
-     * 瓦片坐标：level 表示金字塔层级（此版本固定为 0，后续可扩展），x/y 为网格索引。
-     */
-    data class TileCoord(val level: Int, val x: Int, val y: Int)
-
-    /**
-     * 瓦片实体：包含纹理 id、像素尺寸、在整图中的原点（左上角像素坐标）以及是否就绪。
-     */
-    data class Tile(
-        val coord: TileCoord,
-        val textureId: Int,
-        val widthPx: Int,
-        val heightPx: Int,
-        val originXInMapPx: Int,
-        val originYInMapPx: Int,
-        val isReady: Boolean
-    )
 
     private var mapWidthPx: Int = 0
     private var mapHeightPx: Int = 0

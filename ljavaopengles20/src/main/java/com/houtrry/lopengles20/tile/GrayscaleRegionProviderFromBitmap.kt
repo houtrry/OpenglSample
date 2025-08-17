@@ -10,9 +10,9 @@ import java.nio.ByteBuffer
  * - 上传时使用 GL_LUMINANCE，较 RGBA 可降低 4 倍带宽；
  * - 灰度计算使用 BT.601 近似（0.299R + 0.587G + 0.114B）。
  */
-class GrayscaleRegionProviderFromBitmap(private val source: Bitmap) : TileManager.RegionProvider {
+class GrayscaleRegionProviderFromBitmap(private val source: Bitmap) : RegionProvider {
 
-    override fun obtainRegion(x: Int, y: Int, width: Int, height: Int): TileManager.RegionBuffer? {
+    override fun obtainRegion(x: Int, y: Int, width: Int, height: Int): RegionBuffer? {
         return try {
             val pixels = IntArray(width * height)
             source.getPixels(pixels, 0, width, x, y, width, height)
@@ -29,7 +29,7 @@ class GrayscaleRegionProviderFromBitmap(private val source: Bitmap) : TileManage
                 i++
             }
             buffer.position(0)
-            TileManager.RegionBuffer(
+            RegionBuffer(
                 width = width,
                 height = height,
                 glFormat = GLES20.GL_LUMINANCE,
