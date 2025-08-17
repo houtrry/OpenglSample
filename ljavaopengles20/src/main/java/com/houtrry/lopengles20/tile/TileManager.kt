@@ -40,6 +40,26 @@ class TileManager(
     }
 
     /**
+     * 全局销毁：释放缓存中所有 Tile 的纹理，并清空纹理池。
+     * 注意：需在拥有有效 GL 上下文的 GL 线程中调用。
+     */
+    fun destroy() {
+        val keys = cache.keys()
+        for (k in keys) {
+            val t = cache.get(k) ?: continue
+            val id = t.textureId
+            if (id != 0) {
+                val tmp = intArrayOf(id)
+                GLES20.glDeleteTextures(1, tmp, 0)
+            }
+            cache.remove(k)
+        }
+        texturePool.destroy()
+        pendingLoads.clear()
+        regionProvider = null
+    }
+
+    /**
      * 启用/关闭 1px 扩展边（用于抑制接缝）。默认关闭；启用时默认 border=1。
      */
     fun setBorderEnabled(enable: Boolean, borderSizePx: Int = 1) {

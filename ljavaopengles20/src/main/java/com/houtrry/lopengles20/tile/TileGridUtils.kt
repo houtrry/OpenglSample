@@ -56,9 +56,9 @@ object TileGridUtils {
 	}
 
 	/**
-     * 计算像素 AABB 覆盖到的 Tile 索引闭区间 [txMin..txMax], [tyMin..tyMax]
-     * 使用 (max-1)/floor 避免边界多算一列/行
-     */
+      * 计算像素 AABB 覆盖到的 Tile 索引闭区间 txMin..txMax, tyMin..tyMax
+      * 使用 (max-1)/floor 避免边界多算一列/行
+      */
 	fun computeTileRangeForAabb(aabb: PixelAabb, tileSize: Int): Pair<IntRange, IntRange> {
 		val txMin = floorDivExact(aabb.minX, tileSize)
 		val txMax = floorDivExact(aabb.maxX - 1, tileSize)

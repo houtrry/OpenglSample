@@ -57,6 +57,20 @@ class TexturePool(
             GLES20.glDeleteTextures(1, tmp, 0)
         }
     }
+
+    /**
+     * 全局销毁：删除空闲队列中的所有纹理。
+     * 注意：需在拥有有效 GL 上下文的 GL 线程中调用。
+     */
+    @Synchronized
+    fun destroy() {
+        while (freeList.isNotEmpty()) {
+            val id = freeList.removeFirst()
+            val tmp = intArrayOf(id)
+            GLES20.glDeleteTextures(1, tmp, 0)
+        }
+        totalCreated = 0
+    }
 }
 
 

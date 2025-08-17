@@ -85,14 +85,12 @@ class MapRender(val context: Context?, private val renderCallback: () -> Unit) :
         GLES20.glEnable(GLES20.GL_BLEND)
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
         synchronized(mapMatrix) {
-            layers.forEach { it.doBeforeDraw() }
             layers.forEach {
                 it.onDraw()
                 if (PerfMetrics.enabled) {
                     PerfMetrics.incrementDrawCalls()
                 }
             }
-            layers.forEach { it.doAfterDraw() }
         }
         GLES20.glDisable(GLES20.GL_BLEND)
         if (PerfMetrics.enabled) {
@@ -107,6 +105,11 @@ class MapRender(val context: Context?, private val renderCallback: () -> Unit) :
     fun getMapMatrix() = mapMatrix
 
     fun removeLayer(layer: ILayer) {
+        try {
+            layer.onDestroy()
+        } catch (t: Throwable) {
+            Log.w(TAG, "onDestroy error: ${t.message}")
+        }
         layers.remove(layer)
     }
 
@@ -123,5 +126,26 @@ class MapRender(val context: Context?, private val renderCallback: () -> Unit) :
 
     fun requestRender() {
         renderCallback.invoke()
+    }
+
+    fun destroy() {
+        // 在 GL 线程销毁所有 Layer
+        layers.forEach {
+            try {
+                it.onDestroy()
+            } catch (t: Throwable) {
+                Log.w(TAG, "onDestroy error: ${t.message}")
+            }
+        }
+        layers.clear()
+        if (mPrograms != 0) {
+            GLES20.glUseProgram(0)
+            GLES20.glDeleteProgram(mPrograms)
+            mPrograms = 0
+        }
+        if (PerfMetrics.enabled) {
+            PerfMetrics.flush()
+            PerfMetrics.shutdown()
+        }
     }
 }

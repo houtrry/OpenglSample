@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.opengl.GLES20
 import android.util.Log
+import com.houtrry.common_map.utils.glGetAttribLocation
 import com.houtrry.lopengles20.utils.OpenglUtils
 import com.houtrry.common_map.utils.glGetUniformLocation
 import com.houtrry.common_map.utils.toBuffer
@@ -23,6 +24,13 @@ class BitmapLayer(private val bitmap: Bitmap) : BaseLayer() {
     }
 
     private var glTextureId: Int = 0
+    private var positionLocation: Int = -1
+    private var textureCoordinateLocation: Int = -1
+    private var centerColorLocation: Int = -1
+    private var outerColorLocation: Int = -1
+    private var wallColorLocation: Int = -1
+    private var transformMatrixLocation: Int = -1
+    private var isMapUniformLocation: Int = -1
 
     //顶点坐标
     private var squareCoords = floatArrayOf(
@@ -69,6 +77,15 @@ class BitmapLayer(private val bitmap: Bitmap) : BaseLayer() {
             GLES20.GL_CLAMP_TO_EDGE, GLES20.GL_CLAMP_TO_EDGE
         )
         Log.d(TAG, "glTextureId: $glTextureId")
+
+        // 缓存 attribute/uniform 位置
+        positionLocation = program.glGetAttribLocation("vPosition")
+        textureCoordinateLocation = program.glGetAttribLocation("inputTextureCoordinate")
+        centerColorLocation = program.glGetUniformLocation("center_color")
+        outerColorLocation = program.glGetUniformLocation("outer_color")
+        wallColorLocation = program.glGetUniformLocation("wall_color")
+        transformMatrixLocation = program.glGetUniformLocation("u_TransformMatrix")
+        isMapUniformLocation = program.glGetUniformLocation("isMap")
     }
 
     private fun String.colorToFloatArray(): FloatArray {
@@ -91,44 +108,69 @@ class BitmapLayer(private val bitmap: Bitmap) : BaseLayer() {
         "#0072ff".colorToFloatArray()
     }
 
-    private fun initColorValue(name: String, color: FloatArray) {
-        val centerColorUniformLocation = program.glGetUniformLocation(name)
-        GLES20.glUniform4fv(
-            centerColorUniformLocation, 1,
-            color,
-            0
-        )
+    private fun setColorValue(location: Int, color: FloatArray) {
+        if (location >= 0) {
+            GLES20.glUniform4fv(location, 1, color, 0)
+        }
     }
 
     override fun onDraw() {
-        val position = GLES20.glGetAttribLocation(program, "vPosition")
-        GLES20.glEnableVertexAttribArray(position)
-        GLES20.glVertexAttribPointer(
-            position, COORDS_PRE_VERTEX, GLES20.GL_FLOAT,
-            false, vertexStride, vertexBuffer
-        )
+        // 设置矩阵：全屏 NDC 顶点，直接使用单位矩阵
+        if (transformMatrixLocation >= 0) {
+            val identity = floatArrayOf(
+                1f,0f,0f,0f,
+                0f,1f,0f,0f,
+                0f,0f,1f,0f,
+                0f,0f,0f,1f
+            )
+            GLES20.glUniformMatrix4fv(transformMatrixLocation, 1, false, identity, 0)
+        }
+        if (isMapUniformLocation >= 0) {
+            GLES20.glUniform1i(isMapUniformLocation, 0)
+        }
 
-        initColorValue("center_color", centerColor)
-        initColorValue("outer_color", outerColor)
-        initColorValue("wall_color", wallColor)
+        // 颜色 uniform
+        setColorValue(centerColorLocation, centerColor)
+        setColorValue(outerColorLocation, outerColor)
+        setColorValue(wallColorLocation, wallColor)
 
+        // 顶点/纹理坐标 attribute
+        if (positionLocation >= 0) {
+            GLES20.glEnableVertexAttribArray(positionLocation)
+            GLES20.glVertexAttribPointer(
+                positionLocation, COORDS_PRE_VERTEX, GLES20.GL_FLOAT,
+                false, vertexStride, vertexBuffer
+            )
+        }
+        if (textureCoordinateLocation >= 0) {
+            GLES20.glEnableVertexAttribArray(textureCoordinateLocation)
+            GLES20.glVertexAttribPointer(
+                textureCoordinateLocation, COORDS_PRE_TEXTURE_VERTEX, GLES20.GL_FLOAT,
+                false, textVertexStride, texVertexBuffer
+            )
+        }
+
+        // 纹理绑定
         GLES20.glActiveTexture(glTextureId)
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, glTextureId)
 
-        val textureCoordinate = GLES20.glGetAttribLocation(program, "inputTextureCoordinate")
-        GLES20.glEnableVertexAttribArray(textureCoordinate)
-
-        GLES20.glVertexAttribPointer(
-            textureCoordinate, COORDS_PRE_TEXTURE_VERTEX, GLES20.GL_FLOAT,
-            false, textVertexStride, texVertexBuffer
-        )
-
+        // 绘制
         GLES20.glDrawElements(
             GLES20.GL_TRIANGLE_STRIP, drawOrder.size,
             GLES20.GL_UNSIGNED_SHORT, drawListBuffer
         )
 
-        GLES20.glDisableVertexAttribArray(position)
-        GLES20.glDisableVertexAttribArray(textureCoordinate)
+        // 收尾：关闭 attribute，解绑纹理
+        if (positionLocation >= 0) GLES20.glDisableVertexAttribArray(positionLocation)
+        if (textureCoordinateLocation >= 0) GLES20.glDisableVertexAttribArray(textureCoordinateLocation)
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0)
+    }
+
+    override fun onDestroy() {
+        if (glTextureId != 0) {
+            val tmp = intArrayOf(glTextureId)
+            GLES20.glDeleteTextures(1, tmp, 0)
+            glTextureId = 0
+        }
     }
 }

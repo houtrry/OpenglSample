@@ -56,4 +56,12 @@ class MapView(context: Context?, attrs: AttributeSet? = null) : GLSurfaceView(co
             requestRender()
         }
     }
+
+    override fun onDetachedFromWindow() {
+        // 确保在 GL 线程执行销毁
+        queueEvent {
+            mapRender.destroy()
+        }
+        super.onDetachedFromWindow()
+    }
 }

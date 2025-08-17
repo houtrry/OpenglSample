@@ -9,6 +9,7 @@ import com.houtrry.common_map.data.Size
 import com.houtrry.common_map.data.Vector3
 import com.houtrry.common_map.utils.formatMatrixString
 import com.houtrry.common_map.utils.glGetUniformLocation
+import com.houtrry.common_map.utils.glGetAttribLocation
 import com.houtrry.common_map.utils.toBuffer
 import com.houtrry.lopengles20.data.*
 import com.houtrry.lopengles20.utils.MatrixUtils
@@ -23,6 +24,23 @@ class BubbleTextShape {
     }
 
     private var glArrowTextureId: Int = 0
+    // 顶点与纹理坐标（单位方块，中心在原点）
+    private val vertexCoords = floatArrayOf(
+        -0.5f, 0.5f, 0.0f,
+        0.5f, 0.5f, 0.0f,
+        0.5f, -0.5f, 0.0f,
+        -0.5f, -0.5f, 0.0f
+    )
+    private val texCoords = floatArrayOf(
+        0f, 0f,
+        1f, 0f,
+        1f, 1f,
+        0f, 1f
+    )
+    private val vertexBuffer = vertexCoords.toBuffer()
+    private val texBuffer = texCoords.toBuffer()
+    private val vertexStride = 3 * 4
+    private val texStride = 2 * 4
 
     //四个顶点的绘制顺序数组
     private val drawOrder = shortArrayOf(
@@ -40,6 +58,13 @@ class BubbleTextShape {
     //四个顶点的绘制顺序数组的缓冲数组
     private val drawListBuffer: ShortBuffer = drawOrder.toBuffer()
     private lateinit var arrowBitmapSize: BitmapSize
+
+    // 位置缓存（按 program）
+    private var cachedProgram: Int = -1
+    private var positionLocation: Int = -1
+    private var texCoordLocation: Int = -1
+    private var transformMatrixLocation: Int = -1
+    private var isMapUniformLocation: Int = -1
 
     private val bubbleTextBitmapMap = mutableMapOf<BubbleText, Bitmap>()
 
@@ -69,8 +94,19 @@ class BubbleTextShape {
         }
     }
 
+    private fun ensureLocations(program: Int) {
+        if (cachedProgram != program) {
+            cachedProgram = program
+            positionLocation = program.glGetAttribLocation("vPosition")
+            texCoordLocation = program.glGetAttribLocation("inputTextureCoordinate")
+            transformMatrixLocation = program.glGetUniformLocation("u_TransformMatrix")
+            isMapUniformLocation = program.glGetUniformLocation("isMap")
+        }
+    }
+
     private fun drawTextShape(program: Int, mapMatrix: MapMatrix,
                               position: Vector3, textBitmap: Bitmap) {
+        ensureLocations(program)
         val glArrowTextureId = OpenglUtils.createTexture(
             textBitmap,
             GLES20.GL_NEAREST, GLES20.GL_LINEAR,
@@ -96,15 +132,42 @@ class BubbleTextShape {
             offsetMatrix
         )
 
-        val transformMatrixLocation = program.glGetUniformLocation("u_TransformMatrix")
+        // 设置 uniform
+        if (transformMatrixLocation >= 0) {
+            GLES20.glUniformMatrix4fv(transformMatrixLocation, 1, false, mMVPMatrix, 0)
+        }
+        if (isMapUniformLocation >= 0) {
+            GLES20.glUniform1i(isMapUniformLocation, 0)
+        }
+
+        // 启用 attribute 并指向数据
+        if (positionLocation >= 0) {
+            GLES20.glEnableVertexAttribArray(positionLocation)
+            GLES20.glVertexAttribPointer(positionLocation, 3, GLES20.GL_FLOAT, false, vertexStride, vertexBuffer)
+        }
+        if (texCoordLocation >= 0) {
+            GLES20.glEnableVertexAttribArray(texCoordLocation)
+            GLES20.glVertexAttribPointer(texCoordLocation, 2, GLES20.GL_FLOAT, false, texStride, texBuffer)
+        }
 
         GLES20.glActiveTexture(glArrowTextureId)
-        GLES20.glUniformMatrix4fv(transformMatrixLocation, 1, false, mMVPMatrix, 0)
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, glArrowTextureId)
         GLES20.glDrawElements(
             GLES20.GL_TRIANGLE_STRIP, drawOrder.size,
             GLES20.GL_UNSIGNED_SHORT, drawListBuffer
         )
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0)
+
+        // 收尾：关闭 attribute
+        if (positionLocation >= 0) GLES20.glDisableVertexAttribArray(positionLocation)
+        if (texCoordLocation >= 0) GLES20.glDisableVertexAttribArray(texCoordLocation)
+    }
+
+    fun release() {
+        // 释放生成的文本位图
+        bubbleTextBitmapMap.values.forEach { bmp ->
+            if (!bmp.isRecycled) bmp.recycle()
+        }
+        bubbleTextBitmapMap.clear()
     }
 }

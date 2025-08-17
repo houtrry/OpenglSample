@@ -177,28 +177,31 @@ class MapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
     private var transformMatrixLocation: Int = -1
     private var textureCoordinateLocation: Int = -1
 
-    override fun doBeforeDraw() {
-        super.doBeforeDraw()
-        positionLocation = program.glGetAttribLocation("vPosition")
-//        Log.d(TAG, "positionLocation: $positionLocation")
+    override fun onDraw() {
+        // 0) 每帧前置：确保 attribute 指针/enable，设置必要的 uniform
+        if (positionLocation == -1) {
+            positionLocation = program.glGetAttribLocation("vPosition")
+        }
         GLES20.glEnableVertexAttribArray(positionLocation)
         GLES20.glVertexAttribPointer(
             positionLocation, COORDS_PRE_VERTEX, GLES20.GL_FLOAT,
             false, vertexStride, vertexBuffer
         )
-        centerColorLocation = initColorValue("center_color", centerColor)
-        outerColorLocation = initColorValue("outer_color", outerColor)
-        wallColorLocation = initColorValue("wall_color", wallColor)
-        isMapUniformLocation = program.glGetUniformLocation("isMap")
-//        Log.d(TAG, "isMapUniformLocation: $isMapUniformLocation")
-        transformMatrixLocation = program.glGetUniformLocation("u_TransformMatrix")
-        GLES20.glEnableVertexAttribArray(transformMatrixLocation)
 
-        textureCoordinateLocation = program.glGetAttribLocation("inputTextureCoordinate")
+        if (centerColorLocation == -1) centerColorLocation = program.glGetUniformLocation("center_color")
+        if (outerColorLocation == -1) outerColorLocation = program.glGetUniformLocation("outer_color")
+        if (wallColorLocation == -1) wallColorLocation = program.glGetUniformLocation("wall_color")
+        GLES20.glUniform4fv(centerColorLocation, 1, centerColor, 0)
+        GLES20.glUniform4fv(outerColorLocation, 1, outerColor, 0)
+        GLES20.glUniform4fv(wallColorLocation, 1, wallColor, 0)
+
+        if (isMapUniformLocation == -1) isMapUniformLocation = program.glGetUniformLocation("isMap")
+        if (transformMatrixLocation == -1) transformMatrixLocation = program.glGetUniformLocation("u_TransformMatrix")
+
+        if (textureCoordinateLocation == -1) {
+            textureCoordinateLocation = program.glGetAttribLocation("inputTextureCoordinate")
+        }
         GLES20.glEnableVertexAttribArray(textureCoordinateLocation)
-    }
-
-    override fun onDraw() {
         GLES20.glUniform1i(isMapUniformLocation, 1)
 
         // 2) 基础 PV*Model（投影*视图*模型）
@@ -255,6 +258,20 @@ class MapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
 
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0)
         GLES20.glUniform1i(isMapUniformLocation, 0)
+
+        // 收尾：仅关闭 attribute 数组
+        positionLocation.glDisableVertexAttribArray()
+        textureCoordinateLocation.glDisableVertexAttribArray()
+    }
+
+    override fun onDestroy() {
+        if (glMapTextureId != 0) {
+            val tmp = intArrayOf(glMapTextureId)
+            GLES20.glDeleteTextures(1, tmp, 0)
+            glMapTextureId = 0
+        }
+        // 销毁 TileManager 资源
+        tileManager.destroy()
     }
 
     /**
@@ -290,15 +307,6 @@ class MapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0)
     }
 
-    override fun doAfterDraw() {
-        super.doAfterDraw()
-        positionLocation.glDisableVertexAttribArray()
-        centerColorLocation.glDisableVertexAttribArray()
-        outerColorLocation.glDisableVertexAttribArray()
-        wallColorLocation.glDisableVertexAttribArray()
-        isMapUniformLocation.glDisableVertexAttribArray()
-        transformMatrixLocation.glDisableVertexAttribArray()
-        textureCoordinateLocation.glDisableVertexAttribArray()
-    }
+    
 
 }

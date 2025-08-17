@@ -4,6 +4,7 @@ import android.opengl.GLES20
 import android.opengl.Matrix
 import android.util.Log
 import com.houtrry.common_map.utils.formatMatrixString
+import com.houtrry.common_map.utils.glGetAttribLocation
 import com.houtrry.common_map.utils.glGetUniformLocation
 import com.houtrry.common_map.utils.toBuffer
 import java.nio.ShortBuffer
@@ -15,6 +16,9 @@ class PointLayer: BaseLayer() {
     }
 
     private var glArrowTextureId: Int = 0
+    private var positionLocation: Int = -1
+    private var textureCoordinateLocation: Int = -1
+    private var transformMatrixLocation: Int = -1
 
     //四个顶点的绘制顺序数组
     private val drawOrder = shortArrayOf(
@@ -33,34 +37,24 @@ class PointLayer: BaseLayer() {
     }
 
     override fun onCreate() {
-//        arrowBitmapSize = BitmapSize(arrowBitmap.width, arrowBitmap.height)
-//        glArrowTextureId = OpenglUtils.createTexture(
-//            arrowBitmap,
-//            GLES20.GL_NEAREST, GLES20.GL_LINEAR,
-//            GLES20.GL_CLAMP_TO_EDGE, GLES20.GL_CLAMP_TO_EDGE
-//        )
-//
-//        Log.d(TAG, "glArrowTextureId: $glArrowTextureId, ${arrowBitmapSize.width} * ${arrowBitmapSize.height}")
+        // 仅缓存位置，若后续绘制点位网格再填充具体数据
+        positionLocation = program.glGetAttribLocation("vPosition")
+        textureCoordinateLocation = program.glGetAttribLocation("inputTextureCoordinate")
+        transformMatrixLocation = program.glGetUniformLocation("u_TransformMatrix")
     }
     private val mMVPMatrix = FloatArray(16) // MVP 矩阵
 
     override fun onDraw() {
-//        val transformMatrix = OpenglUtils.getTargetMatrix(
-//            mapMatrix.getTranslateX(),
-//            mapMatrix.getTranslateY(),
-//            240f.toFloat() / viewHeight,
-//            240f.toFloat() / viewHeight,
-//            0f
-//        )
         mapMatrix.getTransformMatrixWithoutScale(300f.toFloat() / viewHeight, transformMatrix)
         Log.d(TAG, "transformMatrix: ${mapMatrix.getModelMatrix().formatMatrixString()}")
         Log.d(TAG, "translateX: ${mapMatrix.getModelMatrix()[3]}, translateY: ${mapMatrix.getModelMatrix()[7]}, matrix: ${mapMatrix.getModelMatrix().contentToString()}")
         Matrix.setIdentityM(mMVPMatrix, 0)
         Matrix.multiplyMM(mMVPMatrix, 0, mapMatrix.getViewMatrix(), 0, transformMatrix, 0);
         Matrix.multiplyMM(mMVPMatrix, 0, mapMatrix.getProjectionMatrix(), 0, mMVPMatrix, 0);
-        val transformMatrixLocation = program.glGetUniformLocation("u_TransformMatrix")
+        if (transformMatrixLocation >= 0) {
+            GLES20.glUniformMatrix4fv(transformMatrixLocation, 1, false, mMVPMatrix, 0)
+        }
         GLES20.glActiveTexture(glArrowTextureId)
-        GLES20.glUniformMatrix4fv(transformMatrixLocation, 1, false, mMVPMatrix, 0)
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, glArrowTextureId)
         GLES20.glDrawElements(
             GLES20.GL_TRIANGLE_STRIP, drawOrder.size,

@@ -112,6 +112,21 @@ object PerfMetrics {
     fun flush() {
         fileWriter?.flush()
     }
+
+    @Synchronized
+    fun shutdown() {
+        try {
+            fileWriter?.flush()
+        } catch (_: Throwable) {
+        }
+        try {
+            fileWriter?.close()
+        } catch (_: Throwable) {
+        }
+        fileWriter = null
+        csvFile = null
+        frameCounter = 0
+    }
 }
 
 

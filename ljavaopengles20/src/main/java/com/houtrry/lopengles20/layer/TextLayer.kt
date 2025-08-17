@@ -103,4 +103,8 @@ class TextLayer : BaseLayer() {
         bubbleTextShape.load(textList)
         bubbleTextShape.draw(program, mapMatrix)
     }
+
+    override fun onDestroy() {
+        bubbleTextShape.release()
+    }
 }
