@@ -14,6 +14,8 @@ import java.nio.FloatBuffer
 import java.nio.ShortBuffer
 import com.houtrry.lopengles20.tile.TileManager
 import com.houtrry.lopengles20.tile.GrayscaleRegionProviderFromBitmap
+import com.houtrry.lopengles20.tile.JpegPngRegionProvider
+import android.graphics.BitmapRegionDecoder
 
 
 class MapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
@@ -115,6 +117,18 @@ class MapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
         tileManager.setMapSize(mapBitmap.width, mapBitmap.height)
         // Default demo: grayscale provider (GL_LUMINANCE) to reduce bandwidth
         tileManager.setRegionProvider(GrayscaleRegionProviderFromBitmap(mapBitmap))
+    }
+
+    /**
+     * 运行时切换为 JPEG/PNG Provider（区域解码）。
+     * - decoderFactory 由调用方提供，适配 PFD/byte[]/文件路径等来源；
+     * - useCpuGray: true 则 CPU 转灰度走 LUMINANCE 上传；false 则直接 RGBA 上传。
+     */
+    fun useJpegPngRegionProvider(
+        decoderFactory: () -> BitmapRegionDecoder,
+        useCpuGray: Boolean = false
+    ) {
+        tileManager.setRegionProvider(JpegPngRegionProvider(decoderFactory, useCpuGray))
     }
 
     private fun String.colorToFloatArray(): FloatArray {
@@ -227,12 +241,53 @@ class MapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
             GLES20.glUniformMatrix4fv(transformMatrixLocation, 1, false, tileMvp, 0)
 
             GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, tile.textureId)
-            GLES20.glVertexAttribPointer(textureCoordinateLocation, COORDS_PRE_TEXTURE_VERTEX, GLES20.GL_FLOAT, false, textVertexStride, texVertexBuffer)
+            // 只采样内容区域的 UV：使用 (u0,v0)-(u1,v1)
+            val uv = tileManager.getTileContentUv(tile)
+            val uvBuf = floatArrayOf(
+                uv.u0, uv.v0,
+                uv.u1, uv.v0,
+                uv.u1, uv.v1,
+                uv.u0, uv.v1
+            ).toBuffer()
+            GLES20.glVertexAttribPointer(textureCoordinateLocation, COORDS_PRE_TEXTURE_VERTEX, GLES20.GL_FLOAT, false, textVertexStride, uvBuf)
             GLES20.glDrawElements(GLES20.GL_TRIANGLE_STRIP, drawOrder.size, GLES20.GL_UNSIGNED_SHORT, drawListBuffer)
         }
 
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0)
         GLES20.glUniform1i(isMapUniformLocation, 0)
+    }
+
+    /**
+     * 示例：将一个以 (0,0) 为锚点、可向任意方向扩展的动态区域 AABB 增量写入到瓦片纹理中，
+     * 并在绘制阶段渲染缓存中“任意网格”的可见瓦片（支持负索引）。
+     * 注意：该方法仅为示例，可在手势/数据更新时调用。
+     */
+    fun demoApplyDynamicRegionAndDraw(minX: Int, minY: Int, maxX: Int, maxY: Int) {
+        // 1) 在 GL 线程应用增量：将 AABB 拆分为若干 Tile 的局部上传
+        tileManager.applyDynamicAabbOnGlThread(minX, minY, maxX, maxY)
+        // 2) 查询当前视口中缓存已就绪的任何网格瓦片（含负索引）
+        val tiles = tileManager.queryVisibleCachedTilesAnyGrid(mapMatrix)
+        val pvModel = FloatArray(16).identityM()
+        Matrix.multiplyMM(pvModel, 0, mapMatrix.getProjectionViewMatrix(), 0, mapMatrix.getModelMatrix(), 0)
+        val tileSizeM = FloatArray(16)
+        val tileTranslateM = FloatArray(16)
+        val tileMvp = FloatArray(16)
+        for (tile in tiles) {
+            if (tile.textureId == 0) continue
+            tileSizeM.identityM()
+            Matrix.scaleM(tileSizeM, 0, tile.widthPx.toFloat(), tile.heightPx.toFloat(), 1f)
+            val centerX = tile.originXInMapPx + tile.widthPx * 0.5f - mapBitmapSize.width * 0.5f
+            val centerY = tile.originYInMapPx + tile.heightPx * 0.5f - mapBitmapSize.height * 0.5f
+            tileTranslateM.identityM()
+            Matrix.translateM(tileTranslateM, 0, centerX, centerY, 0f)
+            Matrix.multiplyMM(tileMvp, 0, pvModel, 0, tileTranslateM, 0)
+            Matrix.multiplyMM(tileMvp, 0, tileMvp, 0, tileSizeM, 0)
+            GLES20.glUniformMatrix4fv(transformMatrixLocation, 1, false, tileMvp, 0)
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, tile.textureId)
+            GLES20.glVertexAttribPointer(textureCoordinateLocation, COORDS_PRE_TEXTURE_VERTEX, GLES20.GL_FLOAT, false, textVertexStride, texVertexBuffer)
+            GLES20.glDrawElements(GLES20.GL_TRIANGLE_STRIP, drawOrder.size, GLES20.GL_UNSIGNED_SHORT, drawListBuffer)
+        }
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0)
     }
 
     override fun doAfterDraw() {

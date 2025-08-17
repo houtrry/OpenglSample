@@ -3,6 +3,7 @@ package com.houtrry.lopengles20.tile
 import android.opengl.GLES20
 import com.houtrry.lopengles20.utils.PerfMetrics
 import com.houtrry.lopengles20.data.MapMatrix
+import java.nio.ByteBuffer
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.max
@@ -30,8 +31,20 @@ class TileManager(
     private val pendingLoads = LinkedHashSet<TileCoord>()
     private var regionProvider: RegionProvider? = null
 
+    // 可选的 1px 扩展边，用于抑制采样缝隙（默认关闭）
+    private var enableBorder: Boolean = false
+    private var borderSizePx: Int = 1
+
     fun setRegionProvider(provider: RegionProvider?) {
         regionProvider = provider
+    }
+
+    /**
+     * 启用/关闭 1px 扩展边（用于抑制接缝）。默认关闭；启用时默认 border=1。
+     */
+    fun setBorderEnabled(enable: Boolean, borderSizePx: Int = 1) {
+        this.enableBorder = enable
+        this.borderSizePx = borderSizePx.coerceAtLeast(0)
     }
 
     fun setMapSize(widthPx: Int, heightPx: Int) {
@@ -149,30 +162,36 @@ class TileManager(
 
             val texId = texturePool.acquire()
             GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texId)
-            // allocate texture storage
+            val border = if (enableBorder) borderSizePx else 0
+            val texWidth = region.width + border * 2
+            val texHeight = region.height + border * 2
+            // 分配包含边框的纹理存储
             GLES20.glTexImage2D(
                 GLES20.GL_TEXTURE_2D,
                 0,
                 region.glFormat,
-                region.width,
-                region.height,
+                texWidth,
+                texHeight,
                 0,
                 region.glFormat,
                 GLES20.GL_UNSIGNED_BYTE,
                 null
             )
-            // upload subimage
+            // 在 (border, border) 偏移处上传内容
             GLES20.glTexSubImage2D(
                 GLES20.GL_TEXTURE_2D,
                 0,
-                0,
-                0,
+                border,
+                border,
                 region.width,
                 region.height,
                 region.glFormat,
                 GLES20.GL_UNSIGNED_BYTE,
                 region.pixelBuffer
             )
+            if (enableBorder && border > 0) {
+                uploadFullBorders(region, border)
+            }
             GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0)
             if (PerfMetrics.enabled) {
                 val bpp = when (region.glFormat) {
@@ -200,6 +219,238 @@ class TileManager(
     }
 
     // precise mapping now provided by MapMatrix.glToMapPx
+
+    /**
+     * 示例：将“任意方向扩展的动态有效区域 AABB（像素坐标）”分解为若干 Tile 的局部上传请求。
+     * 注意：此方法仅构建请求，不实际上传。可用于离线/在线增量补丁场景。
+     */
+    fun buildSubUploadRequestsForDynamicAabb(
+        minX: Int,
+        minY: Int,
+        maxX: Int,
+        maxY: Int
+    ): List<TileGridUtils.TileSubRequest> {
+        val aabb = TileGridUtils.PixelAabb(minX, minY, maxX, maxY)
+        return TileGridUtils.buildSubRequestsForAabb(aabb, tileSizePx)
+    }
+
+	/**
+	 * 在 GL 线程直接应用动态 AABB 的增量数据：
+	 * - 为涉及到的每个 Tile 分配/复用完整的 tileSizePx×tileSizePx 纹理；
+	 * - 对交叠的子矩形执行 glTexSubImage2D 局部上传；
+	 * - 在缓存中创建/更新 Tile，允许负索引；
+	 * 返回被更新（发生上传）的 Tile 数量。
+	 */
+	fun applyDynamicAabbOnGlThread(
+		minX: Int,
+		minY: Int,
+		maxX: Int,
+		maxY: Int
+	): Int {
+		val provider = regionProvider ?: return 0
+		val requests = buildSubUploadRequestsForDynamicAabb(minX, minY, maxX, maxY)
+		if (requests.isEmpty()) return 0
+		var updatedTiles = 0
+		// 将请求按 tile 分组，便于一次性完成同一 tile 的多段上传
+		val grouped = requests.groupBy { it.tileIndex }
+		for ((tileIndex, subReqs) in grouped) {
+			val coord = TileCoord(level = 0, x = tileIndex.x, y = tileIndex.y)
+			var tile = cache.get(coord)
+			var texId = tile?.textureId ?: 0
+			if (texId == 0) {
+				texId = texturePool.acquire()
+				GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texId)
+				// 以第一个子请求的格式作为 tile 的格式（假设同一 provider 的格式一致）
+				val firstReq = subReqs.first()
+				val firstRegion = provider.obtainRegion(firstReq.subMinX, firstReq.subMinY, firstReq.subWidth, firstReq.subHeight)
+				if (firstRegion == null) {
+					GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0)
+					continue
+				}
+				val border = if (enableBorder) borderSizePx else 0
+				GLES20.glTexImage2D(
+					GLES20.GL_TEXTURE_2D,
+					0,
+					firstRegion.glFormat,
+					tileSizePx + border * 2,
+					tileSizePx + border * 2,
+					0,
+					firstRegion.glFormat,
+					GLES20.GL_UNSIGNED_BYTE,
+					null
+				)
+				// 回填/创建 tile
+				val originX = tileIndex.x * tileSizePx
+				val originY = tileIndex.y * tileSizePx
+				tile = Tile(
+					coord = coord,
+					textureId = texId,
+					widthPx = tileSizePx,
+					heightPx = tileSizePx,
+					originXInMapPx = originX,
+					originYInMapPx = originY,
+					isReady = true
+				)
+				cache.put(coord, tile)
+			} else {
+				GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texId)
+			}
+			// 逐段上传
+			for (req in subReqs) {
+				val region = provider.obtainRegion(req.subMinX, req.subMinY, req.subWidth, req.subHeight) ?: continue
+				val border = if (enableBorder) borderSizePx else 0
+				GLES20.glTexSubImage2D(
+					GLES20.GL_TEXTURE_2D,
+					0,
+					req.xOffsetInTile + border,
+					req.yOffsetInTile + border,
+					req.subWidth,
+					req.subHeight,
+					region.glFormat,
+					GLES20.GL_UNSIGNED_BYTE,
+					region.pixelBuffer
+				)
+				if (enableBorder && border > 0) {
+					uploadPartialBorders(region, req, border)
+				}
+			}
+			GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0)
+			updatedTiles++
+		}
+		return updatedTiles
+	}
+
+	/** 计算只采样“内容区域”的 UV（考虑可选边框）。 */
+	fun getTileContentUv(tile: Tile): TileGridUtils.UvRect {
+		val border = if (enableBorder) borderSizePx else 0
+		val texW = tile.widthPx + border * 2
+		val texH = tile.heightPx + border * 2
+		if (texW <= 0 || texH <= 0) return TileGridUtils.UvRect(0f, 0f, 1f, 1f)
+		val u0 = border.toFloat() / texW.toFloat()
+		val v0 = border.toFloat() / texH.toFloat()
+		val u1 = (border + tile.widthPx).toFloat() / texW.toFloat()
+		val v1 = (border + tile.heightPx).toFloat() / texH.toFloat()
+		return TileGridUtils.UvRect(u0, v0, u1, v1)
+	}
+
+	/**
+	 * 计算当前视口可见范围覆盖的“已缓存 Tile（允许负索引）”。
+	 * 与 queryVisibleTiles 不同点：不对像素范围裁剪到 map 尺寸，
+	 * 仅在缓存中存在且已就绪时返回。
+	 */
+	fun queryVisibleCachedTilesAnyGrid(mapMatrix: MapMatrix): List<Tile> {
+		if (viewportWidthPx <= 0 || viewportHeightPx <= 0) return emptyList()
+		val pLT = mapMatrix.convertScreenToGL(0f, 0f, viewportWidthPx, viewportHeightPx)
+		val pRT = mapMatrix.convertScreenToGL(viewportWidthPx.toFloat(), 0f, viewportWidthPx, viewportHeightPx)
+		val pLB = mapMatrix.convertScreenToGL(0f, viewportHeightPx.toFloat(), viewportWidthPx, viewportHeightPx)
+		val pRB = mapMatrix.convertScreenToGL(viewportWidthPx.toFloat(), viewportHeightPx.toFloat(), viewportWidthPx, viewportHeightPx)
+		val lt = mapMatrix.glToMapPx(pLT.x, pLT.y)
+		val rt = mapMatrix.glToMapPx(pRT.x, pRT.y)
+		val lb = mapMatrix.glToMapPx(pLB.x, pLB.y)
+		val rb = mapMatrix.glToMapPx(pRB.x, pRB.y)
+		val minX = floor(min(min(lt.x, rt.x), min(lb.x, rb.x)).toDouble()).toInt()
+		val maxX = ceil(max(max(lt.x, rt.x), max(lb.x, rb.x)).toDouble()).toInt()
+		val minY = floor(min(min(lt.y, rt.y), min(lb.y, rb.y)).toDouble()).toInt()
+		val maxY = ceil(max(max(lt.y, rt.y), max(lb.y, rb.y)).toDouble()).toInt()
+		val tileMinX = floor(minX / tileSizePx.toDouble()).toInt()
+		val tileMaxX = floor((maxX - 1) / tileSizePx.toDouble()).toInt()
+		val tileMinY = floor(minY / tileSizePx.toDouble()).toInt()
+		val tileMaxY = floor((maxY - 1) / tileSizePx.toDouble()).toInt()
+		val result = ArrayList<Tile>()
+		for (ty in tileMinY..tileMaxY) {
+			for (tx in tileMinX..tileMaxX) {
+				val coord = TileCoord(level = 0, x = tx, y = ty)
+				val tile = cache.get(coord) ?: continue
+				if (tile.isReady && tile.textureId != 0) result.add(tile)
+			}
+		}
+		return result
+	}
+
+    // ================== 边框复制辅助 ==================
+    private fun bytesPerPixel(glFormat: Int): Int {
+        return when (glFormat) {
+            GLES20.GL_LUMINANCE, GLES20.GL_ALPHA, 0x8229 /*GL_RED*/ -> 1
+            else -> 4
+        }
+    }
+
+    private fun uploadFullBorders(region: RegionBuffer, border: Int) {
+        val bpp = bytesPerPixel(region.glFormat)
+        val rowStride = region.width * bpp
+        val src = region.pixelBuffer.duplicate().apply { position(0); limit(region.width * region.height * bpp) }
+
+        // 顶部与底部行
+        val topRow = ByteArray(rowStride)
+        src.position(0); src.get(topRow)
+        val bottomRow = ByteArray(rowStride)
+        src.position((region.height - 1) * rowStride); src.get(bottomRow)
+        val topBuf = ByteBuffer.allocateDirect(rowStride).put(topRow).apply { position(0) }
+        val bottomBuf = ByteBuffer.allocateDirect(rowStride).put(bottomRow).apply { position(0) }
+        // 顶部边
+        GLES20.glTexSubImage2D(GLES20.GL_TEXTURE_2D, 0, border, 0, region.width, border, region.glFormat, GLES20.GL_UNSIGNED_BYTE, topBuf)
+        // 底部边
+        GLES20.glTexSubImage2D(GLES20.GL_TEXTURE_2D, 0, border, border + region.height, region.width, border, region.glFormat, GLES20.GL_UNSIGNED_BYTE, bottomBuf)
+
+        // 左右列
+        val leftCol = ByteArray(region.height * bpp)
+        val rightCol = ByteArray(region.height * bpp)
+        for (row in 0 until region.height) {
+            src.position(row * rowStride)
+            src.get(leftCol, row * bpp, bpp)
+            src.position(row * rowStride + (region.width - 1) * bpp)
+            src.get(rightCol, row * bpp, bpp)
+        }
+        val leftBuf = ByteBuffer.allocateDirect(region.height * bpp).put(leftCol).apply { position(0) }
+        val rightBuf = ByteBuffer.allocateDirect(region.height * bpp).put(rightCol).apply { position(0) }
+        // 左边
+        GLES20.glTexSubImage2D(GLES20.GL_TEXTURE_2D, 0, 0, border, border, region.height, region.glFormat, GLES20.GL_UNSIGNED_BYTE, leftBuf)
+        // 右边
+        GLES20.glTexSubImage2D(GLES20.GL_TEXTURE_2D, 0, border + region.width, border, border, region.height, region.glFormat, GLES20.GL_UNSIGNED_BYTE, rightBuf)
+    }
+
+    private fun uploadPartialBorders(region: RegionBuffer, req: TileGridUtils.TileSubRequest, border: Int) {
+        val bpp = bytesPerPixel(region.glFormat)
+        val rowStride = region.width * bpp
+        val src = region.pixelBuffer.duplicate().apply { position(0); limit(region.width * region.height * bpp) }
+
+        // 顶部
+        if (req.yOffsetInTile == 0) {
+            val topRow = ByteArray(rowStride)
+            src.position(0); src.get(topRow)
+            val buf = ByteBuffer.allocateDirect(rowStride).put(topRow).apply { position(0) }
+            GLES20.glTexSubImage2D(GLES20.GL_TEXTURE_2D, 0, req.xOffsetInTile + border, 0, req.subWidth, border, region.glFormat, GLES20.GL_UNSIGNED_BYTE, buf)
+        }
+        // 底部
+        if (req.yOffsetInTile + req.subHeight == tileSizePx) {
+            val bottomRow = ByteArray(rowStride)
+            src.position((region.height - 1) * rowStride); src.get(bottomRow)
+            val buf = ByteBuffer.allocateDirect(rowStride).put(bottomRow).apply { position(0) }
+            GLES20.glTexSubImage2D(GLES20.GL_TEXTURE_2D, 0, req.xOffsetInTile + border, border + req.yOffsetInTile + req.subHeight, req.subWidth, border, region.glFormat, GLES20.GL_UNSIGNED_BYTE, buf)
+        }
+        // 左侧
+        if (req.xOffsetInTile == 0) {
+            val leftCol = ByteArray(req.subHeight * bpp)
+            for (i in 0 until req.subHeight) {
+                val srcPos = i * rowStride
+                src.position(srcPos)
+                src.get(leftCol, i * bpp, bpp)
+            }
+            val buf = ByteBuffer.allocateDirect(req.subHeight * bpp).put(leftCol).apply { position(0) }
+            GLES20.glTexSubImage2D(GLES20.GL_TEXTURE_2D, 0, 0, req.yOffsetInTile + border, border, req.subHeight, region.glFormat, GLES20.GL_UNSIGNED_BYTE, buf)
+        }
+        // 右侧
+        if (req.xOffsetInTile + req.subWidth == tileSizePx) {
+            val rightCol = ByteArray(req.subHeight * bpp)
+            for (i in 0 until req.subHeight) {
+                val srcPos = i * rowStride + (region.width - 1) * bpp
+                src.position(srcPos)
+                src.get(rightCol, i * bpp, bpp)
+            }
+            val buf = ByteBuffer.allocateDirect(req.subHeight * bpp).put(rightCol).apply { position(0) }
+            GLES20.glTexSubImage2D(GLES20.GL_TEXTURE_2D, 0, border + req.xOffsetInTile + req.subWidth, req.yOffsetInTile + border, border, req.subHeight, region.glFormat, GLES20.GL_UNSIGNED_BYTE, buf)
+        }
+    }
 }
 
 
