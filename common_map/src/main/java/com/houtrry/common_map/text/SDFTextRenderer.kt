@@ -315,7 +315,9 @@ class SDFTextRenderer(context: Context) : BaseTextRenderer(context) {
                 val sourceY = (y * scaleY).toInt()
                 
                 val distance = findMinDistance(sourceX, sourceY, sourcePixels, sourceWidth, sourceHeight, searchRadius)
-                val normalizedDistance = ((distance / searchRadius) * 127 + 128).coerceIn(0, 255)
+                val normalizedDistance = ((distance / searchRadius) * 127f + 128f)
+                    .coerceIn(0f, 255f)
+                    .toInt()
                 sdfPixels[y * targetSize + x] = normalizedDistance.toByte()
             }
         }

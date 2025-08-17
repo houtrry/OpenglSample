@@ -65,7 +65,7 @@ interface ITextRenderer {
 abstract class BaseTextRenderer(protected val context: Context) : ITextRenderer {
     
     protected val textInfos = mutableMapOf<String, TextInfo>()
-    protected var isInitialized = false
+    var isInitialized = false
     protected var lastRenderTime = 0f
     protected var memoryUsage = 0L
     

@@ -170,15 +170,6 @@ object TextMeasureUtils {
             color = style.textColor
             typeface = style.typeface
             alpha = (style.alpha * 255).toInt()
-            
-            // RTL支持
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN_MR1) {
-                textDirection = when (style.textDirection) {
-                    TextDirection.LTR -> Layout.DIR_LEFT_TO_RIGHT
-                    TextDirection.RTL -> Layout.DIR_RIGHT_TO_LEFT  
-                    TextDirection.AUTO -> Layout.DIR_LEFT_TO_RIGHT // 默认，实际检测在其他地方处理
-                }
-            }
         }
     }
     

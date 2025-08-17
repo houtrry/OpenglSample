@@ -106,13 +106,7 @@ class MultiLineRTLExampleActivity : Activity() {
             textSize = 14f
         }
         
-        languageSpinner = Spinner(this).apply {
-            adapter = ArrayAdapter.createFromResource(
-                this@MultiLineRTLExampleActivity,
-                android.R.array.select_dialog_items, // 临时使用系统数组
-                android.R.layout.simple_spinner_item
-            )
-        }
+        languageSpinner = Spinner(this)
         
         // 对齐方式
         val alignLabel = TextView(this).apply { 
