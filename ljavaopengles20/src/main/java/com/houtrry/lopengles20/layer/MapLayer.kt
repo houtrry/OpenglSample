@@ -1,7 +1,7 @@
 package com.houtrry.lopengles20.layer
 
-import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.Bitmap
 import android.opengl.GLES20
 import android.opengl.Matrix
 import android.util.Log
@@ -12,6 +12,8 @@ import com.houtrry.lopengles20.utils.OpenglUtils
 import com.houtrry.lopengles20.utils.identityM
 import java.nio.FloatBuffer
 import java.nio.ShortBuffer
+import com.houtrry.lopengles20.tile.TileManager
+import com.houtrry.lopengles20.tile.GrayscaleRegionProviderFromBitmap
 
 
 class MapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
@@ -70,6 +72,38 @@ class MapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
         Log.d(TAG, "init start, ${mapBitmap.width}, ${mapBitmap.height}")
     }
 
+    interface AutoOverviewListener {
+        fun onRequestAutoOverview()
+    }
+
+    private var autoOverviewListener: AutoOverviewListener? = null
+    fun setAutoOverviewListener(listener: AutoOverviewListener?) {
+        autoOverviewListener = listener
+    }
+
+    fun setAutoOverviewThresholdMeters(thresholdMeters: Float) {
+        autoOverviewThresholdMeters = thresholdMeters
+    }
+
+    fun notifyZoomBegin(currentRobotPoseXMeters: Float, currentRobotPoseYMeters: Float) {
+        notifyZoomGestureBegin(currentRobotPoseXMeters, currentRobotPoseYMeters)
+    }
+
+    fun notifyZoomEnd(currentRobotPoseXMeters: Float, currentRobotPoseYMeters: Float) {
+        notifyZoomGestureEnd(currentRobotPoseXMeters, currentRobotPoseYMeters)
+    }
+
+    fun updateRobotPose(currentRobotPoseXMeters: Float, currentRobotPoseYMeters: Float) {
+        updateRobotPoseAndCheckAutoOverview(currentRobotPoseXMeters, currentRobotPoseYMeters) {
+            autoOverviewListener?.onRequestAutoOverview()
+        }
+    }
+
+    // Tile 管理器（最小骨架）：
+    // 负责：可见瓦片计算、LRU/纹理池、按帧限速加载；
+    // 策略：先绘制“整图单纹理”作为基底，再叠加“已就绪瓦片”，实现平滑过渡。
+    private val tileManager = TileManager(512)
+
     override fun onCreate() {
         mapBitmapSize = BitmapSize(mapBitmap.width, mapBitmap.height)
         mapMatrix.updateBitmapInfo(BitmapInfo(0f, 0f, 0.05f, mapBitmap.width, mapBitmap.height))
@@ -80,6 +114,11 @@ class MapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
         )
         Log.d(TAG, "glTextureId: $glMapTextureId")
         Matrix.scaleM(textureSizeMatrix, 0, mapBitmap.width.toFloat(), mapBitmap.height.toFloat(), 1f)
+
+        // 初始化 TileManager：地图尺寸 + 区域数据提供者（基于 ByteBuffer）
+        tileManager.setMapSize(mapBitmap.width, mapBitmap.height)
+        // Default demo: grayscale provider (GL_LUMINANCE) to reduce bandwidth
+        tileManager.setRegionProvider(GrayscaleRegionProviderFromBitmap(mapBitmap))
     }
 
     private fun String.colorToFloatArray(): FloatArray {
@@ -97,6 +136,7 @@ class MapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
         super.onSizeChange(width, height)
         aspectRatio = width * 1f / height
         Log.d(TAG, "onSizeChange $viewWidth, $viewHeight, $width, $height, ${mapBitmapSize.width}, ${mapBitmapSize.height}")
+        tileManager.setViewportSize(width, height)
     }
 
     private val centerColor: FloatArray by lazy {
@@ -149,38 +189,54 @@ class MapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
     }
 
     override fun onDraw() {
-        GLES20.glUniform1i(
-            isMapUniformLocation, 1
-        )
-//        mapMatrix.testAutoRotate()
+        GLES20.glUniform1i(isMapUniformLocation, 1)
 
-        // Apply a ModelView Projection transformation
-        mMVPMatrix.identityM()
-        // 计算缩放因子
-        //mvpMatrix = projectionMatrix * viewMatrix * textureSizeMatrix * modelMatrix
-        Matrix.multiplyMM(mMVPMatrix, 0, mapMatrix.getProjectionViewMatrix(), 0, mapMatrix.getModelMatrix(), 0);
-        Log.d(TAG, "modelMatrix: ${mapMatrix.getModelMatrix().formatMatrixString()}")
-        Matrix.multiplyMM(mMVPMatrix, 0, mMVPMatrix, 0, textureSizeMatrix, 0)
+        // 2) 基础 PV*Model（投影*视图*模型）
+        val pvModel = FloatArray(16).identityM()
+        Matrix.multiplyMM(pvModel, 0, mapMatrix.getProjectionViewMatrix(), 0, mapMatrix.getModelMatrix(), 0)
+
+        // 3) 先绘制整图（基底），避免瓦片未就绪时出现空白
+        Matrix.multiplyMM(mMVPMatrix, 0, pvModel, 0, textureSizeMatrix, 0)
         GLES20.glUniformMatrix4fv(transformMatrixLocation, 1, false, mMVPMatrix, 0)
-//        GLES20.glUniformMatrix4fv(transformMatrixLocation, 1, false, mapMatrix.getTransformMatrix(), 0);
 
-        GLES20.glActiveTexture(glMapTextureId)
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, glMapTextureId)
-
-        GLES20.glVertexAttribPointer(
-            textureCoordinateLocation, COORDS_PRE_TEXTURE_VERTEX, GLES20.GL_FLOAT,
-            false, textVertexStride, texVertexBuffer
-        )
-        GLES20.glDrawElements(
-            GLES20.GL_TRIANGLE_STRIP, drawOrder.size,
-            GLES20.GL_UNSIGNED_SHORT, drawListBuffer
-        )
+        GLES20.glVertexAttribPointer(textureCoordinateLocation, COORDS_PRE_TEXTURE_VERTEX, GLES20.GL_FLOAT, false, textVertexStride, texVertexBuffer)
+        GLES20.glDrawElements(GLES20.GL_TRIANGLE_STRIP, drawOrder.size, GLES20.GL_UNSIGNED_SHORT, drawListBuffer)
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0)
         GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE_MINUS_SRC_ALPHA) // 设置混合函数
 
-        GLES20.glUniform1i(
-            isMapUniformLocation, 0
-        )
+        // 4) 计算可见瓦片 → 限速加载 → 叠加绘制“已就绪瓦片”
+        //    LOD 选择说明：当前 TileManager 内部固定选择 level=0；
+        //    后续可根据缩放比/屏幕像素密度选择最合适的层级，并将瓦片网格/尺寸与着色采样一并切换。
+        val visibleTiles = kotlin.runCatching { tileManager.queryVisibleTiles(mapMatrix) }.getOrDefault(emptyList())
+        tileManager.loadPendingOnGlThread(maxCount = 2)
+
+        val tileSizeM = FloatArray(16)
+        val tileTranslateM = FloatArray(16)
+        val tileMvp = FloatArray(16)
+        for (tile in visibleTiles) {
+            if (!tile.isReady || tile.textureId == 0) continue
+            // 4.1) tile 尺寸矩阵：单位方块放大为瓦片像素尺寸
+            tileSizeM.identityM()
+            Matrix.scaleM(tileSizeM, 0, tile.widthPx.toFloat(), tile.heightPx.toFloat(), 1f)
+            // 4.2) tile 平移矩阵：以地图中心为原点，将瓦片中心平移到其在地图中的位置
+            val centerX = tile.originXInMapPx + tile.widthPx * 0.5f - mapBitmapSize.width * 0.5f
+            val centerY = tile.originYInMapPx + tile.heightPx * 0.5f - mapBitmapSize.height * 0.5f
+            tileTranslateM.identityM()
+            Matrix.translateM(tileTranslateM, 0, centerX, centerY, 0f)
+
+            // 4.3) 最终 MVP：pvModel * tileTranslate * tileSize
+            Matrix.multiplyMM(tileMvp, 0, pvModel, 0, tileTranslateM, 0)
+            Matrix.multiplyMM(tileMvp, 0, tileMvp, 0, tileSizeM, 0)
+            GLES20.glUniformMatrix4fv(transformMatrixLocation, 1, false, tileMvp, 0)
+
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, tile.textureId)
+            GLES20.glVertexAttribPointer(textureCoordinateLocation, COORDS_PRE_TEXTURE_VERTEX, GLES20.GL_FLOAT, false, textVertexStride, texVertexBuffer)
+            GLES20.glDrawElements(GLES20.GL_TRIANGLE_STRIP, drawOrder.size, GLES20.GL_UNSIGNED_SHORT, drawListBuffer)
+        }
+
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0)
+        GLES20.glUniform1i(isMapUniformLocation, 0)
     }
 
     override fun doAfterDraw() {

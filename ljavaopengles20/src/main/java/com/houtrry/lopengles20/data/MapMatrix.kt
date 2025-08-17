@@ -247,4 +247,17 @@ class MapMatrix {
             bitmapInfo.resolution * y + bitmapInfo.originY + bitmapInfo.resolution * bitmapInfo.height * 0.5f,
         )
     }
+
+    /**
+     * 将 GL 坐标转换为 Map 像素坐标(px)。
+     * 推导自 glToWorld 与 Map 坐标定义：
+     * mapX = (worldX - originX) / resolution + width * 0.5
+     * mapY = (worldY - originY) / resolution + height * 0.5
+     */
+    fun glToMapPx(x: Float, y: Float): PointF {
+        val world = glToWorld(x, y)
+        val mx = (world.x - bitmapInfo.originX) / bitmapInfo.resolution + bitmapInfo.width * 0.5f
+        val my = (world.y - bitmapInfo.originY) / bitmapInfo.resolution + bitmapInfo.height * 0.5f
+        return PointF(mx, my)
+    }
 }
