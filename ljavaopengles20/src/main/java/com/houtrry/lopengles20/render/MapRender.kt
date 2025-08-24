@@ -129,7 +129,7 @@ class MapRender(val context: Context?, private val renderCallback: () -> Unit) :
         try {
             layer.onDestroy()
         } catch (t: Throwable) {
-            Log.w(TAG, "onDestroy error: ${t.message}")
+            Log.w(TAG, "onDestroy error: ${t.message}", t)
         }
         layers.remove(layer)
     }

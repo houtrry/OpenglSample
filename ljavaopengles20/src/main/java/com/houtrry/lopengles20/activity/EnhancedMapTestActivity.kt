@@ -1,14 +1,21 @@
 package com.houtrry.lopengles20.activity
 
 import android.app.Activity
+import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import android.view.View
+import android.view.ViewGroup
 import android.widget.*
+import com.houtrry.common_map.utils.getAssertBitmap
 import com.houtrry.lopengles20.R
 import com.houtrry.lopengles20.layer.*
 import com.houtrry.lopengles20.weight.MapView
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -84,22 +91,26 @@ class EnhancedMapTestActivity : Activity() {
     }
     
     private fun initMapLayer() {
-        enhancedMapLayer = EnhancedMapLayer()
-        
-        // 设置自动全览监听器
-        enhancedMapLayer.setAutoOverviewListener(object : AutoOverviewListener {
-            override fun onRequestAutoOverview() {
-                Log.d(TAG, "🎯 收到自动全览请求，居中地图视图")
-                runOnUiThread {
-                    updateStatus("已自动居中地图视图")
+        GlobalScope.launch(Dispatchers.Main) {
+            enhancedMapLayer = EnhancedMapLayer()
+            // 设置自动全览监听器
+            enhancedMapLayer.setAutoOverviewListener(object : AutoOverviewListener {
+                override fun onRequestAutoOverview() {
+                    Log.d(TAG, "🎯 收到自动全览请求，居中地图视图")
+                    runOnUiThread {
+                        updateStatus("已自动居中地图视图")
+                    }
                 }
-            }
-        })
-        
-        // 关闭默认图层后，手动添加相机控制层与增强地图图层
-        mapView.addCameraControlLayer()
-        mapView.addLayer(enhancedMapLayer)
-        
+            })
+            mapView.addLayer(enhancedMapLayer)
+            mapView.addLayers(
+                RobotLayer(
+                    withContext(Dispatchers.IO) { BitmapFactory.decodeResource(this@EnhancedMapTestActivity.resources, com.houtrry.common_map.R.mipmap.robot) }
+                )
+            )
+            mapView.addLayers(TextLayer())
+        }
+
         Log.d(TAG, "增强MapLayer已添加到MapView")
     }
     
@@ -130,8 +141,8 @@ class EnhancedMapTestActivity : Activity() {
                 updateStatus("准备测试数据...")
                 
                 // 将assets中的optemap_75k复制到应用目录
-                val assetsFile = "optemap_999k"
-                val targetFile = File(filesDir, "optemap_999k_test")
+                val assetsFile = "optemap_22k.png"
+                val targetFile = File(filesDir, "optemap_22k.png")
                 
                 if (!targetFile.exists()) {
                     assets.open(assetsFile).use { input ->
@@ -179,13 +190,13 @@ class EnhancedMapTestActivity : Activity() {
                 }
                 
                 // 创建ParcelFileDescriptor
-                val parcelFd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+//                val parcelFd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
                 
                 runOnUiThread {
                     // 首先尝试关闭内存优化的基础模式，用于调试
                     Log.d(TAG, "开始加载ParcelFd数据源...")
-                    val success = enhancedMapLayer.setParcelFileDescriptor(parcelFd, enableOptimization = false)
-                    
+//                    val success = enhancedMapLayer.setParcelFileDescriptor(parcelFd, enableOptimization = false)
+                    val success = enhancedMapLayer.setImageFile(file)
                     if (success) {
                         currentDataSourceType = "ParcelFd(基础模式)"
                         updateStatus("ParcelFd数据源加载成功 - 基础模式")

@@ -15,6 +15,7 @@ import androidx.annotation.Nullable
 import androidx.appcompat.app.AppCompatActivity
 import com.houtrry.lopengl.OpenglNativeTestActivity
 import com.houtrry.lopengles20.activity.EnhancedMapTestActivity
+import com.houtrry.lopengles20.activity.JavaOpenglES20Activity
 import com.houtrry.lopengles20.tile.MapMetadata
 import com.houtrry.lopengles20.tile.SimpleMemoryOptimizedGenerator
 import com.houtrry.openglsample.databinding.ActivityMainBinding
@@ -47,6 +48,7 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, OpenglNativeTestActivity::class.java))
         }
         binding.javaOpengl.setOnClickListener {
+//            startActivity(Intent(this, JavaOpenglES20Activity::class.java))
             startActivity(Intent(this, EnhancedMapTestActivity::class.java))
         }
         binding.grayToRgb.setOnClickListener {
