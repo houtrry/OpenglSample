@@ -25,6 +25,8 @@ class MapRender(val context: Context?, private val renderCallback: () -> Unit) :
     private var mPrograms: Int = 0
 
     private val mapMatrix = MapMatrix()
+    private var viewportWidth: Int = 0
+    private var viewportHeight: Int = 0
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         GLES20.glClearColor(0f, 1.0f, 1.0f, 1f)
@@ -72,6 +74,8 @@ class MapRender(val context: Context?, private val renderCallback: () -> Unit) :
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
         GLES20.glViewport(0, 0, width, height)
         Log.d(TAG, "onSurfaceChanged, width: $width, height: $height")
+        viewportWidth = width
+        viewportHeight = height
         layers.forEach { it.onSizeChange(width, height) }
     }
 
@@ -100,10 +104,22 @@ class MapRender(val context: Context?, private val renderCallback: () -> Unit) :
 
     fun addLayer(layer : ILayer) {
         layers.add(layer)
-        
-        // 🔥 为EnhancedMapLayer设置重绘回调
+
+        // 为EnhancedMapLayer设置重绘回调
         if (layer is com.houtrry.lopengles20.layer.EnhancedMapLayer) {
             layer.setRenderCallback { requestRender() }
+        }
+
+        // 如果GL上下文已就绪，立即初始化该图层
+        if (mPrograms != 0 && context != null) {
+            try {
+                layer.onCreate(context, mPrograms, mapMatrix)
+                if (viewportWidth > 0 && viewportHeight > 0) {
+                    layer.onSizeChange(viewportWidth, viewportHeight)
+                }
+            } catch (t: Throwable) {
+                Log.w(TAG, "addLayer onCreate error: ${t.message}")
+            }
         }
     }
 
@@ -116,6 +132,17 @@ class MapRender(val context: Context?, private val renderCallback: () -> Unit) :
             Log.w(TAG, "onDestroy error: ${t.message}")
         }
         layers.remove(layer)
+    }
+
+    fun clearLayers() {
+        layers.forEach {
+            try {
+                it.onDestroy()
+            } catch (t: Throwable) {
+                Log.w(TAG, "onDestroy error: ${t.message}")
+            }
+        }
+        layers.clear()
     }
 
     fun onTouchEvent(event: MotionEvent): Boolean {

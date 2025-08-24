@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="MapView">
+        <attr name="useDefaultLayers" format="boolean" />
+        <attr name="useCameraControlLayer" format="boolean" />
+    </declare-styleable>
+</resources>
+
+

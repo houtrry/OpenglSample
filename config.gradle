@@ -2,6 +2,7 @@ ext {
     kotlin_core_ktx_version = '1.7.0'
     appcompat_version = '1.7.0'
     anko_version = '0.10.8'
+    coroutines_version = '1.7.3'
 
     lib = [
             core_ktx              : "1.7.0",

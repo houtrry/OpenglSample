@@ -67,6 +67,9 @@ class EnhancedMapTestActivity : Activity() {
     
     private fun initViews() {
         mapView = findViewById(R.id.map_view)
+        // 布局中已关闭默认层，但为安全起见，代码创建场景可显式控制：
+        mapView.setUseDefaultLayers(false)
+        mapView.setUseCameraControlLayer(true)
         btnLoadFd = findViewById(R.id.btn_load_fd)
         btnLoadFile = findViewById(R.id.btn_load_file)
         btnLoadBitmap = findViewById(R.id.btn_load_bitmap)
@@ -93,6 +96,8 @@ class EnhancedMapTestActivity : Activity() {
             }
         })
         
+        // 关闭默认图层后，手动添加相机控制层与增强地图图层
+        mapView.addCameraControlLayer()
         mapView.addLayer(enhancedMapLayer)
         
         Log.d(TAG, "增强MapLayer已添加到MapView")
