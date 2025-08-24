@@ -2,6 +2,7 @@ package com.houtrry.lopengles20.tile
 
 import android.graphics.Bitmap
 import android.opengl.GLES20
+import android.util.Log
 import java.nio.ByteBuffer
 
 /**
@@ -12,7 +13,12 @@ import java.nio.ByteBuffer
  */
 class GrayscaleRegionProviderFromBitmap(private val source: Bitmap) : RegionProvider {
 
+    companion object {
+        private const val TAG = "BitmapRegionProvider"
+    }
+
     override fun obtainRegion(x: Int, y: Int, width: Int, height: Int): RegionBuffer? {
+        Log.d(TAG, "obtainRegion called, ($x, $y), ($width, $height)")
         return try {
             val pixels = IntArray(width * height)
             source.getPixels(pixels, 0, width, x, y, width, height)
@@ -36,8 +42,19 @@ class GrayscaleRegionProviderFromBitmap(private val source: Bitmap) : RegionProv
                 pixelBuffer = buffer
             )
         } catch (e: Throwable) {
+            e.printStackTrace()
             null
         }
+    }
+    
+    /**
+     * 释放Provider相关资源
+     * 
+     * GrayscaleRegionProviderFromBitmap 不负责管理源Bitmap的生命周期，
+     * Bitmap由外部创建和管理，因此提供空实现
+     */
+    override fun close() {
+        // Bitmap由外部管理，无需释放
     }
 }
 

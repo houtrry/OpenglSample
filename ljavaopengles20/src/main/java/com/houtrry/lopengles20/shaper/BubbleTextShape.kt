@@ -67,6 +67,7 @@ class BubbleTextShape {
     private var isMapUniformLocation: Int = -1
 
     private val bubbleTextBitmapMap = mutableMapOf<BubbleText, Bitmap>()
+    private val textureCache = mutableMapOf<String, Int>()  // 纹理缓存：文本内容 -> 纹理ID
 
     fun updateText(vector3: Vector3 ?= null, text: String? = null, color: Int? = null) {
 //        bubbleText = bubbleText.update(vector3, text, color)
@@ -107,11 +108,30 @@ class BubbleTextShape {
     private fun drawTextShape(program: Int, mapMatrix: MapMatrix,
                               position: Vector3, textBitmap: Bitmap) {
         ensureLocations(program)
-        val glArrowTextureId = OpenglUtils.createTexture(
-            textBitmap,
-            GLES20.GL_NEAREST, GLES20.GL_LINEAR,
-            GLES20.GL_CLAMP_TO_EDGE, GLES20.GL_CLAMP_TO_EDGE
-        )
+        
+        // 生成缓存key（基于位图内容哈希）
+        val cacheKey = "${textBitmap.width}x${textBitmap.height}_${textBitmap.hashCode()}"
+        
+        // 尝试从缓存获取纹理ID
+        val glArrowTextureId = textureCache[cacheKey] ?: run {
+            // 智能选择纹理过滤方式：小图标用NEAREST保持锐利，大图标用LINEAR平滑
+            val minFilter = if (textBitmap.width <= 64 && textBitmap.height <= 64) {
+                GLES20.GL_NEAREST  // 小图标保持像素级清晰
+            } else {
+                GLES20.GL_LINEAR   // 大图标使用平滑过滤
+            }
+            val magFilter = GLES20.GL_LINEAR  // 放大时始终使用LINEAR避免锯齿
+            
+            val textureId = OpenglUtils.createTexture(
+                textBitmap,
+                minFilter, magFilter,
+                GLES20.GL_CLAMP_TO_EDGE, GLES20.GL_CLAMP_TO_EDGE
+            )
+            
+            // 缓存纹理ID
+            textureCache[cacheKey] = textureId
+            textureId
+        }
         val vector3 = mapMatrix.worldToGl(position.x.toFloat(), position.y.toFloat())
         Log.d(TAG, "drawTextShape, $textBitmap, vector3: $vector3 -> $position")
         transformMatrix.identityM()
@@ -164,6 +184,13 @@ class BubbleTextShape {
     }
 
     fun release() {
+        // 释放纹理缓存
+        textureCache.values.forEach { textureId ->
+            val textures = intArrayOf(textureId)
+            GLES20.glDeleteTextures(1, textures, 0)
+        }
+        textureCache.clear()
+        
         // 释放生成的文本位图
         bubbleTextBitmapMap.values.forEach { bmp ->
             if (!bmp.isRecycled) bmp.recycle()

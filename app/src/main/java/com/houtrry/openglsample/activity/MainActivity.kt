@@ -3,26 +3,28 @@ package com.houtrry.openglsample.activity
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.ParcelFileDescriptor
 import android.provider.Settings
 import android.util.Log
-import android.view.Gravity
 import android.widget.Toast
 import androidx.annotation.Nullable
 import androidx.appcompat.app.AppCompatActivity
-import com.houtrry.common_map.utils.toGrayFile
 import com.houtrry.lopengl.OpenglNativeTestActivity
-import com.houtrry.lopengles20.activity.JavaOpenglES20Activity
+import com.houtrry.lopengles20.activity.EnhancedMapTestActivity
+import com.houtrry.lopengles20.tile.MapMetadata
+import com.houtrry.lopengles20.tile.SimpleMemoryOptimizedGenerator
 import com.houtrry.openglsample.databinding.ActivityMainBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.io.File
+import java.io.FileInputStream
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 
 class MainActivity : AppCompatActivity() {
@@ -45,7 +47,7 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, OpenglNativeTestActivity::class.java))
         }
         binding.javaOpengl.setOnClickListener {
-            startActivity(Intent(this, JavaOpenglES20Activity::class.java))
+            startActivity(Intent(this, EnhancedMapTestActivity::class.java))
         }
         binding.grayToRgb.setOnClickListener {
             startActivity(Intent(this, GrayToRgbActivity::class.java))
@@ -57,15 +59,6 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, TextBenchmarkActivity::class.java))
         }
         binding.generateGrayImageFile.setOnClickListener {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                if (Environment.isExternalStorageManager()) {
-                    generateGrayImageFile()
-                } else {
-                    val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-                    intent.data = Uri.parse("package:" + this.packageName)
-                    startActivityForResult(intent, REQUEST_CODE_R)
-                }
-            }
             when {
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> {
                     if (Environment.isExternalStorageManager()) {
@@ -136,27 +129,74 @@ class MainActivity : AppCompatActivity() {
 
     private fun generateGrayImageFile() {
         GlobalScope.launch(Dispatchers.IO) {
-            val bitmap = BitmapFactory.decodeResource(
-                this@MainActivity.resources,
-                com.houtrry.openglsample.R.drawable.optemap_22k,
-                BitmapFactory.Options().apply {
-                    inScaled = false
-                    inPreferredConfig = Bitmap.Config.RGB_565
-                })
-            Log.d(TAG, "toGrayFile width: ${bitmap.width}, height: ${bitmap.height}")
-            bitmap.toGrayFile(File(filesDir, "optemap_area_2k"))
-
-            assets?.open("optemap_area_2k")?.let {
-                val bytes = it.readBytes()
-                Log.d(TAG, "size: ${bytes.size}")
-//                bytes.forEachIndexed { index, byte ->
-//                    Log.d(TAG, "byte[$index]: $byte")
+//            val bitmap = BitmapFactory.decodeResource(
+//                this@MainActivity.resources,
+//                com.houtrry.openglsample.R.drawable.optemap_999k,
+//                BitmapFactory.Options().apply {
+//                    inScaled = false
+//                    inPreferredConfig = Bitmap.Config.RGB_565
+//                })
+//            Log.d(TAG, "toGrayFile width: ${bitmap.width}, height: ${bitmap.height}")
+//            bitmap.toGrayFile(File(filesDir, "optemap_area_75k"))
+//
+//            assets?.open("optemap_area_2k")?.let {
+//                val bytes = it.readBytes()
+//                Log.d(TAG, "size: ${bytes.size}")
+////                bytes.forEachIndexed { index, byte ->
+////                    Log.d(TAG, "byte[$index]: $byte")
+////                }
+//                for (index in 0 .. 100) {
+//                    Log.d(TAG, "byte[$index]: ${bytes[index]}")
 //                }
-                for (index in 0 .. 100) {
-                    Log.d(TAG, "byte[$index]: ${bytes[index]}")
+//                it.close()
+//            }
+
+//            val example = ParcelMapDataGeneratorExample()
+//            val outputPath = example.generateOptemapParcelDataFromDrawable(
+//                context = this@MainActivity,
+//                drawableRes = R.drawable.optemap_999k,
+//                useExternalStorage = true  // 使用内部存储，无需权限
+//            )
+//            val generator = SimpleMemoryOptimizedGenerator()
+//            val outputPath = generator.generateFromAssetsOptimized(
+//                context = this@MainActivity,
+//                assetFileName = "optemap_999k.png",
+//                outputFileName = "optemap_999k",
+//                originX = -415.618653,
+//                originY = -159.552259,
+//                resolution = 0.05
+//            )
+            val generator = SimpleMemoryOptimizedGenerator()
+            val outputPath = generator.generateFromAssetsOptimized(
+                context = this@MainActivity,
+                assetFileName = "optemap_999k.png",
+                outputFileName = "optemap_999k",
+                originX = -415.618653,
+                originY = -159.552259,
+                resolution = 0.05
+            )
+            Log.d(TAG, "outputPath: $outputPath")
+            val targetFile = File(outputPath)
+            val fd = ParcelFileDescriptor.open(targetFile, ParcelFileDescriptor.MODE_READ_ONLY)
+            val headerBytes = ByteArray(36)
+
+            FileInputStream(fd.fileDescriptor).use { inputStream ->
+                val headerRead = inputStream.read(headerBytes)
+                if (headerRead != 36) {
+                    throw IllegalArgumentException("Invalid header: expected 36 bytes, got $headerRead")
                 }
-                it.close()
             }
+
+            val headerBuffer = ByteBuffer.wrap(headerBytes).order(ByteOrder.LITTLE_ENDIAN)
+            val result = MapMetadata(
+                originX = headerBuffer.getDouble(0),
+                originY = headerBuffer.getDouble(8),
+                resolution = headerBuffer.getDouble(16),
+                width = headerBuffer.getInt(24),
+                height = headerBuffer.getInt(28),
+                area = headerBuffer.getInt(32)
+            )
+            Log.d(TAG, "result: $result")
         }
     }
 

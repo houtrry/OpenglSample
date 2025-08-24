@@ -110,17 +110,20 @@ class TextBenchmarkActivity : Activity() {
 
 private class BenchRenderer(
 	private val activity: Activity,
-	scenario: RenderingScenario,
-	config: com.houtrry.common_map.text.HybridConfig
+	private val scenario: RenderingScenario,
+	private val config: com.houtrry.common_map.text.HybridConfig
 ) : GLSurfaceView.Renderer {
 
 	private val projectionMatrix = FloatArray(16)
 	private val viewMatrix = FloatArray(16)
 	private val mvpMatrix = FloatArray(16)
-	private val textRenderer: HybridTextRenderer = TextRenderingFactory.createRecommendedRenderer(activity, scenario, config)
+	private lateinit var textRenderer: HybridTextRenderer
 
 	override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
 		GLES20.glClearColor(0.15f, 0.18f, 0.22f, 1f)
+		
+		// 在OpenGL上下文准备好后初始化文字渲染器
+		textRenderer = TextRenderingFactory.createRecommendedRenderer(activity, scenario)
 	}
 
 	override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
@@ -133,13 +136,17 @@ private class BenchRenderer(
 
 	override fun onDrawFrame(gl: GL10?) {
 		GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
-		textRenderer.render(mvpMatrix)
+		if (::textRenderer.isInitialized) {
+			textRenderer.render(mvpMatrix)
+		}
 	}
 
 	fun setMarkerCount(count: Int) {
-		textRenderer.clear()
-		val items = generateBubbleIconTexts(count)
-		textRenderer.addTexts(items)
+		if (::textRenderer.isInitialized) {
+			textRenderer.clear()
+			val items = generateBubbleIconTexts(count)
+			textRenderer.addTexts(items)
+		}
 	}
 
 	private fun generateBubbleIconTexts(count: Int): List<com.houtrry.common_map.data.TextInfo> {
@@ -172,8 +179,17 @@ private class BenchRenderer(
 		return list
 	}
 
-	fun getRenderingStatus() = textRenderer.getRenderingStatus()
-	fun getPerformanceStats(): PerformanceStats = textRenderer.getPerformanceStats()
+	fun getRenderingStatus() = if (::textRenderer.isInitialized) {
+		textRenderer.getRenderingStatus()
+	} else {
+		com.houtrry.common_map.text.RenderingStatus("Initializing", 0, 0, 0, 0)
+	}
+	
+	fun getPerformanceStats(): PerformanceStats = if (::textRenderer.isInitialized) {
+		textRenderer.getPerformanceStats()
+	} else {
+		PerformanceStats(0f, 0L, 0, 0)
+	}
 }
 
 

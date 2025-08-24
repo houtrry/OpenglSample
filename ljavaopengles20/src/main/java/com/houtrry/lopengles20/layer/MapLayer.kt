@@ -74,10 +74,6 @@ class MapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
         Log.d(TAG, "init start, ${mapBitmap.width}, ${mapBitmap.height}")
     }
 
-    interface AutoOverviewListener {
-        fun onRequestAutoOverview()
-    }
-
     private var autoOverviewListener: AutoOverviewListener? = null
     fun setAutoOverviewListener(listener: AutoOverviewListener?) {
         autoOverviewListener = listener

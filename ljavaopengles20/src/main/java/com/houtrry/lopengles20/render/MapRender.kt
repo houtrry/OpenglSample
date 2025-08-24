@@ -100,6 +100,11 @@ class MapRender(val context: Context?, private val renderCallback: () -> Unit) :
 
     fun addLayer(layer : ILayer) {
         layers.add(layer)
+        
+        // 🔥 为EnhancedMapLayer设置重绘回调
+        if (layer is com.houtrry.lopengles20.layer.EnhancedMapLayer) {
+            layer.setRenderCallback { requestRender() }
+        }
     }
 
     fun getMapMatrix() = mapMatrix

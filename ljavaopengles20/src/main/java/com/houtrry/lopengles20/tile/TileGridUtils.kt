@@ -1,6 +1,5 @@
 package com.houtrry.lopengles20.tile
 
-import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 

@@ -8,6 +8,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.opengl.GLES20
 import android.os.Build
+import android.os.ParcelFileDescriptor
 import android.text.TextUtils
 import android.util.Log
 import android.util.TypedValue
@@ -20,6 +21,7 @@ import java.nio.ByteOrder
 import java.nio.FloatBuffer
 import java.nio.ShortBuffer
 import java.util.*
+import androidx.core.text.layoutDirection
 
 fun FloatArray.toBuffer(): FloatBuffer = ByteBuffer.allocateDirect(this.size * 4)
     .order(ByteOrder.nativeOrder()).asFloatBuffer().apply {
@@ -233,4 +235,15 @@ val Float.sp: Float
         Resources.getSystem().displayMetrics
     )
 
-fun isLTR() = TextUtils.getLayoutDirectionFromLocale(Locale.getDefault()) == View.LAYOUT_DIRECTION_LTR
+fun isLTR() = Locale.getDefault().layoutDirection == View.LAYOUT_DIRECTION_LTR
+
+fun ParcelFileDescriptor.lseekSafely(offset: Long = 0, whence: Int = android.system.OsConstants.SEEK_SET): Boolean {
+    return try {
+        android.system.Os.lseek(this.fileDescriptor, offset, whence)
+        true
+    } catch (e: Exception) {
+        e.printStackTrace()
+        Log.w("StreamingParser", "lseekSafely error: ${e.message}", e)
+        false
+    }
+}

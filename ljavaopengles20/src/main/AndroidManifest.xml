@@ -2,5 +2,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application>
         <activity android:name=".activity.JavaOpenglES20Activity"/>
+        <activity android:name=".activity.EnhancedMapTestActivity"/>
     </application>
 </manifest>

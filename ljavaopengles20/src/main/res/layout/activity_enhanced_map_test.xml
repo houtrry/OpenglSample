@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="8dp">
+
+    <!-- 标题 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="增强地图渲染测试"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:padding="8dp"
+        android:background="#E3F2FD" />
+
+    <!-- 地图视图 -->
+    <com.houtrry.lopengles20.weight.MapView
+        android:id="@+id/map_view"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_margin="4dp" />
+
+    <!-- 控制面板 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#F5F5F5"
+        android:padding="8dp">
+
+        <!-- 数据源切换按钮组 -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="数据源切换测试"
+            android:textStyle="bold"
+            android:padding="4dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btn_load_fd"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="ParcelFd\n(内存优化)"
+                android:textSize="12sp"
+                android:enabled="false"
+                android:textAllCaps="false"
+                android:layout_margin="2dp" />
+
+            <Button
+                android:id="@+id/btn_load_file"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_margin="2dp"
+                android:layout_weight="1"
+                android:enabled="false"
+                android:text="ImageFile\n(区域解码)"
+                android:textAllCaps="false"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btn_load_bitmap"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Bitmap\n(兼容模式)"
+                android:textSize="12sp"
+                android:enabled="false"
+                android:textAllCaps="false"
+                android:layout_margin="2dp" />
+
+        </LinearLayout>
+
+        <!-- 性能监控 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+
+            <Button
+                android:id="@+id/btn_show_stats"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="显示统计"
+                android:textSize="12sp" />
+
+            <ProgressBar
+                android:id="@+id/progress_bar"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginStart="8dp"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/tv_status"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="初始化中..."
+                android:textSize="12sp"
+                android:layout_marginStart="8dp"
+                android:gravity="center_vertical" />
+
+        </LinearLayout>
+
+        <!-- 统计信息显示区域 -->
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="120dp"
+            android:layout_marginTop="8dp"
+            android:background="#FFFFFF"
+            android:padding="4dp">
+
+            <TextView
+                android:id="@+id/tv_stats"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="点击'显示统计'查看性能数据"
+                android:textSize="11sp"
+                android:fontFamily="monospace"
+                android:padding="4dp" />
+
+        </ScrollView>
+
+        <!-- 测试说明 -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="测试功能：fd/文件/bitmap数据源切换、内存优化、Tile渲染、性能监控"
+            android:textSize="10sp"
+            android:textColor="#666666"
+            android:padding="4dp"
+            android:layout_marginTop="4dp" />
+
+    </LinearLayout>
+
+</LinearLayout>

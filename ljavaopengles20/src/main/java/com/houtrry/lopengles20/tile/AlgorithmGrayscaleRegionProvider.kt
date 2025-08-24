@@ -19,7 +19,12 @@ class AlgorithmGrayscaleRegionProvider(
     override fun obtainRegion(x: Int, y: Int, width: Int, height: Int): RegionBuffer? {
         if (x < 0 || y < 0 || width <= 0 || height <= 0) return null
         if (x + width > mapWidthPx || y + height > mapHeightPx) return null
-        val src = try { bufferSupplier.invoke() } catch (_: Throwable) { return null }
+        val src = try {
+            bufferSupplier.invoke()
+        } catch (e: Throwable) {
+            e.printStackTrace()
+            return null
+        }
         val required = rowStrideBytes * mapHeightPx
         if (src.capacity() < required) return null
 
@@ -42,6 +47,16 @@ class AlgorithmGrayscaleRegionProvider(
             glFormat = GLES20.GL_LUMINANCE,
             pixelBuffer = dst
         )
+    }
+    
+    /**
+     * 释放Provider相关资源
+     * 
+     * AlgorithmGrayscaleRegionProvider 不持有需要显式释放的资源，
+     * bufferSupplier 由外部管理，因此提供空实现
+     */
+    override fun close() {
+        // 无需释放资源
     }
 }
 

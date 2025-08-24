@@ -1,6 +1,7 @@
 package com.houtrry.lopengles20.tile
 
 import android.opengl.GLES20
+import android.util.Log
 import com.houtrry.lopengles20.utils.PerfMetrics
 import com.houtrry.lopengles20.data.MapMatrix
 import java.nio.ByteBuffer
@@ -10,8 +11,25 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * Minimal TileManager with visible-tile computation and tiny LRU+TexturePool.
- * This is a scaffold; loading/updates/LOD generation will be added later.
+ * 瓦片管理器：负责大地图的瓦片化渲染和资源管理
+ * 
+ * 核心功能：
+ * - 可见瓦片计算：根据视口和变换矩阵确定需要渲染的瓦片
+ * - 瓦片缓存管理：LRU策略管理瓦片生命周期，控制内存使用
+ * - 纹理池管理：复用GL纹理对象，减少频繁创建/销毁开销
+ * - 动态扩展支持：支持地图尺寸动态增长和负索引瓦片
+ * - 分帧加载：按帧限速加载瓦片，避免阻塞渲染线程
+ * - 边框扩展：可选的1px边框扩展，消除瓦片间采样缝隙
+ * 
+ * 设计原则：
+ * - 线程安全：所有GL操作必须在GL线程中执行
+ * - 内存可控：通过LRU和池化策略控制资源使用
+ * - 性能优先：分帧加载和视口裁剪减少不必要的工作
+ * - 扩展友好：预留LOD层级接口，支持未来多分辨率需求
+ * 
+ * @param tileSizePx            单个瓦片的像素尺寸（宽高相等），推荐256/512
+ * @param lruCapacity           LRU缓存容量，控制最大瓦片数量
+ * @param texturePoolCapacity   纹理池容量，控制可复用的GL纹理数量
  */
 class TileManager(
     private val tileSizePx: Int = 512,
@@ -19,29 +37,60 @@ class TileManager(
     texturePoolCapacity: Int = 256
 ) {
 
+    companion object {
+        private const val TAG = "TileManager"
+    }
+
+    // ================== 核心状态变量 ==================
+    /** 地图总宽度（像素），用于边界裁剪和瓦片范围计算 */
     private var mapWidthPx: Int = 0
+    /** 地图总高度（像素），用于边界裁剪和瓦片范围计算 */
     private var mapHeightPx: Int = 0
+    /** 视口宽度（像素），用于可见区域计算 */
     private var viewportWidthPx: Int = 0
+    /** 视口高度（像素），用于可见区域计算 */
     private var viewportHeightPx: Int = 0
 
-    // LRU 缓存：管理 TileCoord → Tile 的映射（占位或已就绪）
+    // ================== 缓存和资源管理 ==================
+    /** LRU 缓存：管理 TileCoord → Tile 的映射，包括占位瓦片和已就绪瓦片 */
     private val cache = LruCache<TileCoord, Tile>(lruCapacity)
-    // 纹理池：预分配/复用 GL 纹理，减少 glGenTextures 频率
+    /** 纹理池：预分配和复用 GL 纹理对象，减少 glGenTextures 调用频率 */
     private val texturePool = TexturePool(texturePoolCapacity)
+    /** 待加载队列：存储需要异步加载的瓦片坐标，保持插入顺序 */
     private val pendingLoads = LinkedHashSet<TileCoord>()
+    /** 区域数据提供者：负责获取指定区域的像素数据 */
     private var regionProvider: RegionProvider? = null
 
-    // 可选的 1px 扩展边，用于抑制采样缝隙（默认关闭）
+    // ================== 边框扩展配置 ==================
+    /** 是否启用边框扩展：可选的1px扩展边，用于抑制瓦片间采样缝隙（默认关闭） */
     private var enableBorder: Boolean = false
+    /** 边框扩展尺寸：扩展边的像素宽度，默认1像素 */
     private var borderSizePx: Int = 1
 
+    /**
+     * 设置区域数据提供者
+     * 
+     * @param provider 区域数据提供者实例，null表示清空
+     *                 提供者负责在需要时获取指定区域的像素数据
+     */
     fun setRegionProvider(provider: RegionProvider?) {
         regionProvider = provider
     }
 
     /**
-     * 全局销毁：释放缓存中所有 Tile 的纹理，并清空纹理池。
-     * 注意：需在拥有有效 GL 上下文的 GL 线程中调用。
+     * 全局销毁：释放所有资源，包括瓦片纹理和纹理池
+     * 
+     * 执行操作：
+     * 1. 遍历缓存中的所有瓦片，删除其GL纹理
+     * 2. 清空LRU缓存
+     * 3. 销毁纹理池中的所有纹理
+     * 4. 清空待加载队列
+     * 5. 重置区域提供者
+     * 
+     * 注意事项：
+     * - 必须在拥有有效GL上下文的GL线程中调用
+     * - 调用后TileManager不可再使用，除非重新初始化
+     * - 建议在Activity/Fragment销毁时调用
      */
     fun destroy() {
         val keys = cache.keys()
@@ -60,37 +109,97 @@ class TileManager(
     }
 
     /**
-     * 启用/关闭 1px 扩展边（用于抑制接缝）。默认关闭；启用时默认 border=1。
+     * 启用/关闭边框扩展功能（用于抑制瓦片间采样缝隙）
+     * 
+     * 边框扩展原理：
+     * - 在每个瓦片周围添加边框像素，复制边缘像素值
+     * - 采样时UV坐标映射到内容区域，避免采样到相邻瓦片
+     * - 有效消除线性插值导致的瓦片间缝隙
+     * 
+     * 性能影响：
+     * - 启用后纹理尺寸增加：(size + border*2) × (size + border*2)
+     * - 增加边框像素拷贝的CPU开销
+     * - 建议在视觉质量要求高且缝隙明显时启用
+     * 
+     * @param enable        是否启用边框扩展，默认关闭
+     * @param borderSizePx  边框像素宽度，默认1像素，最小值0
      */
     fun setBorderEnabled(enable: Boolean, borderSizePx: Int = 1) {
         this.enableBorder = enable
         this.borderSizePx = borderSizePx.coerceAtLeast(0)
     }
 
+    /**
+     * 设置地图总尺寸
+     * 
+     * 用途：
+     * - 用于可见瓦片计算时的边界裁剪
+     * - 确定边缘瓦片的实际尺寸
+     * - 支持地图动态扩展，可随时更新
+     * 
+     * @param widthPx  地图总宽度（像素）
+     * @param heightPx 地图总高度（像素）
+     */
     fun setMapSize(widthPx: Int, heightPx: Int) {
         mapWidthPx = widthPx
         mapHeightPx = heightPx
-    }
-
-    fun setViewportSize(widthPx: Int, heightPx: Int) {
-        viewportWidthPx = widthPx
-        viewportHeightPx = heightPx
+        Log.d(TAG, "setMapSize end, mapWidthPx: $widthPx, mapHeightPx: $heightPx")
     }
 
     /**
-     * LOD 层级选择（占位框架）：
-     * - 思路1：根据屏幕像素密度与当前 model 缩放，计算地图像素到屏幕像素的映射比例；
-     *   比例接近 1:1 的层级为最佳；
-     * - 思路2：将投影到屏幕的 1px 反推到 GL/Map 空间的长度，据此估算层级；
-     * - 这里暂时固定为 0，后续接入时：return estimateLevel(mapMatrix, viewportWidthPx, viewportHeightPx)
+     * 设置视口尺寸
+     * 
+     * 用途：
+     * - 可见瓦片计算的基础参数
+     * - 屏幕坐标到GL坐标转换的依据
+     * - 通常对应渲染表面的像素尺寸
+     * 
+     * @param widthPx  视口宽度（像素）
+     * @param heightPx 视口高度（像素）
+     */
+    fun setViewportSize(widthPx: Int, heightPx: Int) {
+        viewportWidthPx = widthPx
+        viewportHeightPx = heightPx
+        Log.d(TAG, "setViewportSize end, viewportWidthPx: $widthPx, viewportHeightPx: $heightPx")
+    }
+
+    /**
+     * LOD 层级选择（占位框架）：根据当前变换状态选择最适合的细节层级
+     * 
+     * 实现思路：
+     * - 思路1：计算地图像素到屏幕像素的映射比例，选择接近1:1的层级
+     * - 思路2：将屏幕1px反推到地图空间的长度，据此估算合适层级
+     * - 思路3：基于缩放级别的阈值分段选择：zoom < 0.5用level1，zoom < 0.25用level2等
+     * 
+     * 当前状态：固定返回0（最高分辨率层）
+     * 后续扩展：return estimateLevel(mapMatrix, viewportWidthPx, viewportHeightPx)
+     * 
+     * @param mapMatrix 当前地图变换矩阵，包含缩放、平移、旋转信息
+     * @return LOD层级，0表示最高分辨率，正数表示逐级降采样
      */
     private fun selectLodLevel(mapMatrix: MapMatrix): Int {
         return 0
     }
 
     /**
-     * 计算可见瓦片（当前固定 level=0）。
-     * 步骤：屏幕四角 → GL 坐标 → Map 像素坐标 → AABB 裁剪 → 像素转瓦片索引范围。
+     * 计算当前视口下的可见瓦片列表
+     * 
+     * 算法流程：
+     * 1. 计算屏幕四角在GL坐标系中的位置
+     * 2. 将GL坐标转换为地图像素坐标
+     * 3. 计算包围盒（AABB）并裁剪到地图边界
+     * 4. 将像素范围转换为瓦片索引范围
+     * 5. 遍历范围内的瓦片坐标
+     * 6. 从缓存获取已有瓦片，或创建占位瓦片
+     * 7. 将新的占位瓦片加入待加载队列
+     * 
+     * 性能优化：
+     * - 边界裁剪减少不必要的瓦片创建
+     * - 占位瓦片机制避免重复计算
+     * - 视口外瓦片通过LRU自动淘汰
+     * 
+     * @param mapMatrix 当前地图变换矩阵，用于坐标转换
+     * @return 可见瓦片列表，包括已就绪和占位瓦片
      */
     fun queryVisibleTiles(mapMatrix: MapMatrix): List<Tile> {
         if (mapWidthPx <= 0 || mapHeightPx <= 0 || viewportWidthPx <= 0 || viewportHeightPx <= 0) return emptyList()
@@ -100,23 +209,27 @@ class TileManager(
         val pRT = mapMatrix.convertScreenToGL(viewportWidthPx.toFloat(), 0f, viewportWidthPx, viewportHeightPx)
         val pLB = mapMatrix.convertScreenToGL(0f, viewportHeightPx.toFloat(), viewportWidthPx, viewportHeightPx)
         val pRB = mapMatrix.convertScreenToGL(viewportWidthPx.toFloat(), viewportHeightPx.toFloat(), viewportWidthPx, viewportHeightPx)
+        Log.d(TAG, "queryVisibleTiles 1, $pLT -> $pRT, $pLB -> $pRB")
 
         // 2) GL → Map 像素坐标（用 MapMatrix.glToWorld + world→map 像素换算）
         val lt = mapMatrix.glToMapPx(pLT.x, pLT.y)
         val rt = mapMatrix.glToMapPx(pRT.x, pRT.y)
         val lb = mapMatrix.glToMapPx(pLB.x, pLB.y)
         val rb = mapMatrix.glToMapPx(pRB.x, pRB.y)
+        Log.d(TAG, "queryVisibleTiles 2, $lt -> $rt, $lb -> $rb")
 
         val minX = floor(min(min(lt.x, rt.x), min(lb.x, rb.x)).toDouble()).toInt()
         val maxX = ceil(max(max(lt.x, rt.x), max(lb.x, rb.x)).toDouble()).toInt()
         val minY = floor(min(min(lt.y, rt.y), min(lb.y, rb.y)).toDouble()).toInt()
         val maxY = ceil(max(max(lt.y, rt.y), max(lb.y, rb.y)).toDouble()).toInt()
+        Log.d(TAG, "queryVisibleTiles 3, $minX -> $maxX, $minY -> $maxY")
 
         // 3) 裁剪到地图范围
         val clippedMinX = max(0, minX)
         val clippedMaxX = min(mapWidthPx, maxX)
         val clippedMinY = max(0, minY)
         val clippedMaxY = min(mapHeightPx, maxY)
+        Log.d(TAG, "queryVisibleTiles 4, $clippedMinX -> $clippedMaxX, $clippedMinY -> $clippedMaxY")
         if (clippedMinX >= clippedMaxX || clippedMinY >= clippedMaxY) return emptyList()
 
         // 4) 选择 LOD 层级（占位），并将像素 → 瓦片索引范围（当前仍按 base 层计算）
@@ -127,6 +240,7 @@ class TileManager(
         val tileMinY = floor(clippedMinY / tileSizePx.toDouble()).toInt()
         val tileMaxY = floor((clippedMaxY - 1) / tileSizePx.toDouble()).toInt()
 
+        Log.d(TAG, "queryVisibleTiles 5, $tileMinX -> $tileMaxX, $tileMinY -> $tileMaxY")
         val result = ArrayList<Tile>()
         for (ty in tileMinY..tileMaxY) {
             for (tx in tileMinX..tileMaxX) {
@@ -149,6 +263,7 @@ class TileManager(
                         originYInMapPx = originY,
                         isReady = false
                     )
+                    Log.d(TAG, "generate tile -> 1 -> $coord -> $placeholder")
                     cache.put(coord, placeholder)
                     result.add(placeholder)
                     pendingLoads.add(coord)
@@ -162,10 +277,33 @@ class TileManager(
     }
 
     /**
-     * 在 GL 线程按帧限速加载挂起瓦片（解码/拷贝数据 → glTex(Sub)Image2D 上传 → 更新缓存）。
-     * 返回本帧加载的瓦片个数。
+     * 在GL线程中分帧加载待处理的瓦片
+     * 
+     * 执行流程：
+     * 1. 从待加载队列取出瓦片坐标（FIFO顺序）
+     * 2. 通过RegionProvider获取像素数据
+     * 3. 从纹理池获取可复用的GL纹理
+     * 4. 创建纹理存储空间（考虑边框扩展）
+     * 5. 上传像素数据到GPU（glTexSubImage2D）
+     * 6. 处理边框扩展（如果启用）
+     * 7. 更新缓存中的瓦片状态为就绪
+     * 8. 记录性能指标
+     * 
+     * 分帧加载的优势：
+     * - 避免单帧加载过多瓦片造成掉帧
+     * - 保持渲染流畅性，分散计算负载
+     * - 可根据设备性能调整每帧加载数量
+     * 
+     * 注意事项：
+     * - 必须在GL线程中调用
+     * - maxCount应根据目标帧率和设备性能调整
+     * - 建议每帧调用，持续消化待加载队列
+     * 
+     * @param maxCount 本帧最大加载瓦片数量，默认2个，避免掉帧
+     * @return 本帧实际加载的瓦片数量
      */
     fun loadPendingOnGlThread(maxCount: Int = 2): Int {
+        Log.d(TAG, "loadPendingOnGlThread called, $maxCount/${pendingLoads.size}/${cache.size()}")
         if (pendingLoads.isEmpty()) return 0
         var loaded = 0
         val iterator = pendingLoads.iterator()
@@ -232,6 +370,7 @@ class TileManager(
                 originYInMapPx = placeholder.originYInMapPx,
                 isReady = true
             )
+            Log.d(TAG, "generate tile -> 2 -> $coord -> $ready")
             cache.put(coord, ready)
             loaded++
         }
@@ -311,6 +450,7 @@ class TileManager(
 					originYInMapPx = originY,
 					isReady = true
 				)
+                Log.d(TAG, "generate tile -> 3 -> $coord -> $tile")
 				cache.put(coord, tile)
 			} else {
 				GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texId)

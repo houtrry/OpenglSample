@@ -11,7 +11,7 @@ import com.houtrry.common_map.utils.notNull
 import com.houtrry.lopengles20.R
 import com.houtrry.lopengles20.layer.*
 
-class MapView(context: Context?, attrs: AttributeSet? = null) : GLSurfaceView(context, attrs) {
+open class MapView(context: Context?, attrs: AttributeSet? = null) : GLSurfaceView(context, attrs) {
 
     private val mapRender: MapRender by lazy { MapRender(context) { requestRenderIfNeed() } }
 
@@ -21,14 +21,14 @@ class MapView(context: Context?, attrs: AttributeSet? = null) : GLSurfaceView(co
         renderMode = RENDERMODE_WHEN_DIRTY
         notNull(context, context?.resources) { ctx, resources ->
             addLayer(CameraControlLayer(mapRender))
-            addLayer(
-                MapLayer(
-//                    BitmapFactory.decodeResource(resources, R.drawable.optemap_22k),
-//                    BitmapFactory.decodeResource(rXesources, R.mipmap.t4),
-//                    ctx.getAssertBitmap("4.png")
-                    ctx.getAssertBitmap("optemap_22k.png")
-                )
-            )
+//            addLayer(
+//                MapLayer(
+////                    BitmapFactory.decodeResource(resources, R.drawable.optemap_22k),
+////                    BitmapFactory.decodeResource(rXesources, R.mipmap.t4),
+////                    ctx.getAssertBitmap("4.png")
+//                    ctx.getAssertBitmap("optemap_22k.png")
+//                )
+//            )
             addLayer(
                 RobotLayer(
                     BitmapFactory.decodeResource(ctx.resources, com.houtrry.common_map.R.mipmap.robot)
@@ -42,7 +42,7 @@ class MapView(context: Context?, attrs: AttributeSet? = null) : GLSurfaceView(co
         return event?.let { mapRender.onTouchEvent(event) } ?: false
     }
 
-    private fun addLayer(shaper: ILayer) {
+    open fun addLayer(shaper: ILayer) {
         mapRender.addLayer(shaper)
         requestRender()
     }

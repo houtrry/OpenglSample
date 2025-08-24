@@ -110,6 +110,19 @@ class JpegPngRegionProvider(
             if (!bmp.isRecycled) bmp.recycle()
         }
     }
+    
+    /**
+     * 释放Provider相关资源
+     * 
+     * 关闭BitmapRegionDecoder，释放内存资源
+     */
+    override fun close() {
+        try {
+            decoder?.recycle()
+        } catch (e: Exception) {
+            // BitmapRegionDecoder.recycle() 可能抛出异常，忽略
+        }
+    }
 }
 
 

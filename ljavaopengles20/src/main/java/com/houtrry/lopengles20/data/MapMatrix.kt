@@ -19,8 +19,8 @@ import kotlin.math.sqrt
 class MapMatrix {
     companion object {
         private const val TAG = "MapMatrix"
-        private const val MIN_SCALE = 0.5f
-        private const val MAX_SCALE = 4.0f
+        private const val MIN_SCALE = 0.000005f
+        private const val MAX_SCALE = 400000.0f
     }
 
     @Volatile

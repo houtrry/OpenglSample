@@ -8,6 +8,7 @@ import com.houtrry.common_map.utils.dp
 import com.houtrry.common_map.utils.isLTR
 import com.houtrry.common_map.utils.sp
 import kotlin.math.max
+import androidx.core.graphics.createBitmap
 
 data class BubbleText(
     /**
@@ -134,7 +135,7 @@ fun BubbleText.draw(
     path: Path,
     size: Size,
     offsetX: Int,
-    isLTR: Boolean
+    isLTR: Boolean,
 ) {
     textParams.drawBubbleBackground(canvas, paint, path, size, offsetX)
     drawDrawable(canvas, paint, size, offsetX, isLTR)
@@ -142,10 +143,18 @@ fun BubbleText.draw(
 }
 
 fun BubbleText.generateBitmap(isLTR: Boolean = isLTR()): Bitmap {
-    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        isDither = true          // 启用抖动减少色带
+        isFilterBitmap = true    // 高质量位图过滤
+    }
     val bubbleSize = getBubbleSize(paint)
+    
+    // 使用 ARGB_8888 确保最佳质量
     val bitmap = Bitmap.createBitmap(bubbleSize.width, bubbleSize.height, Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(bitmap)
+    val canvas = Canvas(bitmap).apply {
+        drawFilter = PaintFlagsDrawFilter(0, Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+    }
+    
     val path = Path()
     val offsetX = 0
     textParams.drawBubbleBackground(canvas, paint, path, bubbleSize, offsetX)
@@ -159,7 +168,7 @@ fun BubbleText.drawDrawable(
     paint: Paint,
     size: Size,
     offsetX: Int,
-    isLTR: Boolean
+    isLTR: Boolean,
 ) {
     if (drawable == null) {
 
@@ -189,12 +198,24 @@ fun BubbleText.drawDrawable(
         }
     }
 
+    // 只在需要缩放时才启用过滤
+    val needsScaling = drawable.drawable.width != drawable.width.toInt() || 
+                      drawable.drawable.height != drawable.height.toInt()
+    if (needsScaling) {
+        paint.isFilterBitmap = true
+    }
+    
     canvas.drawBitmap(
         drawable.drawable,
         Rect(0, 0, drawable.drawable.width, drawable.drawable.height),
         Rect(offsetX + left, top, (offsetX + left + drawable.width).toInt(), (top + drawable.height).toInt()),
         paint
     )
+    
+    // 重置Paint状态
+    if (needsScaling) {
+        paint.isFilterBitmap = false
+    }
 }
 
 fun BubbleText.drawText(canvas: Canvas, paint: Paint, size: Size, offsetX: Int, isLTR: Boolean) {
@@ -248,7 +269,7 @@ private fun BubbleTextLayoutParam.drawBubbleBackground(
     paint: Paint,
     path: Path,
     size: Size,
-    offsetX: Int
+    offsetX: Int,
 ) {
     path.reset()
 //    val offsetInner = borderStokeWidth * 0.5f
