@@ -202,7 +202,10 @@ class TileManager(
      * @return 可见瓦片列表，包括已就绪和占位瓦片
      */
     fun queryVisibleTiles(mapMatrix: MapMatrix): List<Tile> {
-        if (mapWidthPx <= 0 || mapHeightPx <= 0 || viewportWidthPx <= 0 || viewportHeightPx <= 0) return emptyList()
+        if (mapWidthPx <= 0 || mapHeightPx <= 0 || viewportWidthPx <= 0 || viewportHeightPx <= 0) {
+            Log.d(TAG, "queryVisibleTiles 0, $mapWidthPx -> $mapHeightPx, $viewportWidthPx -> $viewportHeightPx")
+            return emptyList()
+        }
 
         // 1) 计算屏幕四角在 GL 空间坐标
         val pLT = mapMatrix.convertScreenToGL(0f, 0f, viewportWidthPx, viewportHeightPx)
@@ -230,7 +233,10 @@ class TileManager(
         val clippedMinY = max(0, minY)
         val clippedMaxY = min(mapHeightPx, maxY)
         Log.d(TAG, "queryVisibleTiles 4, $clippedMinX -> $clippedMaxX, $clippedMinY -> $clippedMaxY")
-        if (clippedMinX >= clippedMaxX || clippedMinY >= clippedMaxY) return emptyList()
+        if (clippedMinX >= clippedMaxX || clippedMinY >= clippedMaxY) {
+            Log.d(TAG, "queryVisibleTiles has scroll outer of map, show nothing")
+            return emptyList()
+        }
 
         // 4) 选择 LOD 层级（占位），并将像素 → 瓦片索引范围（当前仍按 base 层计算）
         val level = selectLodLevel(mapMatrix)
@@ -240,30 +246,32 @@ class TileManager(
         val tileMinY = floor(clippedMinY / tileSizePx.toDouble()).toInt()
         val tileMaxY = floor((clippedMaxY - 1) / tileSizePx.toDouble()).toInt()
 
-        Log.d(TAG, "queryVisibleTiles 5, $tileMinX -> $tileMaxX, $tileMinY -> $tileMaxY")
+        Log.d(TAG, "queryVisibleTiles 5, $tileMinX -> $tileMaxX, $tileMinY -> $tileMaxY, $tileSizePx")
         val result = ArrayList<Tile>()
-        for (ty in tileMinY..tileMaxY) {
+        // 将内部行索引统一为“左上原点，y向下”
+        for (tyUp in tileMinY..tileMaxY) {
             for (tx in tileMinX..tileMaxX) {
-                val coord = TileCoord(level = level, x = tx, y = ty)
+                val coord = TileCoord(level = level, x = tx, y = tyUp)
                 val cached = cache.get(coord)
                 if (cached != null) {
+                    Log.d(TAG, "queryVisibleTiles use cached tile -> 2 -> $coord -> $cached")
                     result.add(cached)
                 } else {
                     // 占位 Tile：未就绪时返回 isReady=false，纹理 id=0；供渲染层跳过绘制
                     val originX = tx * tileSizePx
-                    val originY = ty * tileSizePx
+                    val originYDown = tyUp * tileSizePx
                     val width = min(tileSizePx, mapWidthPx - originX)
-                    val height = min(tileSizePx, mapHeightPx - originY)
+                    val height = min(tileSizePx, mapHeightPx - originYDown)
                     val placeholder = Tile(
                         coord = coord,
                         textureId = 0,
                         widthPx = width,
                         heightPx = height,
                         originXInMapPx = originX,
-                        originYInMapPx = originY,
+                        originYInMapPx = originYDown,
                         isReady = false
                     )
-                    Log.d(TAG, "generate tile -> 1 -> $coord -> $placeholder")
+                    Log.d(TAG, "queryVisibleTiles generate new tile -> 1 -> $coord -> $placeholder")
                     cache.put(coord, placeholder)
                     result.add(placeholder)
                     pendingLoads.add(coord)
@@ -311,9 +319,14 @@ class TileManager(
             val coord = iterator.next()
             iterator.remove()
             val placeholder = cache.get(coord) ?: continue
+            // Provider 以左上角为原点(y向下)，内部tile原点为左下(y向上)，需要转换
+            val srcX = placeholder.originXInMapPx
+            val srcYTop = placeholder.originYInMapPx
+
+            Log.d(TAG, "loadPendingOnGlThread $coord -> srcX: $srcX, srcYTop: $srcYTop = $mapHeightPx - ${placeholder.originYInMapPx} - ${placeholder.heightPx}")
             val region = regionProvider?.obtainRegion(
-                placeholder.originXInMapPx,
-                placeholder.originYInMapPx,
+                srcX,
+                srcYTop,
                 placeholder.widthPx,
                 placeholder.heightPx
             ) ?: continue
@@ -421,6 +434,7 @@ class TileManager(
 				GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texId)
 				// 以第一个子请求的格式作为 tile 的格式（假设同一 provider 的格式一致）
 				val firstReq = subReqs.first()
+				// 内部已改为左上(y向下)，直接使用请求中的y
 				val firstRegion = provider.obtainRegion(firstReq.subMinX, firstReq.subMinY, firstReq.subWidth, firstReq.subHeight)
 				if (firstRegion == null) {
 					GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0)

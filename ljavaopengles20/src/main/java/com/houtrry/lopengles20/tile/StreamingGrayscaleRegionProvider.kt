@@ -1,6 +1,7 @@
 package com.houtrry.lopengles20.tile
 
 import android.opengl.GLES20
+import android.util.Log
 import android.util.LruCache
 
 import java.nio.ByteBuffer
@@ -39,6 +40,9 @@ class StreamingGrayscaleRegionProvider(
 ) : RegionProvider {
     
     companion object {
+
+        private const val TAG = "StreamingRegionProvider"
+
         // 默认缓存32MB（约512个256×256区域）
         private const val DEFAULT_CACHE_SIZE_BYTES = 32 * 1024 * 1024
         
@@ -137,6 +141,7 @@ class StreamingGrayscaleRegionProvider(
     private fun readRegionFromFile(x: Int, y: Int, width: Int, height: Int): ByteArray? {
         synchronized(fileLock) {
             try {
+                Log.d(TAG, "readRegionFromFile leftTop: ($x, $y), size: $width * $height")
                 val regionData = ByteArray(width * height)
                 var destOffset = 0
                 
@@ -146,6 +151,7 @@ class StreamingGrayscaleRegionProvider(
                     
                     // 计算该行在文件中的起始偏移
                     val fileOffset = metadata.getPixelFileOffset(x, currentY)
+                    Log.d(TAG, "readRegionFromFile readBytesAt: ($x, $currentY), fileOffset: $fileOffset, width: $width")
                     
                     // 读取一行数据
                     val rowData = metadata.readBytesAt(fileOffset, width)
@@ -164,6 +170,7 @@ class StreamingGrayscaleRegionProvider(
                 
             } catch (e: Exception) {
                 e.printStackTrace()
+                Log.e(TAG, "readRegionFromFile error: ${e.message}", e)
                 return null
             }
         }

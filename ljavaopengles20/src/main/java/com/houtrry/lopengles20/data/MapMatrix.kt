@@ -251,13 +251,17 @@ class MapMatrix {
     /**
      * 将 GL 坐标转换为 Map 像素坐标(px)。
      * 推导自 glToWorld 与 Map 坐标定义：
-     * mapX = (worldX - originX) / resolution + width * 0.5
-     * mapY = (worldY - originY) / resolution + height * 0.5
+     * mapX = (worldX - originX) / resolution
+     * mapY = height - (worldY - originY) / resolution
      */
     fun glToMapPx(x: Float, y: Float): PointF {
+        //为什么要转成世界坐标系
+        //因为gl坐标系下，需要考虑缩放、旋转、平移
+        //转成世界坐标系可以忽略这些
+        //毕竟，纹理在世界坐标系下的位置是固定的
         val world = glToWorld(x, y)
-        val mx = (world.x - bitmapInfo.originX) / bitmapInfo.resolution + bitmapInfo.width * 0.5f
-        val my = (world.y - bitmapInfo.originY) / bitmapInfo.resolution + bitmapInfo.height * 0.5f
+        val mx = (world.x - bitmapInfo.originX) / bitmapInfo.resolution
+        val my = bitmapInfo.height - (world.y - bitmapInfo.originY) / bitmapInfo.resolution 
         return PointF(mx, my)
     }
 }

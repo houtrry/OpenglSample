@@ -28,6 +28,7 @@ class BitmapLayer(private val bitmap: Bitmap) : BaseLayer() {
     private var textureCoordinateLocation: Int = -1
     private var centerColorLocation: Int = -1
     private var outerColorLocation: Int = -1
+    private var originOuterColorLocation: Int = -1
     private var wallColorLocation: Int = -1
     private var transformMatrixLocation: Int = -1
     private var isMapUniformLocation: Int = -1
@@ -83,6 +84,7 @@ class BitmapLayer(private val bitmap: Bitmap) : BaseLayer() {
         textureCoordinateLocation = program.glGetAttribLocation("inputTextureCoordinate")
         centerColorLocation = program.glGetUniformLocation("center_color")
         outerColorLocation = program.glGetUniformLocation("outer_color")
+        originOuterColorLocation = program.glGetUniformLocation("origin_outer_color")
         wallColorLocation = program.glGetUniformLocation("wall_color")
         transformMatrixLocation = program.glGetUniformLocation("u_TransformMatrix")
         isMapUniformLocation = program.glGetUniformLocation("isMap")
@@ -103,6 +105,9 @@ class BitmapLayer(private val bitmap: Bitmap) : BaseLayer() {
     }
     private val outerColor: FloatArray by lazy {
         "#ffffff".colorToFloatArray()
+    }
+    private val originOuterColor: FloatArray by lazy {
+        "#808080".colorToFloatArray()
     }
     private val wallColor by lazy {
         "#0072ff".colorToFloatArray()
@@ -132,6 +137,7 @@ class BitmapLayer(private val bitmap: Bitmap) : BaseLayer() {
         // 颜色 uniform
         setColorValue(centerColorLocation, centerColor)
         setColorValue(outerColorLocation, outerColor)
+        setColorValue(originOuterColorLocation, originOuterColor)
         setColorValue(wallColorLocation, wallColor)
 
         // 顶点/纹理坐标 attribute

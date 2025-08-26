@@ -5,10 +5,11 @@ varying highp vec2 textureCoordinate;
 uniform sampler2D inputImageTexture;
 uniform vec4 center_color;
 uniform vec4 outer_color;
+uniform vec4 origin_outer_color;
 uniform vec4 wall_color;
 uniform bool isMap;
 
-vec4 convertMapColor(vec4 color, vec4 color0) {
+vec4 convertMapColor(vec4 color) {
     if (color.r == 1.0 && color.g == 1.0 && color.b == 1.0) {
         //中心区域 #c3d8ea
         //        return vec4(0.49725, 0.847059, 0.917647, 1.0);
@@ -16,7 +17,7 @@ vec4 convertMapColor(vec4 color, vec4 color0) {
 //        return vec4(0.7647058823529412, 0.8470588235294118, 0.9176470588235294, 1.0);
         return center_color;
     }
-    if (color.r == color0.r && color.g == color0.g && color.b == color0.b) {
+    if (color.r == origin_outer_color.r && color.g == origin_outer_color.g && color.b == origin_outer_color.b) {
 //        return vec4(1.0, 1.0, 1.0, 1.0);
         return outer_color;
     }
@@ -49,14 +50,14 @@ vec4 convertInvertedColor(vec4 color) {
 
 void main() {
     // 将2D纹理inputImageTexture和纹理顶点坐标通过texture2D计算后传给片段着色器
-    vec4 color0 = texture2D(inputImageTexture, vec2(1.0, 1.0));
-    vec4 color = texture2D(inputImageTexture, textureCoordinate);
+//    vec4 color0 = texture2D(inputImageTexture, vec2(1.0, 1.0));
+//    vec4 color = texture2D(inputImageTexture, textureCoordinate);
     //    float red = (gl_FragColor.r - 0.5870 * gl_FragColor.g - 0.1140 * gl_FragColor.b) / 0.2989;
     //    if((color.r > 0.5137 && color.r < 0.5216) ) {
     if(isMap) {
-        vec4 color0 = texture2D(inputImageTexture, vec2(1.0, 1.0));
+//        vec4 color0 = texture2D(inputImageTexture, vec2(1.0, 1.0));
         vec4 color = texture2D(inputImageTexture, textureCoordinate);
-        gl_FragColor = convertMapColor(color, color0);
+        gl_FragColor = convertMapColor(color);
     } else {
         gl_FragColor = texture2D(inputImageTexture, textureCoordinate);
     }

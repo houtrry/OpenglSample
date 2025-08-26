@@ -92,6 +92,8 @@ class EnhancedMapTestActivity : Activity() {
     
     private fun initMapLayer() {
         GlobalScope.launch(Dispatchers.Main) {
+            mapView.setUseDefaultLayers(false)
+            mapView.addCameraControlLayer()
             enhancedMapLayer = EnhancedMapLayer()
             // 设置自动全览监听器
             enhancedMapLayer.setAutoOverviewListener(object : AutoOverviewListener {
@@ -108,7 +110,7 @@ class EnhancedMapTestActivity : Activity() {
                     withContext(Dispatchers.IO) { BitmapFactory.decodeResource(this@EnhancedMapTestActivity.resources, com.houtrry.common_map.R.mipmap.robot) }
                 )
             )
-            mapView.addLayers(TextLayer())
+//            mapView.addLayers(TextLayer())
         }
 
         Log.d(TAG, "增强MapLayer已添加到MapView")
@@ -247,7 +249,7 @@ class EnhancedMapTestActivity : Activity() {
                 
                 runOnUiThread {
                     // 由于optemap_75k不是标准图像格式，我们用它来测试ParcelFd的文件模式
-                    val success = enhancedMapLayer.setImageFile(file, useCpuGrayscale = true)
+                    val success = enhancedMapLayer.setImageFile(file, useCpuGrayscale = false)
                     
                     if (success) {
                         currentDataSourceType = "ImageFile"

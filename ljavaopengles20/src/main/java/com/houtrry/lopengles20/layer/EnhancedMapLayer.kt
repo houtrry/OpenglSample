@@ -124,10 +124,10 @@ open class EnhancedMapLayer() : BaseLayer() {
 
     // ================== Tile 管理 ==================
     protected val tileManager = TileManager(
-        tileSizePx = 256,           // 🔥 减小瓦片大小到256像素，提高覆盖率
+        tileSizePx = 512,           // 🔥 减小瓦片大小到256像素，提高覆盖率
         lruCapacity = 512,          // 🔥 增加缓存容量到512个瓦片  
         texturePoolCapacity = 512   // 🔥 增加纹理池容量
-    )
+    ).apply { setBorderEnabled(false) }
 
     // ================== 自动全览支持 ==================
     private var autoOverviewListener: AutoOverviewListener? = null
@@ -322,6 +322,9 @@ open class EnhancedMapLayer() : BaseLayer() {
     private val outerColor: FloatArray by lazy {
         "#d6dadf".colorToFloatArray()
     }
+    private val originOuterColor: FloatArray by lazy {
+        "#808080".colorToFloatArray()
+    }
     private val wallColor by lazy {
         "#0072ff".colorToFloatArray()
     }
@@ -339,6 +342,7 @@ open class EnhancedMapLayer() : BaseLayer() {
     private var positionLocation: Int = -1
     private var centerColorLocation: Int = -1
     private var outerColorLocation: Int = -1
+    private var originOuterColorLocation: Int = -1
     private var wallColorLocation: Int = -1
     private var isMapUniformLocation: Int = -1
     private var transformMatrixLocation: Int = -1
@@ -367,9 +371,11 @@ open class EnhancedMapLayer() : BaseLayer() {
 
         if (centerColorLocation == -1) centerColorLocation = program.glGetUniformLocation("center_color")
         if (outerColorLocation == -1) outerColorLocation = program.glGetUniformLocation("outer_color")
+        if (originOuterColorLocation == -1) originOuterColorLocation = program.glGetUniformLocation("origin_outer_color")
         if (wallColorLocation == -1) wallColorLocation = program.glGetUniformLocation("wall_color")
         GLES20.glUniform4fv(centerColorLocation, 1, centerColor, 0)
         GLES20.glUniform4fv(outerColorLocation, 1, outerColor, 0)
+        GLES20.glUniform4fv(originOuterColorLocation, 1, originOuterColor, 0)
         GLES20.glUniform4fv(wallColorLocation, 1, wallColor, 0)
 
         if (isMapUniformLocation == -1) isMapUniformLocation = program.glGetUniformLocation("isMap")
@@ -470,7 +476,8 @@ open class EnhancedMapLayer() : BaseLayer() {
             
             // tile 平移矩阵：以地图中心为原点，将瓦片中心平移到其在地图中的位置
             val centerX = tile.originXInMapPx + tile.widthPx * 0.5f - currentMapSize.width * 0.5f
-            val centerY = tile.originYInMapPx + tile.heightPx * 0.5f - currentMapSize.height * 0.5f
+            // tile.originYInMapPx 现为左上(y向下)，需转为以地图中心为原点、y向上
+            val centerY = (currentMapSize.height - (tile.originYInMapPx + tile.heightPx * 0.5f)) - currentMapSize.height * 0.5f
             Log.v(TAG, "瓦片变换: centerX=$centerX, centerY=$centerY, 地图中心=(${currentMapSize.width * 0.5f}, ${currentMapSize.height * 0.5f})")
             
             tileTranslateM.identityM()
@@ -485,6 +492,7 @@ open class EnhancedMapLayer() : BaseLayer() {
             
             // 只采样内容区域的 UV：使用 (u0,v0)-(u1,v1)
             val uv = tileManager.getTileContentUv(tile)
+            // 使用未翻转的UV，避免上下反转
             val uvBuf = floatArrayOf(
                 uv.u0, uv.v0,
                 uv.u1, uv.v0,
@@ -493,7 +501,8 @@ open class EnhancedMapLayer() : BaseLayer() {
             ).toBuffer()
             
             GLES20.glVertexAttribPointer(textureCoordinateLocation, COORDS_PRE_TEXTURE_VERTEX, GLES20.GL_FLOAT, false, textVertexStride, uvBuf)
-            GLES20.glDrawElements(GLES20.GL_TRIANGLE_STRIP, drawOrder.size, GLES20.GL_UNSIGNED_SHORT, drawListBuffer)
+            // 使用GL_TRIANGLES与索引匹配
+            GLES20.glDrawElements(GLES20.GL_TRIANGLES, drawOrder.size, GLES20.GL_UNSIGNED_SHORT, drawListBuffer)
         }
 
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0)
@@ -536,7 +545,8 @@ open class EnhancedMapLayer() : BaseLayer() {
 
             GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, fallbackTextureId)
             GLES20.glVertexAttribPointer(textureCoordinateLocation, COORDS_PRE_TEXTURE_VERTEX, GLES20.GL_FLOAT, false, textVertexStride, texVertexBuffer)
-            GLES20.glDrawElements(GLES20.GL_TRIANGLE_STRIP, drawOrder.size, GLES20.GL_UNSIGNED_SHORT, drawListBuffer)
+            // 使用GL_TRIANGLES与索引匹配
+            GLES20.glDrawElements(GLES20.GL_TRIANGLES, drawOrder.size, GLES20.GL_UNSIGNED_SHORT, drawListBuffer)
             GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0)
             Log.d(TAG, "fallback bitmap rendered successfully")
         } else {

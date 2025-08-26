@@ -5,6 +5,8 @@ import android.graphics.BitmapFactory
 import android.graphics.BitmapRegionDecoder
 import android.graphics.Rect
 import android.opengl.GLES20
+import android.util.Log
+import com.houtrry.lopengles20.tile.StreamingGrayscaleRegionProvider.Companion
 import java.nio.ByteBuffer
 
 /**
@@ -20,6 +22,10 @@ class JpegPngRegionProvider(
     private val decoderFactory: () -> BitmapRegionDecoder,
     private val useCpuGray: Boolean = false
 ) : RegionProvider {
+
+    companion object {
+        private const val TAG = "JpegPngRegionProvider"
+    }
 
     @Volatile
     private var decoder: BitmapRegionDecoder? = null
@@ -38,6 +44,7 @@ class JpegPngRegionProvider(
     }
 
     override fun obtainRegion(x: Int, y: Int, width: Int, height: Int): RegionBuffer? {
+        Log.d(TAG, "obtainRegion leftTop: ($x, $y), size: $width * $height, useCpuGray: $useCpuGray")
         if (width <= 0 || height <= 0) return null
         val dec = try { requireDecoder() } catch (_: Throwable) { return null }
         val imgW = dec.width
@@ -49,6 +56,7 @@ class JpegPngRegionProvider(
         if (rw <= 0 || rh <= 0) return null
 
         val rect = Rect(rx, ry, rx + rw, ry + rh)
+        Log.d(TAG, "obtainRegion rect: (${rect.left}, ${rect.top}), (${rect.right}, ${rect.bottom})")
         val opts = BitmapFactory.Options().apply { inPreferredConfig = Bitmap.Config.ARGB_8888 }
         val bmp: Bitmap = synchronized(decodeLock) {
             dec.decodeRegion(rect, opts)

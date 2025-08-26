@@ -210,7 +210,8 @@ class MapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
 
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, glMapTextureId)
         GLES20.glVertexAttribPointer(textureCoordinateLocation, COORDS_PRE_TEXTURE_VERTEX, GLES20.GL_FLOAT, false, textVertexStride, texVertexBuffer)
-        GLES20.glDrawElements(GLES20.GL_TRIANGLE_STRIP, drawOrder.size, GLES20.GL_UNSIGNED_SHORT, drawListBuffer)
+        // 使用GL_TRIANGLES与索引匹配
+        GLES20.glDrawElements(GLES20.GL_TRIANGLES, drawOrder.size, GLES20.GL_UNSIGNED_SHORT, drawListBuffer)
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0)
         GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE_MINUS_SRC_ALPHA) // 设置混合函数
 
@@ -230,7 +231,8 @@ class MapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
             Matrix.scaleM(tileSizeM, 0, tile.widthPx.toFloat(), tile.heightPx.toFloat(), 1f)
             // 4.2) tile 平移矩阵：以地图中心为原点，将瓦片中心平移到其在地图中的位置
             val centerX = tile.originXInMapPx + tile.widthPx * 0.5f - mapBitmapSize.width * 0.5f
-            val centerY = tile.originYInMapPx + tile.heightPx * 0.5f - mapBitmapSize.height * 0.5f
+            // tile.originYInMapPx 现为左上(y向下)，需转为以地图中心为原点、y向上
+            val centerY = (mapBitmapSize.height - (tile.originYInMapPx + tile.heightPx * 0.5f)) - mapBitmapSize.height * 0.5f
             tileTranslateM.identityM()
             Matrix.translateM(tileTranslateM, 0, centerX, centerY, 0f)
 
@@ -242,6 +244,7 @@ class MapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
             GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, tile.textureId)
             // 只采样内容区域的 UV：使用 (u0,v0)-(u1,v1)
             val uv = tileManager.getTileContentUv(tile)
+            // 使用未翻转的UV，避免上下反转
             val uvBuf = floatArrayOf(
                 uv.u0, uv.v0,
                 uv.u1, uv.v0,
@@ -249,7 +252,8 @@ class MapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
                 uv.u0, uv.v1
             ).toBuffer()
             GLES20.glVertexAttribPointer(textureCoordinateLocation, COORDS_PRE_TEXTURE_VERTEX, GLES20.GL_FLOAT, false, textVertexStride, uvBuf)
-            GLES20.glDrawElements(GLES20.GL_TRIANGLE_STRIP, drawOrder.size, GLES20.GL_UNSIGNED_SHORT, drawListBuffer)
+            // 使用GL_TRIANGLES与索引匹配
+            GLES20.glDrawElements(GLES20.GL_TRIANGLES, drawOrder.size, GLES20.GL_UNSIGNED_SHORT, drawListBuffer)
         }
 
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0)
