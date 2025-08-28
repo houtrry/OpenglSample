@@ -22,7 +22,16 @@ class MapRender(val context: Context?, private val renderCallback: () -> Unit) :
     }
 
     private val layers = CopyOnWriteArrayList<ILayer>()
-    private var mPrograms: Int = 0
+
+    /**
+     * 专门用来绘制地图layer(需要做颜色映射)
+     */
+    private var mMapProgram: Int = 0
+
+    /**
+     * 用于绘制不需要颜色映射的layer的program
+     */
+    private var mPlainProgram: Int = 0
 
     private val mapMatrix = MapMatrix()
     private var viewportWidth: Int = 0
@@ -35,7 +44,8 @@ class MapRender(val context: Context?, private val renderCallback: () -> Unit) :
         }
         PerfMetrics.init(context)
         val vertexShaderCode = context.readRawText(R.raw.map_vertex)
-        val fragmentShaderCode = context.readRawText(R.raw.map_fragment)
+        val mapFragmentShaderCode = context.readRawText(R.raw.map_fragment)
+        val plainFragmentShaderCode = context.readRawText(R.raw.texture_fragment)
         //编译顶点着色器
         val vertexShaper: Int = OpenglUtils.loadShaper(
             GLES20.GL_VERTEX_SHADER, vertexShaderCode
@@ -45,28 +55,54 @@ class MapRender(val context: Context?, private val renderCallback: () -> Unit) :
         }
         Log.d(TAG, "vertexShaper: $vertexShaper")
         //编译片源着色器
-        val fragmentShaper: Int = OpenglUtils.loadShaper(
-            GLES20.GL_FRAGMENT_SHADER, fragmentShaderCode
+        val mapFragmentShaper: Int = OpenglUtils.loadShaper(
+            GLES20.GL_FRAGMENT_SHADER, mapFragmentShaderCode
         ) ?: kotlin.run {
             Log.e(TAG, "compile fragment shape failure")
             return
         }
-        Log.d(TAG, "fragmentShaper: $fragmentShaper")
-        //创建着色器程序
-        mPrograms = OpenglUtils.linkProgram(
-            vertexShaper, fragmentShaper
+        Log.d(TAG, "mapFragmentShaper: $mapFragmentShaper")
+
+        val plainFragmentShaper: Int = OpenglUtils.loadShaper(
+            GLES20.GL_FRAGMENT_SHADER, plainFragmentShaderCode
+        ) ?: kotlin.run {
+            Log.e(TAG, "compile plain fragment shape failure")
+            return
+        }
+        Log.d(TAG, "plainFragmentShaper: $plainFragmentShaper")
+
+        //创建两套着色器程序
+        mMapProgram = OpenglUtils.linkProgram(
+            vertexShaper, mapFragmentShaper
         ) ?: kotlin.run {
             Log.e(TAG, "link program failure")
             return
         }
-        Log.d(TAG, "mPrograms: $mPrograms")
-        if (!OpenglUtils.isValidateProgram(mPrograms)) {
+        Log.d(TAG, "mMapProgram: $mMapProgram")
+        if (!OpenglUtils.isValidateProgram(mMapProgram)) {
             Log.e(TAG, "program status isn`t validate")
             return
         }
-        GLES20.glUseProgram(mPrograms)
+        mPlainProgram = OpenglUtils.linkProgram(
+            vertexShaper, plainFragmentShaper
+        ) ?: kotlin.run {
+            Log.e(TAG, "link plain program failure")
+            return
+        }
+        Log.d(TAG, "mPlainProgram: $mPlainProgram")
+        if (!OpenglUtils.isValidateProgram(mPlainProgram)) {
+            Log.e(TAG, "plain program status isn`t validate")
+            return
+        }
+
+        // 使用地图程序初始化（随后为每个图层选择对应程序）
+        GLES20.glUseProgram(mMapProgram)
         context.let { ctx ->
-            layers.forEach { it.onCreate(ctx, mPrograms, mapMatrix) }
+            layers.forEach { layer ->
+                val program = chooseProgramForLayer(layer)
+                GLES20.glUseProgram(program)
+                layer.onCreate(ctx, program, mapMatrix)
+            }
         }
         Log.d(TAG, "onSurfaceCreated end")
     }
@@ -89,8 +125,10 @@ class MapRender(val context: Context?, private val renderCallback: () -> Unit) :
         GLES20.glEnable(GLES20.GL_BLEND)
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
         synchronized(mapMatrix) {
-            layers.forEach {
-                it.onDraw()
+            layers.forEach { layer ->
+                val program = chooseProgramForLayer(layer)
+                GLES20.glUseProgram(program)
+                layer.onDraw()
                 if (PerfMetrics.enabled) {
                     PerfMetrics.incrementDrawCalls()
                 }
@@ -111,9 +149,11 @@ class MapRender(val context: Context?, private val renderCallback: () -> Unit) :
         }
 
         // 如果GL上下文已就绪，立即初始化该图层
-        if (mPrograms != 0 && context != null) {
+        if ((mMapProgram != 0 && mPlainProgram != 0) && context != null) {
             try {
-                layer.onCreate(context, mPrograms, mapMatrix)
+                val program = chooseProgramForLayer(layer)
+                GLES20.glUseProgram(program)
+                layer.onCreate(context, program, mapMatrix)
                 if (viewportWidth > 0 && viewportHeight > 0) {
                     layer.onSizeChange(viewportWidth, viewportHeight)
                 }
@@ -170,14 +210,27 @@ class MapRender(val context: Context?, private val renderCallback: () -> Unit) :
             }
         }
         layers.clear()
-        if (mPrograms != 0) {
+        if (mMapProgram != 0) {
             GLES20.glUseProgram(0)
-            GLES20.glDeleteProgram(mPrograms)
-            mPrograms = 0
+            GLES20.glDeleteProgram(mMapProgram)
+            mMapProgram = 0
+        }
+        if (mPlainProgram != 0) {
+            GLES20.glUseProgram(0)
+            GLES20.glDeleteProgram(mPlainProgram)
+            mPlainProgram = 0
         }
         if (PerfMetrics.enabled) {
             PerfMetrics.flush()
             PerfMetrics.shutdown()
+        }
+    }
+
+    private fun chooseProgramForLayer(layer: ILayer): Int {
+        return when (layer) {
+            is com.houtrry.lopengles20.layer.EnhancedMapLayer -> mMapProgram
+            is com.houtrry.lopengles20.layer.MapLayer -> mMapProgram
+            else -> mPlainProgram
         }
     }
 }

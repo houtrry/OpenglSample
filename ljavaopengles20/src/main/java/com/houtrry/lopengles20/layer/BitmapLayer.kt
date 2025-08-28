@@ -87,7 +87,7 @@ class BitmapLayer(private val bitmap: Bitmap) : BaseLayer() {
         originOuterColorLocation = program.glGetUniformLocation("origin_outer_color")
         wallColorLocation = program.glGetUniformLocation("wall_color")
         transformMatrixLocation = program.glGetUniformLocation("u_TransformMatrix")
-        isMapUniformLocation = program.glGetUniformLocation("isMap")
+        // Plain Program 不需要 isMap
     }
 
     private fun String.colorToFloatArray(): FloatArray {

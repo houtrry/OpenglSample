@@ -169,7 +169,7 @@ class MapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
     private var centerColorLocation: Int = -1
     private var outerColorLocation: Int = -1
     private var wallColorLocation: Int = -1
-    private var isMapUniformLocation: Int = -1
+    // 地图 Program 不再需要 isMap
     private var transformMatrixLocation: Int = -1
     private var textureCoordinateLocation: Int = -1
 
@@ -191,14 +191,13 @@ class MapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
         GLES20.glUniform4fv(outerColorLocation, 1, outerColor, 0)
         GLES20.glUniform4fv(wallColorLocation, 1, wallColor, 0)
 
-        if (isMapUniformLocation == -1) isMapUniformLocation = program.glGetUniformLocation("isMap")
         if (transformMatrixLocation == -1) transformMatrixLocation = program.glGetUniformLocation("u_TransformMatrix")
 
         if (textureCoordinateLocation == -1) {
             textureCoordinateLocation = program.glGetAttribLocation("inputTextureCoordinate")
         }
         GLES20.glEnableVertexAttribArray(textureCoordinateLocation)
-        GLES20.glUniform1i(isMapUniformLocation, 1)
+        // 地图 Program 不再需要 isMap uniform
 
         // 2) 基础 PV*Model（投影*视图*模型）
         val pvModel = FloatArray(16).identityM()
@@ -257,7 +256,7 @@ class MapLayer(private val mapBitmap: Bitmap) : BaseLayer() {
         }
 
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0)
-        GLES20.glUniform1i(isMapUniformLocation, 0)
+        // 地图 Program 不再需要 isMap uniform
 
         // 收尾：仅关闭 attribute 数组
         positionLocation.glDisableVertexAttribArray()

@@ -7,7 +7,6 @@ uniform vec4 center_color;
 uniform vec4 outer_color;
 uniform vec4 origin_outer_color;
 uniform vec4 wall_color;
-uniform bool isMap;
 
 // 基于灰度阈值 + 容差的分类映射，兼容 RGBA 与 LUMINANCE 纹理
 const float G_OUTER  = 128.0/255.0;   // 原图外侧 #808080 的灰度
@@ -52,24 +51,8 @@ vec4 convertInvertedColor(vec4 color) {
 }
 
 void main() {
-    // 将2D纹理inputImageTexture和纹理顶点坐标通过texture2D计算后传给片段着色器
-//    vec4 color0 = texture2D(inputImageTexture, vec2(1.0, 1.0));
-//    vec4 color = texture2D(inputImageTexture, textureCoordinate);
-    //    float red = (gl_FragColor.r - 0.5870 * gl_FragColor.g - 0.1140 * gl_FragColor.b) / 0.2989;
-    //    if((color.r > 0.5137 && color.r < 0.5216) ) {
-    if(isMap) {
-//        vec4 color0 = texture2D(inputImageTexture, vec2(1.0, 1.0));
-        vec4 color = texture2D(inputImageTexture, textureCoordinate);
-        gl_FragColor = convertMapColor(color);
-    } else {
-        gl_FragColor = texture2D(inputImageTexture, textureCoordinate);
-    }
-
-    //    gl_FragColor = convertToGrayColor(color);
-    //    gl_FragColor = color * vec4(0.5, 0.5, 0.5, 1);
-//    gl_FragColor = convertInvertedColor(color);
-//        gl_FragColor = color;
-    //    if(fr <= 133.0 && fr >= 131.0 && fg <= 131.0 && fg >= 129.0 && fb <= 133.0 && fb >= 131.0) {
+    vec4 color = texture2D(inputImageTexture, textureCoordinate);
+    gl_FragColor = convertMapColor(color);
 }
 
 

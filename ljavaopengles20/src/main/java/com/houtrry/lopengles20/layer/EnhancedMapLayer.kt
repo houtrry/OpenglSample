@@ -344,7 +344,6 @@ open class EnhancedMapLayer() : BaseLayer() {
     private var outerColorLocation: Int = -1
     private var originOuterColorLocation: Int = -1
     private var wallColorLocation: Int = -1
-    private var isMapUniformLocation: Int = -1
     private var transformMatrixLocation: Int = -1
     private var textureCoordinateLocation: Int = -1
 
@@ -378,14 +377,13 @@ open class EnhancedMapLayer() : BaseLayer() {
         GLES20.glUniform4fv(originOuterColorLocation, 1, originOuterColor, 0)
         GLES20.glUniform4fv(wallColorLocation, 1, wallColor, 0)
 
-        if (isMapUniformLocation == -1) isMapUniformLocation = program.glGetUniformLocation("isMap")
         if (transformMatrixLocation == -1) transformMatrixLocation = program.glGetUniformLocation("u_TransformMatrix")
 
         if (textureCoordinateLocation == -1) {
             textureCoordinateLocation = program.glGetAttribLocation("inputTextureCoordinate")
         }
         GLES20.glEnableVertexAttribArray(textureCoordinateLocation)
-        GLES20.glUniform1i(isMapUniformLocation, 1)
+        // 地图 Program 不再需要 isMap uniform
 
         // 基础 PV*Model（投影*视图*模型）
         val pvModel = FloatArray(16).identityM()
@@ -407,7 +405,7 @@ open class EnhancedMapLayer() : BaseLayer() {
             renderWithFallbackBitmap(pvModel)
         }
 
-        GLES20.glUniform1i(isMapUniformLocation, 0)
+        // 地图 Program 不再需要 isMap uniform
 
         // 收尾：仅关闭 attribute 数组
         positionLocation.glDisableVertexAttribArray()
