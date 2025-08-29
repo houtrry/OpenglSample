@@ -324,12 +324,14 @@ class TileManager(
             val srcYTop = placeholder.originYInMapPx
 
             Log.d(TAG, "loadPendingOnGlThread $coord -> srcX: $srcX, srcYTop: $srcYTop = $mapHeightPx - ${placeholder.originYInMapPx} - ${placeholder.heightPx}")
+            val startTimestamp = System.currentTimeMillis()
             val region = regionProvider?.obtainRegion(
                 srcX,
                 srcYTop,
                 placeholder.widthPx,
                 placeholder.heightPx
             ) ?: continue
+            Log.d(TAG, "obtainRegion $coord cost time is ${System.currentTimeMillis() - startTimestamp}")
 
             val texId = texturePool.acquire()
             GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texId)

@@ -25,6 +25,8 @@ class JpegPngRegionProvider(
 
     companion object {
         private const val TAG = "JpegPngRegionProvider"
+        // GL_BGRA_EXT 常量未在 Android GLES* 类中暴露，使用其实际值 0x80E1
+        private const val GL_BGRA_EXT = 0x80E1
     }
 
     @Volatile
@@ -64,30 +66,30 @@ class JpegPngRegionProvider(
 
         return try {
             if (!useCpuGray) {
-                // RGBA 路线：将 ARGB_8888 像素转为 RGBA 顺序的字节缓冲
-                val pixels = IntArray(rw * rh)
-                bmp.getPixels(pixels, 0, rw, 0, 0, rw, rh)
-                val buf = ByteBuffer.allocateDirect(rw * rh * 4)
-                var i = 0
-                while (i < pixels.size) {
-                    val c = pixels[i]
-                    val a = (c ushr 24) and 0xFF
-                    val r = (c ushr 16) and 0xFF
-                    val g = (c ushr 8) and 0xFF
-                    val b = c and 0xFF
-                    buf.put(r.toByte())
-                    buf.put(g.toByte())
-                    buf.put(b.toByte())
-                    buf.put(a.toByte())
-                    i++
+                val format = if (supportsBGRA()) GL_BGRA_EXT else GLES20.GL_RGBA
+                Log.d(TAG, "format: $format")
+                return if (format == GL_BGRA_EXT) {
+                    val buf = ByteBuffer.allocateDirect(rw * rh * 4)
+                    bmp.copyPixelsToBuffer(buf)
+                    buf.position(0)
+                    RegionBuffer(rw, rh, format, buf)
+                } else {
+                    // 设备不支持 BGRA 扩展时，退回原先的通道重排（保持正确性）
+                    val pixels = IntArray(rw * rh)
+                    bmp.getPixels(pixels, 0, rw, 0, 0, rw, rh)
+                    val reordered = ByteBuffer.allocateDirect(rw * rh * 4)
+                    var i = 0
+                    while (i < pixels.size) {
+                        val c = pixels[i]
+                        reordered.put(((c ushr 16) and 0xFF).toByte()) // R
+                        reordered.put(((c ushr 8) and 0xFF).toByte())  // G
+                        reordered.put((c and 0xFF).toByte())           // B
+                        reordered.put(((c ushr 24) and 0xFF).toByte()) // A
+                        i++
+                    }
+                    reordered.position(0)
+                    RegionBuffer(rw, rh, GLES20.GL_RGBA, reordered)
                 }
-                buf.position(0)
-                RegionBuffer(
-                    width = rw,
-                    height = rh,
-                    glFormat = GLES20.GL_RGBA,
-                    pixelBuffer = buf
-                )
             } else {
                 // CPU 转灰度（BT.601 近似）→ LUMINANCE 上传
                 val pixels = IntArray(rw * rh)
@@ -130,6 +132,12 @@ class JpegPngRegionProvider(
         } catch (e: Exception) {
             // BitmapRegionDecoder.recycle() 可能抛出异常，忽略
         }
+    }
+
+    private fun supportsBGRA(): Boolean {
+        val extensions = GLES20.glGetString(GLES20.GL_EXTENSIONS) ?: return false
+        Log.d(TAG, "supportsBGRA extensions: $extensions")
+        return extensions.contains("GL_EXT_texture_format_BGRA8888")
     }
 }
 
